@@ -1,5 +1,9 @@
 # OS Helper
 
+`OS Helper` belongs to a collection of libraries called AI Helpers developped for building Artificial Intelligence
+
+[🕸️ AI Helpers](https://harchaoui.org/warith/ai-helpers)
+
 OS Helper is a Python library that provides utility functions for working with different operating systems.  
 
 It offers a set of tools to simplify common system operations, file handling, and OS-specific tasks.
