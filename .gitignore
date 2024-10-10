@@ -9,6 +9,11 @@ __pycache__/
 # logs
 logs/
 
+# json and yaml
+*.json
+*.yaml
+*.yml
+
 # Distribution / packaging
 .Python
 build/
