@@ -4,7 +4,7 @@
 
 [🕸️ AI Helpers](https://harchaoui.org/warith/ai-helpers)
 
-![https://harchaoui.org/warith/ai-helpers](logo.png)
+[![logo](logo.png)](https://harchaoui.org/warith/ai-helpers)
 
 
 OS Helper is a Python library that provides utility functions for working with different operating systems.  
