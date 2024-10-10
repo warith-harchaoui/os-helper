@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
+    
 
 setup(
     name="os-helper",
@@ -19,5 +20,10 @@ setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    install_requires=[],
+    install_requires=[
+        'requests',
+        'numpy',
+        'PyYAML',  # for yaml
+        'validators'
+    ]
 )
