@@ -1192,19 +1192,28 @@ def get_config(path: str, keys: list, config_type: str) -> dict:
     {'api_key': 'abcdef', 'url': 'https://api.example.com'}
     """
     config = None
-    if file_exists(path):
-        config = valid_config_file(path, keys, config_type=config_type)
-        if config:
-            return config
-
-    check(dir_exists(path), f"{config_type} Config folder {path} has no valid file")
-    candidates = sorted(glob.glob(os_path_constructor([path, "*"])))  # Find all files in the folder
-    for c in candidates:
-        config = valid_config_file(c, keys, config_type)
-        if config:
-            return config
-
-    error(f"No valid {config_type} config file found in {path}")
+    if emptystring(path):
+        # Check environment variables
+        config = {}
+        for k in keys:
+            k_capital = k.upper()
+            check(k_capital in os.environ, msg = f"Variable {k_capital} not present in environment variables")
+            config[k_capital] = os.environ[k_capital]
+        return config
+    else:
+        # Check file
+        if file_exists(path):
+            config = valid_config_file(path, keys, config_type=config_type)
+            if config:
+                return config
+        # Check folder
+        check(dir_exists(path), f"{config_type} Config folder {path} has no valid file")
+        candidates = sorted(glob.glob(os_path_constructor([path, "*"])))  # Find all files in the folder
+        for c in candidates:
+            config = valid_config_file(c, keys, config_type)
+            if config:
+                return config
+        error(f"No valid {config_type} config file found in {path}")
 
 
 def is_working_url(url: str) -> bool:
