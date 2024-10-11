@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "os-helper"
-version = "1.1.0"
+version = "1.0.0"
 description = "Utility functions for system operations"
 authors = ["Warith Harchaoui <warith.harchaoui@gmail.com>", "Mohamed Chelali <mohamed.t.chelali[at]gmail.fr>", "Bachir Zerroug <bachir.zerroug.ai@gmail.com>"]
 readme = "README.md"
-license = "MIT"
+license = "BSD-2-Clause"  # Updated license to BSD-2-Clause
 homepage = "https://github.com/warith-harchaoui/os-helper"
 
 [tool.poetry.dependencies]
@@ -17,7 +17,6 @@ pywin32 = { version = "^301", markers = "platform_system == 'Windows'" }
 requests = "^2.32.3"
 validators = "^0.34"
 python-dotenv = "^1.0.1"
-
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
