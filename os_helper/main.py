@@ -1195,8 +1195,12 @@ def get_config(path: str, keys: list, config_type: str) -> dict:
         config = {}
         for k in keys:
             k_capital = k.upper()
-            check(k_capital in os.environ, msg = f"Variable {k_capital} not present in environment variables")
-            config[k_capital] = os.environ[k_capital]
+            if k_capital in os.environ:
+                config[k_capital] = os.environ[k_capital]
+
+        # pydantic is here
+
+        check(all([k in config for k in keys]), msg = f"All keys are not present in .env nor environment variables" )
         return config
     else:
         # Check file
