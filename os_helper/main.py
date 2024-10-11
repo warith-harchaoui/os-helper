@@ -1191,14 +1191,16 @@ def get_config(path: str, keys: list, config_type: str) -> dict:
     """
     config = None
     if emptystring(path):
-        # Check environment variables
-        config = {}
-        for k in keys:
-            k_capital = k.upper()
-            if k_capital in os.environ:
-                config[k] = os.environ[k_capital]
 
         # pydantic is here
+
+        if not(all([k in config for k in keys])):     
+            # Check environment variables
+            config = {}
+            for k in keys:
+                k_capital = k.upper()
+                if k_capital in os.environ:
+                    config[k] = os.environ[k_capital]
 
         check(all([k in config for k in keys]), msg = f"All keys are not present in .env nor environment variables" )
         return config
