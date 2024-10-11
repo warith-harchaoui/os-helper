@@ -2,7 +2,7 @@
 name = "os-helper"
 version = "1.1.0"
 description = "Utility functions for system operations"
-authors = ["Bachir Zerroug <bachir.zerroug.ai@gmail.com>"]
+authors = ["Warith Harchaoui <warith.harchaoui@gmail.com>", "Mohamed Chelali <mohamed.t.chelali[at]gmail.fr>", "Bachir Zerroug <bachir.zerroug.ai@gmail.com>"]
 readme = "README.md"
 license = "MIT"
 homepage = "https://github.com/warith-harchaoui/os-helper"
