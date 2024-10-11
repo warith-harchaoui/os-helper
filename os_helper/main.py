@@ -1196,7 +1196,7 @@ def get_config(path: str, keys: list, config_type: str) -> dict:
         for k in keys:
             k_capital = k.upper()
             if k_capital in os.environ:
-                config[k_capital] = os.environ[k_capital]
+                config[k] = os.environ[k_capital]
 
         # pydantic is here
 
