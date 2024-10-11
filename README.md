@@ -30,7 +30,7 @@ We can recommand python environments. Check this link if you don't know how
 
 
 ```bash
-pip install git+https://github.com/warith-harchaoui/os-helper.git@main
+pip install --force-reinstall --no-cache-dir git+https://github.com/warith-harchaoui/os-helper.git@main
 ```
 
 ## Usage
