@@ -352,41 +352,6 @@ def open(
         # Enforce UTF-8 encoding for text mode (e.g., "r", "w", "a")
         return pythonopen(filename, mode=mode, encoding=encoding, buffering=buffering, errors=errors, newline=newline, closefd=closefd, opener=opener)
 
-@contextlib.contextmanager
-def temporary_filename(suffix: str = "", mode: str = "wt", prefix: str = "") -> str:
-    """
-    Create a temporary file with a unique name that persists even after closing.
-
-    This function generates a temporary file with a unique name, which is removed after use.
-    It can be used to safely create and use a temporary file for writing or reading data.
-
-    Parameters
-    ----------
-    suffix : str, optional
-        File suffix (e.g., .txt). Defaults to "".
-    mode : str, optional
-        Mode in which the file is opened (e.g., "wt" for writing text). Defaults to "wt".
-    prefix : str, optional
-        Prefix for the file name. Defaults to "".
-
-    Yields
-    ------
-    str
-        The name of the temporary file.
-
-    Example
-    -------
-    >>> with temporary_filename(suffix=".txt") as temp_file:
-    ...     with open(temp_file, "w") as f:
-    ...         f.write("Temporary content")
-    """
-    s = suffix if suffix.startswith(".") else f".{suffix}"  # Ensure suffix starts with a dot
-    p = f"{prefix}-{now_string('filename')}-" if prefix else ""  # Create a prefix if provided
-    h = hashlib.new("ripemd160").hexdigest()[:8]  # Generate a hash for uniqueness
-    with tempfile.NamedTemporaryFile(mode=mode, suffix=s, delete=False, prefix=p) as f:
-        yield f.name  # Yield the temporary file name
-    os.unlink(f.name)  # Remove the file after use
-
 
 
 
@@ -787,6 +752,8 @@ def remove_files(files_list: list, verbose: bool = False) -> None:
             if verbose:
                 info(f"File {f} removed")
 
+
+
 def make_directory(folder_path: str, exist_ok: bool = True) -> None:
     """
     Create a directory, optionally ignoring if it already exists.
@@ -806,6 +773,79 @@ def make_directory(folder_path: str, exist_ok: bool = True) -> None:
     check(dir_exists(folder_path), f"{folder_path} was not created")
 
 
+@contextlib.contextmanager
+def temporary_filename(suffix: str = "", mode: str = "wt", prefix: str = "") -> str:
+    """
+    Create a temporary file with a unique name that persists even after closing.
+
+    This function generates a temporary file with a unique name, which is removed after use.
+    It can be used to safely create and use a temporary file for writing or reading data.
+
+    Parameters
+    ----------
+    suffix : str, optional
+        File suffix (e.g., .txt). Defaults to "".
+    mode : str, optional
+        Mode in which the file is opened (e.g., "wt" for writing text). Defaults to "wt".
+    prefix : str, optional
+        Prefix for the file name. Defaults to "".
+
+    Yields
+    ------
+    str
+        The name of the temporary file.
+
+    Example
+    -------
+    >>> with temporary_filename(suffix=".txt") as temp_file:
+    ...     with open(temp_file, "w") as f:
+    ...         f.write("Temporary content")
+    """
+    s = suffix if suffix.startswith(".") else f".{suffix}"  # Ensure suffix starts with a dot
+    p = f"{prefix}-{now_string('filename')}-" if prefix else ""  # Create a prefix if provided
+    h = hashlib.new("ripemd160").hexdigest()[:8]  # Generate a hash for uniqueness
+    with tempfile.NamedTemporaryFile(mode=mode, suffix=s, delete=False, prefix=p) as f:
+        yield f.name  # Yield the temporary file name
+    os.unlink(f.name)  # Remove the file after use
+
+
+
+@contextlib.contextmanager
+def temporary_folder(prefix: str = "") -> str:
+    """
+    Create a temporary directory with a unique name that persists during the context.
+
+    This function generates a temporary folder with a unique name, which is removed after use.
+    It can be used to safely create and work within a temporary directory.
+
+    Parameters
+    ----------
+    prefix : str, optional
+        Prefix for the folder name. Defaults to "".
+
+    Yields
+    ------
+    str
+        The name of the temporary directory.
+
+    Example
+    -------
+    >>> with temporary_folder(prefix="tempdir") as temp_directory:
+    ...     print(f"Temporary folder created: {temp_directory}")
+    ...     # Do work inside the temporary folder
+    """
+    p = f"{prefix}-{now_string('filename')}-" if prefix else ""
+    h = hashlib.new("ripemd160").hexdigest()[:8]  # Generate a hash for uniqueness
+
+    # Create a temporary directory
+    temp_dir = tempfile.mkdtemp(prefix=p + h)
+    temp_dir = relative2absolute_path(temp_dir)
+    make_directory(temp_dir)
+    try:
+        yield temp_dir  # Yield the directory name to the context
+    finally:
+        # Remove the directory and its contents after exiting the context
+        remove_directory(temp_dir)
 
 def system(
     cmd: str, expected_output: str = "", check_exitcode: bool = True, check_empty: bool = False
