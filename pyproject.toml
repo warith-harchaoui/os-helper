@@ -8,14 +8,16 @@ license = "MIT"
 homepage = "https://github.com/warith-harchaoui/os-helper"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<4.0"
 numpy = "^1.21"
 pyyaml = "^6.0"
 psutil = "^5.8"
 pandas = "^1.3"
 pywin32 = { version = "^301", markers = "platform_system == 'Windows'" }
-requests = "*"
-validators = "*"
+requests = "^2.32.3"
+validators = "^0.34"
+python-dotenv = "^1.0.1"
+
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
