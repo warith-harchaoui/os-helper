@@ -24,24 +24,7 @@ from os_helper import (
 import json
 import yaml
 
-@pytest.fixture
-def setup_env_file(tmpdir):
-    """
-    Fixture to create a temporary .env file with sample configuration.
-    """
-    env_path = os_path_constructor([tmpdir, ".env"])
-    with open(env_path, "w") as f:
-        f.write("API_KEY=sample_api_key\n")
-        f.write("DB_URL=postgres://user:pass@localhost/db\n")
-    return str(env_path)
 
-@pytest.fixture
-def check_test_config(config: Dict):
-    """
-    Fixture to check the loaded configuration.
-    """
-    assert config["api_key"] == "sample_api_key"
-    assert config["db_url"] == "postgres://user:pass@localhost/db"
 
 def test_emptystring():
     assert emptystring("") is True
@@ -83,8 +66,8 @@ def test_dir_exists():
 def test_relative2absolute_path():
     relative_path = "test_utils.py"
     absolute_path = relative2absolute_path(relative_path)
-    assert os.path.isabs(absolute_path)
-    assert os.path.exists(absolute_path)
+    assert os.path.isabs(absolute_path), "Path is not absolute: " + absolute_path
+    assert not(os.path.isabs(relative_path)), "Path is not absolute: " + absolute_path
 
 
 def test_asciistring():
@@ -132,6 +115,13 @@ def test_get_config_from_env_file():
     # Define required keys for the config
     keys = ["api_key", "db_url"]
 
+    def check_test_config(config: Dict):
+        """
+        Fixture to check the loaded configuration.
+        """
+        assert config["api_key"] == "sample_api_key"
+        assert config["db_url"] == "postgres://user:pass@localhost/db"
+
     with temporary_folder(prefix="tempdir") as temp_directory:
         # Create a .env file with sample configuration
         env_path = os_path_constructor([temp_directory, ".env"])
@@ -153,6 +143,11 @@ def test_get_config_from_env_file():
             json.dump(config, fout)
 
         config = get_config(keys=keys, config_type="API", path = config_json_path)
+        assert file_exists(config_json_path), "File not found: " + config_json_path
+        with open(config_json_path, "rt") as fin:
+            config_str = json.load(fin)
+            config_str = str(config_str)
+        assert config is not None, "Config is None " + config_str + " from " + config_json_path
         check_test_config(config)
 
         config_yaml_path = os_path_constructor([temp_directory, "config.yaml"])

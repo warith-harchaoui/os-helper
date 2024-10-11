@@ -31,7 +31,6 @@ Dependencies:
 - yaml
 - validators
 - zipfile
-- pydantic
 - dotenv
 """
 
@@ -60,8 +59,7 @@ import validators
 import zipfile
 import unicodedata
 
-from pydantic import BaseSettings, ValidationError, Field
-from typing import Dict, List
+from typing import Dict, List, Union
 import os
 import glob
 from dotenv import load_dotenv
@@ -390,7 +388,6 @@ def info(msg: str, error: bool = False, error_code: int = 1) -> None:
     Example
     -------
     >>> info("Process completed successfully.")
-    >>> info("Process failed.", error=True, error_code=2)
     """
     logging.info(msg)
     if error:
@@ -416,7 +413,7 @@ def check(condition: bool, msg: str = "Something went wrong", error_code: int = 
     >>> check(1 == 2, msg="Condition failed", error_code=2)
     """
     if not condition:
-        info(f"{msg} (error code: {error_code})", error=True)
+        error(f"{msg} (error code: {error_code})")
 
 
 
@@ -1177,42 +1174,31 @@ def valid_config_file(a_path: str, keys: list, config_type: str) -> dict:
     -------
     dict or None
         The loaded configuration dictionary if valid, otherwise None.
-
-    Example
-    -------
-    >>> valid_config_file("config.json", keys=["api_key", "url"], config_type="API")
-    {'api_key': 'abcdef', 'url': 'https://api.example.com'}
     """
-    if not file_exists(a_path):
-        return None
+    if not file_exists(a_path):  # Step 1: Check if the file exists
+        return None  # Return None if file does not exist
     
-    _,_,ext = folder_name_ext(a_path)
+    _, _, ext = folder_name_ext(a_path)  # Step 2: Get file extension
     ext = ext.lower()
 
+    # Step 3: Load file based on extension
     with open(a_path, "r") as fin:
-        if ext in [".json"]:
+        jsons = ["json"]
+        jsons += [j.upper() for j in jsons]
+        yamls = ["yaml", "yml"]
+        yamls += [y.upper() for y in yamls]
+        if any(ext in e for e in jsons):  # Handle JSON
             j = json.load(fin)  # Load JSON configuration
-        elif ext in [".yml", ".yaml"]:
-            j = yaml.load(fin, Loader=yaml.FullLoader)  # Load YAML configuration
+        elif any(ext in e for e in yamls):  # Handle YAML
+            j = yaml.load(fin, Loader=yaml.SafeLoader)  # Load YAML configuration
         else:
             return None  # Unsupported file format
 
-        # Check if all required keys are present
+        # Step 4: Check if all required keys are present
         if all(k in j for k in keys):
-            return j
+            return j  # Return the configuration if all keys are present
 
     return None  # Return None if keys are missing
-
-def create_settings_model(keys: list) -> BaseSettings:
-    """
-    Dynamically creates a Pydantic BaseSettings model with fields based on the provided keys.
-    Each key will be capitalized and used as a required field.
-    """
-    fields: Dict[str, tuple] = {}
-    for key in keys:
-        fields[key.upper()] = (str, Field(..., description=f"{key.upper()} is required"))
-
-    return type('ConfigSettings', (BaseSettings,), fields)
 
 def get_config(keys: List[str], config_type: str, path: str = None, env_files: List[str] = [".env"]) -> dict:
     """
@@ -1237,56 +1223,60 @@ def get_config(keys: List[str], config_type: str, path: str = None, env_files: L
     -------
     dict
         The loaded configuration dictionary keys and associated values.
-
-    Example
-    -------
-    >>> get_config(["api_key", "url"], "API", path="config")
-    {'api_key': 'abcdef', 'url': 'https://api.example.com'}
-
     """
 
-    ConfigSettings = create_settings_model(keys)
+    def config_from_env(keys: List[str]) -> Union[Dict, None]:
+        c = {}
+        for k in keys:
+            if k.upper() in os.environ:
+                c[k] = os.environ[k.upper()]
+        if all([k in c for k in keys]):
+            return c
+        return None
 
     if emptystring(path):
-        for env_file in env_files:
-            if file_exists(env_file):
-                load_dotenv(env_file)
-                try:
-                    settings_instance = ConfigSettings()
-                    config_capitals = settings_instance.dict()
-                    if all([k.upper() in config_capitals for k in keys]):
-                        config = {k: config_capitals[k.upper()] for k in keys}
-                        info(f"Configuration {config_type} loaded from: {env_file}")
+        # Try loading configuration from .env files
+        if len(env_files) > 0:
+            for env_file in env_files:
+                if file_exists(env_file):
+                    load_dotenv(env_file)
+                    config = config_from_env(keys)
+                    if config:
+                        info(f"Successful configuration {config_type} loaded from: {env_file}")
                         return config
-                except ValidationError as e:
-                    info(f"Configuraton {config_type} validation Error in {env_file}, continuing: {str(e)}")
-
-        s = "\n\t".join(keys)
-        t = "\n\t".join(env_files)
-        info(f"Falling back to environment variables (for Confiration {config_type}); no valid .env found:\n\t{t}\nKeys:\n\t{s}")
-        config = {k: os.getenv(k.upper(), None) for k in keys if os.getenv(k.upper())}
-        if all([k in config for k in keys]):
-            info(f"Configuration {config_type} loaded from environment variables with keys:\n\t{s}")
-            return config
+                    else:
+                        info(f"Missing keys for configuration {config_type} in {env_file}")
         else:
-            error(f"Missing keys for configuration {config_type} in environment variables or .env files:\n\t{s}\nFiles:\n\t{t}")
+            config = config_from_env(keys)
+            if config:
+                info(f"Successful configuration {config_type} loaded from environment variables.")
+                return config
+
+        error(f"Missing keys for configuration {config_type} in .env files or environment variables.")
     else:
-        # Check file
+        # Check if the path is a file and load configuration
         if file_exists(path):
             config = valid_config_file(path, keys, config_type=config_type)
-            if config:
+            if not(config is None):
                 return config
-        # Check folder
+
+        # If it's a folder, search for valid config files (JSON or YAML)
         check(dir_exists(path), f"{config_type} Config folder {path} has no valid file")
+
         formats = [".json", ".yml", ".yaml"]
+        formats += [f.upper() for f in formats]
+
         candidates = []
         for format in formats:
-            candidates += glob.glob(os_path_constructor([path, f"*.{e}"]))
+            candidates += glob.glob(os_path_constructor([path, f"*{format}"]))
+
         candidates = sorted(candidates)
+
         for c in candidates:
             config = valid_config_file(c, keys, config_type)
             if config:
                 return config
+
         error(f"No valid {config_type} config file found in {path}")
 
 
