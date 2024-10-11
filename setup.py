@@ -24,6 +24,8 @@ setup(
         'requests',
         'numpy',
         'PyYAML',  # for yaml
-        'validators'
+        'validators',
+        'pydantic',
+        'python-dotenv'
     ]
 )

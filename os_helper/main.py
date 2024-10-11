@@ -31,6 +31,8 @@ Dependencies:
 - yaml
 - validators
 - zipfile
+- pydantic
+- dotenv
 """
 
 import contextlib
@@ -58,6 +60,11 @@ import validators
 import zipfile
 import unicodedata
 
+from pydantic import BaseSettings, ValidationError, Field
+from typing import Dict, List
+import os
+import glob
+from dotenv import load_dotenv
 
 # Default logging setup
 name = os.getcwd().split(os.sep)[-1]
@@ -1156,54 +1163,46 @@ def valid_config_file(a_path: str, keys: list, config_type: str) -> dict:
 
     return None  # Return None if keys are missing
 
-
-def get_config(path: str, keys: list, config_type: str) -> dict:
+def create_settings_model(keys: list) -> BaseSettings:
     """
-    Retrieve a valid configuration file from a path or directory.
-
-    This function searches for a valid configuration file in the provided path or directory.
-    If the path is a file, it checks if the file contains the required keys. If the path is a directory, 
-    it searches for configuration files and returns the first valid one.
-
-    Parameters
-    ----------
-    path : str
-        The path to the configuration file or directory.
-    keys : list
-        List of required keys for the configuration.
-    config_type : str
-        Type of configuration (for logging purposes).
-
-    Returns
-    -------
-    dict
-        The loaded configuration dictionary if valid.
-
-    Raises
-    ------
-    SystemExit
-        If no valid configuration file is found.
-
-    Example
-    -------
-    >>> get_config("config_folder", keys=["api_key", "url"], config_type="API")
-    {'api_key': 'abcdef', 'url': 'https://api.example.com'}
+    Dynamically creates a Pydantic BaseSettings model with fields based on the provided keys.
+    Each key will be capitalized and used as a required field.
     """
-    config = None
+    fields: Dict[str, tuple] = {}
+    for key in keys:
+        fields[key.upper()] = (str, Field(..., description=f"{key.upper()} is required"))
+
+    return type('ConfigSettings', (BaseSettings,), fields)
+
+def get_config(keys: list, config_type: str, path: str = None, env_files: List[str] = [".env"]) -> dict:
+    """
+    Retrieve a valid configuration file from a path or directory, or environment variables.
+    """
+    ConfigSettings = create_settings_model(keys)
+
     if emptystring(path):
+        for env_file in env_files:
+            if file_exists(env_file):
+                load_dotenv(env_file)
+                try:
+                    settings_instance = ConfigSettings()
+                    config_capitals = settings_instance.dict()
+                    if all([k.upper() in config_capitals for k in keys]):
+                        config = {k: config_capitals[k.upper()] for k in keys}
+                        info(f"Configuration {config_type} loaded from: {env_file}")
+                        return config
+                except ValidationError as e:
+                    info(f"Configuraton {config_type} validation Error in {env_file}, continuing: {str(e)}")
 
-        # pydantic is here
-
-        if not(all([k in config for k in keys])):     
-            # Check environment variables
-            config = {}
-            for k in keys:
-                k_capital = k.upper()
-                if k_capital in os.environ:
-                    config[k] = os.environ[k_capital]
-
-        check(all([k in config for k in keys]), msg = f"All keys are not present in .env nor environment variables" )
-        return config
+        s = "\n\t".join(keys)
+        t = "\n\t".join(env_files)
+        info(f"Falling back to environment variables (for Confiration {config_type}); no valid .env found:\n\t{t}\nKeys:\n\t{s}")
+        config = {k: os.getenv(k.upper(), None) for k in keys if os.getenv(k.upper())}
+        if all([k in config for k in keys]):
+            info(f"Configuration {config_type} loaded from environment variables with keys:\n\t{s}")
+            return config
+        else:
+            error(f"Missing keys for configuration {config_type} in environment variables or .env files:\n\t{s}\nFiles:\n\t{t}")
     else:
         # Check file
         if file_exists(path):
@@ -1212,12 +1211,17 @@ def get_config(path: str, keys: list, config_type: str) -> dict:
                 return config
         # Check folder
         check(dir_exists(path), f"{config_type} Config folder {path} has no valid file")
-        candidates = sorted(glob.glob(os_path_constructor([path, "*"])))  # Find all files in the folder
+        formats = [".json", ".yml", ".yaml"]
+        candidates = []
+        for format in formats:
+            candidates += glob.glob(os_path_constructor([path, f"*.{e}"]))
+        candidates = sorted(candidates)
         for c in candidates:
             config = valid_config_file(c, keys, config_type)
             if config:
                 return config
         error(f"No valid {config_type} config file found in {path}")
+
 
 
 def is_working_url(url: str) -> bool:
