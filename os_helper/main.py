@@ -1342,3 +1342,51 @@ def zip_folder(folder_path: str, zip_file_path: str = ""):
                     zipf.write(file_path, arcname)
 
     info(f"Folder {folder_path} successfully zipped into {zip_file_path}")
+
+def time2str(time: float, no_space: bool = False) -> str:
+    """
+    Convert time in seconds to a human-readable string format (hours, minutes, seconds).
+
+    Parameters
+    ----------
+    time : float
+        Time in seconds.
+    no_space : bool, optional
+        If True, removes spaces between numbers and units (default is False).
+
+    Returns
+    -------
+    str
+        A formatted string representing the time in hours, minutes, and seconds.
+
+    Examples
+    --------
+    >>> time2str(3661)
+    '1 hr 1 min 1 sec'
+    >>> time2str(61)
+    '1 min 1 sec'
+    >>> time2str(61, no_space=True)
+    '1min1sec'
+    """
+
+    # Calculate hours, minutes, and seconds
+    hours = int(time // 3600)
+    minutes = int((time % 3600) // 60)
+    seconds = int(time % 60)
+
+    # Build the time string based on non-zero values
+    res = []
+    if hours > 0:
+        res.append(f"{hours} hr")
+    if minutes > 0:
+        res.append(f"{minutes} min")
+    if seconds > 0 or (hours == 0 and minutes == 0):  # Always show seconds if no hours or minutes
+        res.append(f"{seconds} sec")
+
+    # Join the result with spaces or no spaces based on the no_space flag
+    if no_space:
+        res = [r.replace(" ", "") for r in res]       
+
+    time_str = " ".join(res)
+
+    return time_str
