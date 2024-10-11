@@ -35,5 +35,7 @@ from .main import (
     folder_name_ext,
     absolute2relative_path,
     path_without_home,
-    recursive_glob
+    recursive_glob,
+    zip_folder,
+    time2str
 )
