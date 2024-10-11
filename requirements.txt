@@ -12,7 +12,6 @@ isort==5.13.2
 mccabe==0.6.1
 mypy-extensions==1.0.0
 numpy==1.26.4
-os-helper @ git+https://github.com/warith-harchaoui/os-helper.git@main
 packaging==24.1
 pandas==1.5.3
 pathspec==0.12.1
