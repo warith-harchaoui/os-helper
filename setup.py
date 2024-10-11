@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="os-helper",
-    version="0.1.0",
+    version="1.0.0",
     author="Warith Harchaoui, Mohamed Chelali and Bachir Zerroug",
     author_email="warith.harchaoui@gmail.com", 
     description="OS Helper is a Python library that provides utility functions for working with different operating systems.",
