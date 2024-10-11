@@ -1214,10 +1214,37 @@ def create_settings_model(keys: list) -> BaseSettings:
 
     return type('ConfigSettings', (BaseSettings,), fields)
 
-def get_config(keys: list, config_type: str, path: str = None, env_files: List[str] = [".env"]) -> dict:
+def get_config(keys: List[str], config_type: str, path: str = None, env_files: List[str] = [".env"]) -> dict:
     """
-    Retrieve a valid configuration file from a path or directory, or environment variables.
+    get_config is a helper function to load configuration from a file or environment variables.
+
+    This function attempts to load configuration settings from a file (JSON or YAML) or environment variables or .env.
+    If a path or folder is provided, it will attempt to load the configuration from the file at that path.
+    If no path is provided, it will look in environment or .env files.
+
+    Parameters
+    ----------
+    keys : list
+        List of keys that must be present in the configuration file.
+    config_type : str
+        The type of configuration (for logging purposes).
+    path : str, optional
+        The path to the configuration file or folder. Defaults to None.
+    env_files : list, optional
+        List of .env files to check for configuration. Defaults to [".env"].
+
+    Returns
+    -------
+    dict
+        The loaded configuration dictionary keys and associated values.
+
+    Example
+    -------
+    >>> get_config(["api_key", "url"], "API", path="config")
+    {'api_key': 'abcdef', 'url': 'https://api.example.com'}
+
     """
+
     ConfigSettings = create_settings_model(keys)
 
     if emptystring(path):

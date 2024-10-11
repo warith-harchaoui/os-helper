@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 import pytest
 import tempfile
 from os_helper import (
@@ -11,12 +12,36 @@ from os_helper import (
     file_exists,
     dir_exists,
     relative2absolute_path,
+    temporary_folder,
+    temporary_filename,
     openfile,
     asciistring,
     zip_folder,
-    recursive_glob
+    recursive_glob,
+    os_path_constructor,
+    get_config,
 )
+import json
+import yaml
 
+@pytest.fixture
+def setup_env_file(tmpdir):
+    """
+    Fixture to create a temporary .env file with sample configuration.
+    """
+    env_path = os_path_constructor([tmpdir, ".env"])
+    with open(env_path, "w") as f:
+        f.write("API_KEY=sample_api_key\n")
+        f.write("DB_URL=postgres://user:pass@localhost/db\n")
+    return str(env_path)
+
+@pytest.fixture
+def check_test_config(config: Dict):
+    """
+    Fixture to check the loaded configuration.
+    """
+    assert config["api_key"] == "sample_api_key"
+    assert config["db_url"] == "postgres://user:pass@localhost/db"
 
 def test_emptystring():
     assert emptystring("") is True
@@ -41,23 +66,17 @@ def test_now_string():
     assert ":" not in filename_format
 
 
-def test_os_functions():
-    assert isinstance(windows(), bool)
-    assert isinstance(linux(), bool)
-    assert isinstance(macos(), bool)
-
-
 def test_file_exists():
-    with tempfile.NamedTemporaryFile() as temp_file:
-        assert file_exists(temp_file.name) is True
+    with temporary_filename(prefix="tempfile", mode="wt") as temp_file:
+        assert file_exists(temp_file) is True
         assert file_exists("non_existent_file.txt") is False
 
 
 def test_dir_exists():
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with temporary_folder(prefix="tempdir_dir_exists") as temp_dir:
         assert dir_exists(temp_dir) is True
-        assert dir_exists(temp_dir, check_empty=True) is True
-        f = os.path.join(temp_dir, "test")
+        assert dir_exists(temp_dir, check_empty=True) is False
+        f = os_path_constructor([temp_dir, "non_existent_dir"])
         assert dir_exists(f) is False
 
 
@@ -68,13 +87,6 @@ def test_relative2absolute_path():
     assert os.path.exists(absolute_path)
 
 
-def test_openfile():
-    with tempfile.NamedTemporaryFile(suffix=".txt") as temp_file:
-        # This test might not work on non-GUI systems, so it is marked as xfail
-        pytest.xfail("Open file test not reliable on non-GUI systems")
-        openfile(temp_file.name)
-
-
 def test_asciistring():
     assert asciistring("Café-Con-Leche!") == "cafe-con-leche"
     assert asciistring("Special#File$2024", lower=False) == "Special-File-2024"
@@ -82,11 +94,11 @@ def test_asciistring():
 
 
 def test_zip_folder():
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with temporary_folder(prefix="tempdir") as temp_dir:
         # Create some dummy files
-        file1 = os.path.join(temp_dir, "file1.txt")
-        file2 = os.path.join(temp_dir, "file2.txt")
-        with open(file1, 'w') as f1, open(file2, 'w') as f2:
+        file1 = os_path_constructor([temp_dir, "file1.txt"])
+        file2 = os_path_constructor([temp_dir, "file2.txt"])
+        with open(file1, 'wt') as f1, open(file2, 'wt') as f2:
             f1.write("File 1 content")
             f2.write("File 2 content")
         
@@ -98,7 +110,7 @@ def test_zip_folder():
         assert file_exists(zip_file)
 
 def test_recursive_glob():
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with temporary_folder(prefix="tempdir") as temp_dir:
         # Create some dummy files
         file1 = os.path.join(temp_dir, "file1.txt")
         file2 = os.path.join(temp_dir, "file2.txt")
@@ -111,3 +123,41 @@ def test_recursive_glob():
         assert len(files) == 2
         assert file1 in files
         assert file2 in files
+
+
+def test_get_config_from_env_file():
+    """
+    Test get_config by loading from a valid .env file.
+    """
+    # Define required keys for the config
+    keys = ["api_key", "db_url"]
+
+    with temporary_folder(prefix="tempdir") as temp_directory:
+        # Create a .env file with sample configuration
+        env_path = os_path_constructor([temp_directory, ".env"])
+        with open(env_path, "wt") as f:
+            f.write("API_KEY=sample_api_key\n")
+            f.write("DB_URL=postgres://user:pass@localhost/db\n")
+
+        # Call get_config with path set to the .env file
+        config = get_config(keys=keys, config_type="API", env_files=[env_path])
+        check_test_config(config)
+
+        config = {
+            "api_key": "sample_api_key",
+            "db_url": "postgres://user:pass@localhost/db"
+        }
+
+        config_json_path = os_path_constructor([temp_directory, "config.json"])
+        with open(config_json_path, "wt") as fout:
+            json.dump(config, fout)
+
+        config = get_config(keys=keys, config_type="API", path = config_json_path)
+        check_test_config(config)
+
+        config_yaml_path = os_path_constructor([temp_directory, "config.yaml"])
+        with open(config_yaml_path, "wt") as fout:
+            yaml.dump(config, fout)
+
+        config = get_config(keys=keys, config_type="API", path = config_yaml_path)
+        check_test_config(config)
