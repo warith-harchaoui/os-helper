@@ -372,7 +372,7 @@ def error(msg: str, error_code: int = 1) -> None:
     sys.exit(error_code)  # Exit the program with the specified error code
 
 
-def info(msg: str, error: bool = False, error_code: int = 1) -> None:
+def info(msg: str) -> None:
     """
     Log an informational message or error message based on the 'error' flag.
 
@@ -380,19 +380,12 @@ def info(msg: str, error: bool = False, error_code: int = 1) -> None:
     ----------
     msg : str
         The message to log.
-    error : bool, optional
-        If True, logs the message as an error and exits. Defaults to False.
-    error_code : int, optional
-        The exit code to use if 'error' is True. Defaults to 1.
 
     Example
     -------
     >>> info("Process completed successfully.")
     """
     logging.info(msg)
-    if error:
-        error(msg, error_code)
-
 
 
 def check(condition: bool, msg: str = "Something went wrong", error_code: int = 1) -> None:
