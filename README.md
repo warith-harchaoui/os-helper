@@ -39,7 +39,7 @@ Here are an example of how to use OS helper:
 ```python
 import os_helper as osh
 
-# Get number of workers
+# Get number of CPU cores available in your machine
 print(osh.get_nb_workers())
 ```
 
