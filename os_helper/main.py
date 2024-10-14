@@ -374,7 +374,7 @@ def error(msg: str, error_code: int = 1) -> None:
 
 def info(msg: str) -> None:
     """
-    Log an informational message or error message based on the 'error' flag.
+    Log an informational message: just a shortcut
 
     Parameters
     ----------
