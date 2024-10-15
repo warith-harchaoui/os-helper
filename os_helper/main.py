@@ -7,9 +7,9 @@ string manipulation, folder management, and more. The functions are optimized
 for cross-platform compatibility and robust error handling.
 
 Authors:
- - Warith Harchaoui, https://harchaoui.org/warith
- - Mohamed Chelali, https://mchelali.github.io
- - Bachir Zerroug, https://www.linkedin.com/in/bachirzerroug
+- Warith Harchaoui, https://harchaoui.org/warith
+- Mohamed Chelali, https://mchelali.github.io
+- Bachir Zerroug, https://www.linkedin.com/in/bachirzerroug
 
 Dependencies:
 - contextlib
