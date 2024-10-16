@@ -64,6 +64,9 @@ import os
 import glob
 from dotenv import load_dotenv
 
+import time
+
+
 # Default logging setup
 name = os.getcwd().split(os.sep)[-1]
 date = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -1418,6 +1421,49 @@ def zip_folder(folder_path: str, zip_file_path: str = ""):
                     zipf.write(file_path, arcname)
 
     info(f"Folder {folder_path} successfully zipped into {zip_file_path}")
+
+def tic() -> float:
+    """
+    Start a timer and return the current time.
+
+    This function is used to capture the start time, which can then be passed to `toc()` 
+    to calculate the elapsed time.
+
+    Returns
+    -------
+    float
+        The current time in seconds since the epoch (the same as `time.time()`).
+    
+    Example
+    -------
+    >>> start_time = tic()
+    """
+    return time.time()
+
+
+def toc(t: float) -> float:
+    """
+    Stop the timer and return the elapsed time in seconds.
+
+    Parameters
+    ----------
+    t : float
+        The start time captured by the `tic()` function.
+
+    Returns
+    -------
+    float
+        The elapsed time in seconds since `tic()` was called.
+    
+    Example
+    -------
+    >>> start_time = tic()
+    >>> # some operations
+    >>> elapsed_time = toc(start_time)
+    >>> print(f"Elapsed time: {elapsed_time:.2f} seconds")
+    """
+    return time.time() - t
+
 
 def time2str(time: float, no_space: bool = False) -> str:
     """
