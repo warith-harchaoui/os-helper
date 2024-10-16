@@ -615,6 +615,28 @@ def os_path_constructor(ell: list) -> str:
     """
     return relative2absolute_path(os.path.join(*ell), checkpath=False)
 
+ def join(*args: str) -> str:
+    """
+    Join multiple path elements into a single path and convert it to an absolute path.
+
+    Parameters
+    ----------
+    *args : str
+        Path elements to join.
+
+    Returns
+    -------
+    str
+        The absolute path after joining the elements.
+
+    Example
+    -------
+    >>> join("folder1", "subfolder2", "file.txt")
+    '/absolute/path/to/folder1/subfolder2/file.txt'
+    """
+    # Join the path elements and convert to an absolute path
+    return relative2absolute_path(os.path.join(*args), checkpath=False)
+
 
 def size_file(filepath: str) -> int:
     """
