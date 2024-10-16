@@ -1512,3 +1512,27 @@ def time2str(time: float, no_space: bool = False) -> str:
     time_str = " ".join(res)
 
     return time_str
+
+
+def download_file(url: str, file_path: str= ""):
+    """download_file function is a shortcut function to download a file from a URL
+
+    Args:
+        url (str): URL to download the file from
+        file_path (str): File path to save the downloaded file
+    """
+    # Check if the URL is working
+    check(is_working_url(url), msg=f"URL {url} is not working")
+    
+    # If the file path is not provided, use the current directory
+    if emptystring(file_path):
+        s = str(url).replace("https://", "").replace("http://", "")
+        s = s.split("/")
+        file_path = s[-1]
+    
+    # Download the file
+    with open(file_path, "wb") as f:
+        response = requests.get(url)
+        f.write(response.content)
+    
+    info(f"File downloaded from {url} and saved to {file_path}")
