@@ -721,9 +721,12 @@ def copyfile(a: str, b: str) -> None:
     checkfile(a, msg=f"Copying {a} to {b} failed")
     a2 = relative2absolute_path(a)
     b2 = relative2absolute_path(b)
+    if dir_exists(b2):
+        f,b,e = folder_name_ext(a2)
+        b2 = join(b2, f"{b}.{e}")
     check(not(a2 == b2), msg=f"Source and destination are the same: {a2}")
-    shutil.copy2(a, b)
-    checkfile(b, msg=f"File {a} not copied into {b}")
+    shutil.copy2(a2, b2)
+    checkfile(b2, msg=f"File {a} was not copied into {b}")
 
 
 def remove_directory(folder_path: str) -> None:
