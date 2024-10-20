@@ -55,7 +55,8 @@ __all__ = [
     "is_working_url",
     "asciistring",
     "zip_folder",
-    "time2str"
+    "time2str",
+    "download_file,
 ]
 
 # Import all the necessary functions from the main module
@@ -100,5 +101,6 @@ from .main import (
     is_working_url,
     asciistring,
     zip_folder,
-    time2str
+    time2str,
+    download_file
 )
