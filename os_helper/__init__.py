@@ -57,6 +57,8 @@ __all__ = [
     "zip_folder",
     "time2str",
     "download_file",
+    "tic",
+    "toc",
 ]
 
 # Import all the necessary functions from the main module
@@ -102,5 +104,7 @@ from .main import (
     asciistring,
     zip_folder,
     time2str,
-    download_file
+    download_file,
+    tic,
+    toc,
 )
