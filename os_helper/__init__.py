@@ -59,6 +59,7 @@ __all__ = [
     "download_file",
     "tic",
     "toc",
+    "join",
 ]
 
 # Import all the necessary functions from the main module
@@ -107,4 +108,5 @@ from .main import (
     download_file,
     tic,
     toc,
+   join,
 )
