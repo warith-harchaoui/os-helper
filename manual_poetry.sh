@@ -10,7 +10,7 @@ set -e  # Exit the script immediately on any command failure
 
 # Configurations
 PROJECT_NAME="os-helper"
-PYTHON_VERSION="3.13"
+PYTHON_VERSION="3.12"
 ENV="env4osh"
 DEPENDENCIES="requests python-dotenv numpy pandas pyyaml validators"
 DESCRIPTION="This module provides a collection of utility functions aimed at simplifying various common programming tasks, including file handling, system operations, string manipulation, folder management, and more. The functions are optimized for cross-platform compatibility and robust error handling."
@@ -22,6 +22,7 @@ source ~/.zshrc
 # Conda environment setup (optional, use only if Conda is required for some reason)
 if conda info --envs | grep -q "^$ENV"; then
     echo "Environment $ENV already exists, removing it..."
+    conda deactivate
     conda deactivate
     conda remove --name $ENV --all -y
 fi
