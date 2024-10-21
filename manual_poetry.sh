@@ -56,6 +56,10 @@ poetry install
 poetry2setup > setup.py
 poetry export -f requirements.txt --output requirements.txt --without-hashes
 
+# replace git commit hash with @main
+sed -i '' 's/@[a-f0-9]\{7,40\}/@main/g' requirements.txt
+
+
 # Create environment.yml for conda users (optional)
 cat <<EOL > environment.yml
 name: $ENV
