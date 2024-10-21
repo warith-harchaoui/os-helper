@@ -1,30 +1,20 @@
 [tool.poetry]
 name = "os-helper"
-version = "1.0.0"
-description = "Utility functions for system operations"
-authors = ["Warith Harchaoui <warith.harchaoui@gmail.com>", "Mohamed Chelali <mohamed.t.chelali[at]gmail.fr>", "Bachir Zerroug <bachir.zerroug.ai@gmail.com>"]
+version = "0.1.0"
+description = "This module provides a collection of utility functions aimed at simplifying various common programming tasks, including file handling, system operations, string manipulation, folder management, and more. The functions are optimized for cross-platform compatibility and robust error handling."
+authors = ["Warith Harchaoui <warith.harchaoui@gmail.com>, Mohamed Chelali <mohamed.t.chelali@gmail.com>, Bachir Zerroug <bzerroug@gmail.com>"]
 readme = "README.md"
-license = "BSD-2-Clause"  # Updated license to BSD-2-Clause
-homepage = "https://github.com/warith-harchaoui/os-helper"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4.0"
-numpy = "^1.21"
-pyyaml = "^6.0"
-psutil = "^5.8"
-pandas = "^1.3"
-pywin32 = { version = "^301", markers = "platform_system == 'Windows'" }
+python = "^3.13"
 requests = "^2.32.3"
-validators = "^0.34"
 python-dotenv = "^1.0.1"
+numpy = "^2.1.2"
+pandas = "^2.2.3"
+pyyaml = "^6.0.2"
+validators = "^0.34.0"
 
-[tool.poetry.dev-dependencies]
-pytest = "^6.2"
-pytest-cov = "^3.0"
-black = "^22.1"
-isort = "^5.10"
-flake8 = "^4.0"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
