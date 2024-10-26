@@ -59,7 +59,7 @@ import validators
 import zipfile
 import unicodedata
 
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 import os
 import glob
 from dotenv import load_dotenv
@@ -1539,3 +1539,38 @@ def download_file(url: str, file_path: str= ""):
         f.write(response.content)
     
     info(f"File downloaded from {url} and saved to {file_path}")
+
+
+def get_user_ip() -> Dict[str, Optional[str]]:
+    """
+    Fetches the user's public IP addresses in both IPv4 and IPv6 formats, if available.
+
+    This function attempts to retrieve the user's IP addresses using the `ipify` API.
+    It tries separate endpoints for IPv4 and IPv6 and returns a dictionary containing
+    both addresses, or `None` if an address could not be retrieved.
+
+    Returns
+    -------
+    dict of {str: Optional[str]}
+        A dictionary with the keys "ipv4" and "ipv6". The values are either the IP addresses
+        as strings or `None` if the address could not be fetched.
+    """
+    
+    # Initialize a dictionary to store both IPv4 and IPv6 addresses
+    ip_address = {"ipv4": None, "ipv6": None}
+
+    # Try to get the IPv4 address
+    try:
+        response_v4 = requests.get("https://api.ipify.org?format=json")
+        ip_address["ipv4"] = response_v4.json().get("ip")
+    except (requests.RequestException, KeyError):
+        ip_address["ipv4"] = None  # Set to None if the request or dict access fails
+
+    # Try to get the IPv6 address
+    try:
+        response_v6 = requests.get("https://api64.ipify.org?format=json")
+        ip_address["ipv6"] = response_v6.json().get("ip")
+    except (requests.RequestException, KeyError):
+        ip_address["ipv6"] = None  # Set to None if the request or dict access fails
+
+    return ip_address
