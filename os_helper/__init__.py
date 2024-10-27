@@ -110,5 +110,8 @@ from .main import (
     tic,
     toc,
     join,
+)
+
+from .progress_bar import (
     ProgressTask,
 )
