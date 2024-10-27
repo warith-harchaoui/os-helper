@@ -26,7 +26,7 @@ import logging
 from typing import Callable, Optional, Union
 from functools import partial
 from tqdm import tqdm
-import .main as osh
+import main as osh
 
 # Import stqdm and streamlit if available
 try:
@@ -81,9 +81,13 @@ class ProgressTask:
                  leave: bool = True, 
                  smoothing: float = 0.3, 
                  bar_format: str = "{l_bar}{bar}| {n_fmt}/{total_fmt}", 
-                 progress_threshold: float = 0.9):
-        if not (0 < progress_threshold < 1):
-            osh.error("progress_threshold must be between 0 and 1.")
+                 progress_threshold: float = None):
+
+        if progress_threshold is None:
+            self.progress_threshold = 1.0 * (total_steps - 1.0) / total_steps
+
+        if not (0 < self.progress_threshold < 1):
+            osh.error(f"progress_threshold must be between 0 and 1: {self.progress_threshold}")
         
         # Task properties and configuration
         self.task = task
@@ -95,8 +99,7 @@ class ProgressTask:
         self.leave = leave
         self.smoothing = smoothing
         self.bar_format = bar_format
-        self.progress_threshold = progress_threshold
-        self.completion_threshold = 1 - progress_threshold  # Automatically calculate completion threshold
+        self.completion_threshold = 1.0 - self.progress_threshold 
 
     def _run_progress_bar(self, progress_bar: Union[tqdm, Callable[..., None]]) -> None:
         """
@@ -132,17 +135,26 @@ class ProgressTask:
 
     def _run_task(self) -> None:
         """
-        Executes the actual task, silencing its output.
+        Executes the actual task, silencing only the task output, while leaving tqdm progress bar visible.
         """
         self.task_complete = False  # Flag to indicate task completion
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            logging_level = logging.getLogger().level
-            logging.getLogger().setLevel(logging.CRITICAL + 1)
-            try:
-                self.task()
-            finally:
-                logging.getLogger().setLevel(logging_level)
-                self.task_complete = True  # Set task completion flag
+        
+        # # Use contextlib to suppress only task-specific stdout/stderr output
+        # with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        #     # Temporarily set logging level to suppress logs during task execution
+        #     logging_level = logging.getLogger().level
+        #     logging.getLogger().setLevel(logging.CRITICAL + 1)
+        #     try:
+        #         self.task()
+        #     finally:
+        #         # Restore original logging level
+        #         logging.getLogger().setLevel(logging_level)
+        #         self.task_complete = True  # Set task completion flag
+
+        try:
+            self.task()
+        finally:
+            self.task_complete = True
 
     def run_with_tqdm(self) -> None:
         """
@@ -218,7 +230,7 @@ def my_custom_task(arg1: str, arg2: str) -> None:
     print(f"Running task with arguments: {arg1}, {arg2}")
     logging.info("This is an info log message.")
     logging.warning("This is a warning message.")
-    time.sleep(5)
+    time.sleep(20)
 
 
 if __name__ == "__main__":
@@ -226,9 +238,9 @@ if __name__ == "__main__":
     task_with_args = partial(my_custom_task, arg1="Hello", arg2="World")
 
     # Initialize the ProgressTask class with adjustable progress threshold
-    progress_task = ProgressTask(task=task_with_args, estimated_duration=5, total_steps=50, progress_threshold=0.85)
+    progress_task = ProgressTask(task=task_with_args, estimated_duration=20, total_steps=50)
 
     # Choose one of the following to run:
-    # progress_task.run_with_tqdm()        # For console-only progress bar
+    progress_task.run_with_tqdm()        # For console-only progress bar
     # progress_task.run_with_stqdm()       # For Streamlit-only progress bar
     # progress_task.run_with_both()        # For both console and Streamlit progress bars
