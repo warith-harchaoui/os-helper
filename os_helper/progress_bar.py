@@ -26,7 +26,7 @@ import logging
 from typing import Callable, Optional, Union
 from functools import partial
 from tqdm import tqdm
-import main as osh
+import os_helper as osh
 
 # Import stqdm and streamlit if available
 try:
