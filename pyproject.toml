@@ -6,14 +6,14 @@ authors = ["Warith Harchaoui <warith.harchaoui@gmail.com>, Mohamed Chelali <moha
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.10"
 requests = "^2.32.3"
 python-dotenv = "^1.0.1"
 numpy = "^2.1.2"
 pandas = "^2.2.3"
 pyyaml = "^6.0.2"
 validators = "^0.34.0"
-tqdm = "^4.66.5"
+tqdm = "^4.66.6"
 
 
 [build-system]

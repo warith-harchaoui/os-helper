@@ -13,7 +13,7 @@ install_requires = \
  'python-dotenv>=1.0.1,<2.0.0',
  'pyyaml>=6.0.2,<7.0.0',
  'requests>=2.32.3,<3.0.0',
- 'tqdm>=4.66.5,<5.0.0',
+ 'tqdm>=4.66.6,<5.0.0',
  'validators>=0.34.0,<0.35.0']
 
 setup_kwargs = {
@@ -29,7 +29,7 @@ setup_kwargs = {
     'packages': packages,
     'package_data': package_data,
     'install_requires': install_requires,
-    'python_requires': '>=3.12,<4.0',
+    'python_requires': '>=3.10,<4.0',
 }
 
 
