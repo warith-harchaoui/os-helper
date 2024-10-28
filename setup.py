@@ -13,6 +13,7 @@ install_requires = \
  'python-dotenv>=1.0.1,<2.0.0',
  'pyyaml>=6.0.2,<7.0.0',
  'requests>=2.32.3,<3.0.0',
+ 'setuptools>=75.2.0,<76.0.0',
  'tqdm>=4.66.5,<5.0.0',
  'validators>=0.34.0,<0.35.0']
 
