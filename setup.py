@@ -8,7 +8,7 @@ package_data = \
 {'': ['*']}
 
 install_requires = \
-['numpy>=2.1.2,<3.0.0',
+['numpy>=2.0.0,<2.1.0',
  'pandas>=2.2.3,<3.0.0',
  'python-dotenv>=1.0.1,<2.0.0',
  'pyyaml>=6.0.2,<7.0.0',

@@ -12,7 +12,16 @@ set -e  # Exit the script immediately on any command failure
 PROJECT_NAME="os-helper"
 PYTHON_VERSION="3.10"
 ENV="env4osh"
-DEPENDENCIES="requests python-dotenv numpy pandas pyyaml validators tqdm"
+
+DEPENDENCIES=(
+    requests
+    python-dotenv
+    "numpy>=2.0.0,<2.1.0"
+    pandas
+    pyyaml
+    validators
+    tqdm
+)
 DESCRIPTION="This module provides a collection of utility functions aimed at simplifying various common programming tasks, including file handling, system operations, string manipulation, folder management, and more. The functions are optimized for cross-platform compatibility and robust error handling."
 AUTHORS="Warith Harchaoui <warith.harchaoui@gmail.com>, Mohamed Chelali <mohamed.t.chelali@gmail.com>, Bachir Zerroug <bzerroug@gmail.com>"
 
@@ -45,7 +54,7 @@ poetry init --name $PROJECT_NAME --description "$DESCRIPTION" --author "$AUTHORS
 DEP_ARRAY=(${=DEPENDENCIES})
 
 # Loop through each dependency and add it with poetry
-for dep in "${DEP_ARRAY[@]}"; do
+for dep in "${DEPENDENCIES[@]}"; do
     echo "Adding $dep..."
     poetry add "$dep"
 done
