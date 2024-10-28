@@ -12,7 +12,7 @@ set -e  # Exit the script immediately on any command failure
 PROJECT_NAME="os-helper"
 PYTHON_VERSION="3.12"
 ENV="env4osh"
-DEPENDENCIES="requests python-dotenv numpy pandas pyyaml validators tqdm stqdm"
+DEPENDENCIES="requests python-dotenv numpy pandas pyyaml validators tqdm"
 DESCRIPTION="This module provides a collection of utility functions aimed at simplifying various common programming tasks, including file handling, system operations, string manipulation, folder management, and more. The functions are optimized for cross-platform compatibility and robust error handling."
 AUTHORS="Warith Harchaoui <warith.harchaoui@gmail.com>, Mohamed Chelali <mohamed.t.chelali@gmail.com>, Bachir Zerroug <bzerroug@gmail.com>"
 

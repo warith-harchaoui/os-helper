@@ -60,7 +60,7 @@ __all__ = [
     "tic",
     "toc",
     "join",
-    "ProgressTask",
+    # "ProgressTask",
 ]
 
 # Import all the necessary functions from the main module
@@ -112,6 +112,6 @@ from .main import (
     join,
 )
 
-from .progress_bar import (
-    ProgressTask,
-)
+# from .progress_bar import (
+#     ProgressTask,
+# )
