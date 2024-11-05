@@ -28,9 +28,10 @@ We can recommand python environments. Check this link if you don't know how
 
 [🥸 Tech tips](https://harchaoui.org/warith/4ml/#install)
 
+We still discuss between different python package managers and try to support as much as possible
 
 ```bash
-pip install --force-reinstall --no-cache-dir git+https://github.com/warith-harchaoui/os-helper.git@main
+pip install --force-reinstall --no-cache-dir git+https://github.com/warith-harchaoui/os-helper.git@v1.0.0
 ```
 
 ## Usage
