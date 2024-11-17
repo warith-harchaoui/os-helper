@@ -197,7 +197,7 @@ print(safe_string)  # Output: 'Special-File-2024'
 # Ensure the result is suitable for filenames or URLs
 safe_string = asciistring("Café@2024.txt")
 print(safe_string)  # Output: 'cafe-2024-txt'
-
+```
 
 ## Temporary Resources
 
