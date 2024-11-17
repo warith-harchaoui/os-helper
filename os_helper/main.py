@@ -65,6 +65,8 @@ import glob
 from dotenv import load_dotenv
 
 import time
+import re
+
 
 
 # Default logging setup
@@ -597,39 +599,13 @@ def recursive_glob(root_dir: str, pattern: str) -> list:
     return matches
 
 
-def os_path_constructor(ell: list) -> str:
-    """
-    Construct a path from a list of path elements.
-
-    Parameters
-    ----------
-    ell : list
-        List of path components.
-
-    Returns
-    -------
-    str
-        The constructed absolute path.
-
-    Example
-    -------
-    >>> os_path_constructor(["/home/user", "folder", "file.txt"])
-    '/home/user/folder/file.txt'
-    """
-
-    raw_path = os.path.join(*ell)  # Join components using the platform-specific separator
-    normalized_path = os.path.normpath(raw_path)  # Normalize the resulting path
-
-    return relative2absolute_path(normalized_path, checkpath=False)
-
-
-def join(*args) -> str:
+def join(*args: str) -> str:
     """
     Join multiple path elements into a single path and convert it to an absolute path.
 
     Parameters
     ----------
-    *args : strings
+    *args : str
         Path elements to join.
 
     Returns
@@ -642,10 +618,40 @@ def join(*args) -> str:
     >>> join("folder1", "subfolder2", "file.txt")
     '/absolute/path/to/folder1/subfolder2/file.txt'
     """
-    raw_path = os.path.join(*args)  # Join components using the platform-specific separator
-    normalized_path = os.path.normpath(raw_path)  # Normalize the resulting path
+    # Join the provided path components and normalize the resulting path
+    normalized_path = os.path.normpath(os.path.join(*args))
 
+    # Convert to an absolute path
     return relative2absolute_path(normalized_path, checkpath=False)
+
+
+def os_path_constructor(ell: List[str]) -> str:
+    """
+    Construct a path from a list of path elements.
+    
+    Note:
+    This function is retained for legacy support. 
+    It is recommended to use `join` instead by passing individual arguments instead of a list.
+
+    Parameters
+    ----------
+    ell : list of str
+        List of path components.
+
+    Returns
+    -------
+    str
+        The constructed absolute path.
+
+    Example
+    -------
+    >>> os_path_constructor(["/home/user", "folder", "file.txt"])
+    '/home/user/folder/file.txt'
+    """
+    # Delegate functionality to `join` with unpacked list elements
+    return join(*ell)
+
+
 
 def size_file(filepath: str) -> int:
     """
@@ -1391,6 +1397,8 @@ def is_working_url(url: str) -> bool:
     except requests.RequestException:
         return False  # Return False if there is an exception (e.g., timeout, network error)
 
+
+
 def asciistring(input_string: str, replacement_char: str = "-", lower: bool = True, allow_digits: bool = True) -> str:
     """
     Converts a given string into a "safe" ASCII string, replacing accented and non-ASCII characters with their ASCII equivalents.
@@ -1426,7 +1434,7 @@ def asciistring(input_string: str, replacement_char: str = "-", lower: bool = Tr
     # Normalize Unicode characters to decompose accents (e.g., é -> e + ´)
     normalized_string = unicodedata.normalize('NFKD', input_string)
     
-    # Only keep ASCII characters and replace non-ASCII with the replacement_char
+    # Define the set of allowed characters
     allowed_chars = string.ascii_letters
     if allow_digits:
         allowed_chars += string.digits
@@ -1435,19 +1443,18 @@ def asciistring(input_string: str, replacement_char: str = "-", lower: bool = Tr
     if lower:
         normalized_string = normalized_string.lower()
 
-    # Create the output string
-    result = ''.join(c if c in allowed_chars else replacement_char for c in normalized_string if ord(c) < 128)
+    # Replace disallowed characters with the replacement_char
+    result = ''.join(
+        c if c in allowed_chars and ord(c) < 128 else replacement_char
+        for c in normalized_string
+    )
 
-    # Ensure there are no multiple replacement characters in a row
-    change = True
-    while change:
-        change = False
-        old_result = str(result)
-        result = result.replace(replacement_char * 2, replacement_char)
-        change = old_result != result
-    
-    # Strip any leading/trailing replacement characters
+    # Use regex to replace multiple consecutive replacement characters with a single one
+    result = re.sub(f'{re.escape(replacement_char)}+', replacement_char, result)
+
+    # Strip any leading or trailing replacement characters
     return result.strip(replacement_char)
+
 
 
 def zip_folder(folder_path: str, zip_file_path: str = ""):
