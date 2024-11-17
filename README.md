@@ -20,6 +20,10 @@ It offers a set of tools to simplify common system operations, file handling, an
 - File hashing and string hashing utilities
 - Process management and execution
 
+# Documentation
+
+[👩‍💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc)
+
 # Installation
 
 ## Install Package
