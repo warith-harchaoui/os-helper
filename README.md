@@ -42,6 +42,8 @@ pip install --force-reinstall --no-cache-dir git+https://github.com/warith-harch
 
 Below are examples demonstrating how to use various features of the `os_helper` library. Make sure to import the library as `osh` before starting.
 
+Please check out the [Examples](EXAMPLES.md) for many more examples
+
 ```python
 import os_helper as osh
 ```
