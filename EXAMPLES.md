@@ -34,7 +34,7 @@ pip install -r requirements.txt
 Use the following functions to determine the platform your script is running on:
 
 ```python
-from os_helper.main import windows, linux, macos, unix
+from os_helper import windows, linux, macos, unix
 
 # Check if the system is Windows
 print(windows())  # True if Windows
@@ -54,7 +54,7 @@ print(unix())  # True if Linux or macOS
 ### Check File or Directory Existence
 
 ```python
-from os_helper.main import file_exists, dir_exists
+from os_helper import file_exists, dir_exists
 
 # Check if a file exists
 print(file_exists("example.txt"))  # True if the file exists
@@ -66,7 +66,7 @@ print(dir_exists("/path/to/folder", check_empty=True))  # True if the directory 
 ### Manage Directories
 
 ```python
-from os_helper.main import make_directory, remove_directory
+from os_helper import make_directory, remove_directory
 
 # Create a directory
 make_directory("/path/to/new_folder")
@@ -78,7 +78,7 @@ remove_directory("/path/to/new_folder")
 ### File Size and Path Operations
 
 ```python
-from os_helper.main import size_file, absolute2relative_path, relative2absolute_path
+from os_helper import size_file, absolute2relative_path, relative2absolute_path
 
 # Get the size of a file
 print(size_file("example.txt"))  # File size in bytes
@@ -93,7 +93,7 @@ print(relative2absolute_path("relative/path"))  # '/absolute/path/to/relative/pa
 ### Describe Folder Contents
 
 ```python
-from os_helper.main import folder_description
+from os_helper import folder_description
 
 # Describe the contents of a folder
 description = folder_description(
@@ -118,7 +118,7 @@ print(description)
 ### Decompose File/Folder Path
 
 ```python
-from os_helper.main import folder_name_ext
+from os_helper import folder_name_ext
 
 # Decompose a file path into folder, base name, and extension
 result = folder_name_ext("/path/to/file.tar.gz")
@@ -140,7 +140,7 @@ print(result)
 ### ASCII String Conversion
 
 ```python
-from os_helper.main import asciistring
+from os_helper import asciistring
 
 # Convert a string to a safe ASCII representation
 print(asciistring("Café-Con-Leche!", replacement_char="_"))  # 'cafe_con_leche'
@@ -149,7 +149,7 @@ print(asciistring("Café-Con-Leche!", replacement_char="_"))  # 'cafe_con_leche'
 ## Temporary Resources
 
 ```python
-from os_helper.main import temporary_filename, temporary_folder
+from os_helper import temporary_filename, temporary_folder
 
 # Create a temporary file
 with temporary_filename(suffix=".txt") as temp_file:
@@ -163,7 +163,7 @@ with temporary_folder(prefix="tempdir") as temp_dir:
 ## System Commands
 
 ```python
-from os_helper.main import system
+from os_helper import system
 
 # Run a system command
 output = system("ls -la")
@@ -174,7 +174,7 @@ print(output['err'])  # Command error (if any)
 ## Networking
 
 ```python
-from os_helper.main import is_working_url, get_user_ip
+from os_helper import is_working_url, get_user_ip
 
 # Check if a URL is valid and reachable
 print(is_working_url("https://www.google.com"))  # True if reachable
@@ -188,7 +188,7 @@ print(get_user_ip())  # {'ipv4': 'x.x.x.x', 'ipv6': 'y:y:y:y'}
 ### Hashing Strings, Files, and Folders
 
 ```python
-from os_helper.main import hash_string, hashfile, hashfolder
+from os_helper import hash_string, hashfile, hashfolder
 
 # Generate a hash for a string
 print(hash_string("example"))  # String hash
@@ -207,7 +207,7 @@ print(hashfolder("/path/to/folder"))  # Folder hash
 In matlab fashion 
 
 ```python
-from os_helper.main import tic, toc
+from os_helper import tic, toc
 
 # Start a timer
 start_time = tic()
@@ -223,7 +223,7 @@ print(f"Elapsed time: {elapsed_time:.2f} seconds")
 ### Retrieve Current Timestamp
 
 ```python
-from os_helper.main import now_string
+from os_helper import now_string
 
 # Get the current timestamp as a formatted string
 print(now_string("log"))  # 'YYYY/MM/DD-HH:MM:SS'
@@ -235,7 +235,7 @@ print(now_string("log"))  # 'YYYY/MM/DD-HH:MM:SS'
 ### Verbosity and logging
 
 ```python
-from os_helper.main import verbosity, info, error
+from os_helper import verbosity, info, error
 
 # Set verbosity level
 verbosity(2)  # Set to info level
@@ -250,9 +250,13 @@ error("Critical failure", error_code=2)
 ### Download file
 
 ```python
-from os_helper.main import download_file
+from os_helper import download_file, file_exists
 
 # Download a file from a URL
 download_file("https://example.com/file.txt", "downloaded_file.txt")
-print("File downloaded successfully.")
+
+if file_exists("downloaded_file.txt"):
+    print("File downloaded successfully.")
+else:
+    print("File download failed")
 ```
