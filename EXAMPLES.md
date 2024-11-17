@@ -154,6 +154,36 @@ print(hashfile("example.txt"))  # File hash
 print(hashfolder("/path/to/folder"))  # Folder hash
 ```
 
+## Timer Utilities
+
+### Time Measurements
+
+In matlab fashion 
+
+```python
+from os_helper.main import tic, toc
+
+# Start a timer
+start_time = tic()
+
+# Perform some operations
+result = sum(range(1000000))
+
+# Stop the timer and get elapsed time
+elapsed_time = toc(start_time)
+print(f"Elapsed time: {elapsed_time:.2f} seconds")
+```
+
+### Retrieve Current Timestamp
+
+```python
+from os_helper.main import now_string
+
+# Get the current timestamp as a formatted string
+print(now_string("log"))  # 'YYYY/MM/DD-HH:MM:SS'
+```
+
+
 ## Miscellaneous Utilities
 
 ### Verbosity and logging
@@ -168,14 +198,15 @@ verbosity(2)  # Set to info level
 info("Process completed successfully.")
 
 # Log error and terminate
-# error("Critical failure", error_code=2)
+error("Critical failure", error_code=2)
 ```
 
-## Retrieve Current Timestamp
+### Download file
 
 ```python
-from os_helper.main import now_string
+from os_helper.main import download_file
 
-# Get the current timestamp as a formatted string
-print(now_string("log"))  # 'YYYY/MM/DD-HH:MM:SS'
+# Download a file from a URL
+download_file("https://example.com/file.txt", "downloaded_file.txt")
+print("File downloaded successfully.")
 ```
