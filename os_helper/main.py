@@ -1065,7 +1065,7 @@ def format_size(size: int) -> str:
     else:
         return "%d B" % size
     
-def folder_description(path: str, recursive: bool = True, index_html: bool = True, with_size:bool = True) -> dict:
+def folder_description(path: str, recursive: bool = True, index_html: bool = True, with_size: bool = True) -> dict:
     """
     Describe the contents of a folder, optionally recursively, and generate an HTML index.
 
@@ -1088,26 +1088,59 @@ def folder_description(path: str, recursive: bool = True, index_html: bool = Tru
     Example
     -------
     >>> folder_description("/path/to/folder")
-    {'file1.txt': 1024, 'subfolder': None}
+    {'file1.txt': 1024, 'subfolder/file2.txt': 2048}
     """
-    check(dir_exists(path), f"Folder {path} cannot be described because it does not exist")  # Ensure folder exists
+    check(dir_exists(path), f"Folder {path} cannot be described because it does not exist")
 
     res = {}
+
     for root, dirs, files in os.walk(path):
+        if not recursive and root != path:
+            break
+
         for file in files:
             if not file.startswith("."):  # Skip hidden files
-                res[file] = size_file(os.path.join(root, file))  # Get file size
+                file_path = os.path.join(root, file)
+                rel_path = os.path.relpath(file_path, path)  # Relative path for output
+                res[rel_path] = size_file(file_path)  # Get file size
 
     # Optionally generate an HTML index of the folder
     if index_html:
         index_html_file = os_path_constructor([path, "index.html"])
         with open(index_html_file, mode="wt") as fout:
-            fout.write(f'<html><body><h1>Folder: {path}</h1>\n')
+            # Bootstrap-styled HTML
+            fout.write(f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Folder Index</title>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+            </head>
+            <body class="bg-light">
+                <div class="container mt-4">
+                    <h1 class="mb-4">Folder: {path}</h1>
+                    <table class="table table-striped">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>File</th>
+                                {"<th>Size</th>" if with_size else ""}
+                            </tr>
+                        </thead>
+                        <tbody>
+            """)
             for k, v in sorted(res.items()):
-                s = format_size(v)
-                s = f" ({s})" if with_size else ""
-                fout.write(f'<a href="{k}">{k}</a>{s}</br>\n')
-            fout.write("</body></html>")
+                escaped_name = k.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
+                size_info = f"<td>{format_size(v)}</td>" if with_size else ""
+                fout.write(f'<tr><td><a href="{escaped_name}">{escaped_name}</a></td>{size_info}</tr>\n')
+            fout.write("""
+                        </tbody>
+                    </table>
+                </div>
+            </body>
+            </html>
+            """)
         info(f"HTML index generated: {index_html_file}")
 
     # Save the folder description as a JSON file
@@ -1117,6 +1150,7 @@ def folder_description(path: str, recursive: bool = True, index_html: bool = Tru
     info(f"Description generated: {description_file}")
 
     return res
+
 
 
 

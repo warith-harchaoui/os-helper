@@ -147,10 +147,10 @@ from os_helper.main import hash_string, hashfile, hashfolder
 # Generate a hash for a string
 print(hash_string("example"))  # String hash
 
-# Generate a hash for a file
+# Generate a hash for a file (taking into account content)
 print(hashfile("example.txt"))  # File hash
 
-# Generate a hash for a folder
+# Generate a hash for a folder (recursively taking into account content)
 print(hashfolder("/path/to/folder"))  # Folder hash
 ```
 
