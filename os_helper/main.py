@@ -616,7 +616,11 @@ def os_path_constructor(ell: list) -> str:
     >>> os_path_constructor(["/home/user", "folder", "file.txt"])
     '/home/user/folder/file.txt'
     """
-    return relative2absolute_path(os.path.join(*ell), checkpath=False)
+
+    raw_path = os.path.join(*ell)  # Join components using the platform-specific separator
+    normalized_path = os.path.normpath(raw_path)  # Normalize the resulting path
+
+    return relative2absolute_path(normalized_path, checkpath=False)
 
 
 def join(*args) -> str:
@@ -638,8 +642,10 @@ def join(*args) -> str:
     >>> join("folder1", "subfolder2", "file.txt")
     '/absolute/path/to/folder1/subfolder2/file.txt'
     """
-    return relative2absolute_path(os.path.join(*args), checkpath=False)
+    raw_path = os.path.join(*args)  # Join components using the platform-specific separator
+    normalized_path = os.path.normpath(raw_path)  # Normalize the resulting path
 
+    return relative2absolute_path(normalized_path, checkpath=False)
 
 def size_file(filepath: str) -> int:
     """
