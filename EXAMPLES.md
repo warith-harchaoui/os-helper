@@ -63,7 +63,7 @@ print(file_exists("example.txt"))  # True if the file exists
 print(dir_exists("/path/to/folder", check_empty=True))  # True if the directory is non-empty
 ```
 
-## Manage Directories
+### Manage Directories
 
 ```python
 from os_helper.main import make_directory, remove_directory
@@ -75,7 +75,7 @@ make_directory("/path/to/new_folder")
 remove_directory("/path/to/new_folder")
 ```
 
-## File Size and Path Operations
+### File Size and Path Operations
 
 ```python
 from os_helper.main import size_file, absolute2relative_path, relative2absolute_path
@@ -88,6 +88,52 @@ print(absolute2relative_path("/home/user/project/file.txt", "/home/user"))  # 'p
 
 # Convert a relative path to an absolute path
 print(relative2absolute_path("relative/path"))  # '/absolute/path/to/relative/path'
+```
+
+### Describe Folder Contents
+
+```python
+from os_helper.main import folder_description
+
+# Describe the contents of a folder
+description = folder_description(
+    "/path/to/folder", 
+    recursive=True, 
+    index_html=True, 
+    with_size=True
+)
+
+# Output: Dictionary with file names and their sizes
+print(description)
+# {
+#     'file1.txt': 1024,
+#     'subfolder/file2.txt': 2097152
+# }
+
+# An HTML index will be generated in /path/to/folder/index.html
+# A JSON description will be saved in /path/to/folder/description.json
+```
+
+
+### Decompose File/Folder Path
+
+```python
+from os_helper.main import folder_name_ext
+
+# Decompose a file path into folder, base name, and extension
+result = folder_name_ext("/path/to/file.tar.gz")
+print(result)
+# ('/path/to', 'file', 'tar.gz')
+
+# Handle folders
+result = folder_name_ext("/path/to/folder")
+print(result)
+# ('/path/to', 'folder', '')
+
+# Example with no extension
+result = folder_name_ext("/path/to/file")
+print(result)
+# ('/path/to', 'file', '')
 ```
 
 ## String Utilities
