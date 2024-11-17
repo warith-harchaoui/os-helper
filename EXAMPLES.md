@@ -466,18 +466,7 @@ else:
     print("File download failed.")
 ```
 
-### Generate Random File Names and Temporary Resources
 
-You can use temporary_filename to create temporary files for secure and isolated operations.
-
-```python
-from os_helper import temporary_filename
-
-# Create a temporary file
-with temporary_filename(suffix=".txt") as temp_file:
-    print(f"Temporary file created: {temp_file}")
-    # Use the file as needed (e.g., write some data)
-```
 
 ### Open Files with Default Applications
 
