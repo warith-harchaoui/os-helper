@@ -1,0 +1,8 @@
+name: env4osh
+channels:
+  - defaults
+dependencies:
+  - python>=3.10,<3.14
+  - pip
+  - pip:
+    - -r requirements.txt

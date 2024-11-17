@@ -14,7 +14,6 @@ logs/
 # json and yaml
 *.json
 *.yaml
-*.yml
 
 # Distribution / packaging
 .Python
