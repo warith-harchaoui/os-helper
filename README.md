@@ -24,6 +24,8 @@ It offers a set of tools to simplify common system operations, file handling, an
 
 [👩‍💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc)
 
+[📋 Examples](EXAMPLES.md)
+
 # Installation
 
 ## Install Package
@@ -42,7 +44,6 @@ pip install --force-reinstall --no-cache-dir git+https://github.com/warith-harch
 
 Below are examples demonstrating how to use various features of the `os_helper` library. Make sure to import the library as `osh` before starting.
 
-Please check out the [Examples](EXAMPLES.md) for many more examples
 
 ```python
 import os_helper as osh
