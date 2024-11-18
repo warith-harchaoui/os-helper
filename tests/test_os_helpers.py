@@ -18,6 +18,7 @@ from os_helper import (
     os_path_constructor,
     get_config,
     hashfolder,
+    join,
 )
 
 # Define a test folder to isolate test artifacts
@@ -217,3 +218,32 @@ def test_hashfolder_content():
         f.write("Modified File 1 content")  # Modify a file
     modified_hash = hashfolder(test_folder, hash_content=True)  # Recompute hash
     assert initial_hash != modified_hash  # Verify the hash changes
+
+def test_temporary_folder():
+    """
+    Test the `temporary_folder` function.
+
+    - Creates a temporary folder and verifies its existence.
+    - Creates a file in the folder and verifies it exists.
+    - Verifies the folder is deleted after the context manager exits.
+    """
+    with temporary_folder() as temp_folder:
+        assert dir_exists(temp_folder)  # Verify the temporary folder exists
+        filename = join(temp_folder, "test.txt")
+        with open(filename, "wt") as f:
+            f.write("Temporary file content")
+        assert file_exists(filename)
+    time.sleep(0.1)  # Wait for the context manager to exit
+    assert not dir_exists(temp_folder)  # Verify the temporary folder is deleted
+    
+def temporary_filename():
+    """
+    Test the `temporary_filename` function.
+
+    - Creates a temporary file and verifies its existence.
+    - Verifies the file is deleted after the context manager exits.
+    """
+    with temporary_filename() as temp_file:
+        assert file_exists(temp_file)  # Verify the temporary file exists
+    time.sleep(0.1)  # Wait for the context manager to exit
+    assert not file_exists(temp_file)  # Verify the temporary file is deleted
