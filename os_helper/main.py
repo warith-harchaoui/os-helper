@@ -1583,6 +1583,94 @@ def time2str(time: float, no_space: bool = False) -> str:
     return time_str
 
 
+def str2time(input_string: str) -> float:
+    """
+    Convert a string to a time in seconds.
+
+    Parameters
+    ----------
+    input_string : str
+        String to convert to time.
+
+    Returns
+    -------
+    float
+        Time in seconds.
+
+    Examples
+    --------
+    >>> str2time("1:30:00")
+    5400.0
+    >>> str2time("1:30")
+    90.0
+    >>> str2time("1 hr 30 min")
+    5400.0
+    >>> str2time("1 hour 30 minutes")
+    5400.0
+    >>> str2time("120")
+    120.0
+    """
+    if not input_string or not input_string.strip():
+        return 0.0
+
+    input_string = input_string.lower().strip()
+    
+    filled = False
+    time_in_seconds = 0.0
+
+    try:
+        # Check for HH:MM:SS or MM:SS formats
+        if ":" in input_string:
+            parts = list(map(lambda s: float(s.strip()), input_string.split(":")))
+            if len(parts) == 3:  # HH:MM:SS
+                filled = True
+                return parts[0] * 3600 + parts[1] * 60 + parts[2]
+            elif len(parts) == 2:  # MM:SS
+                filled = True
+                return parts[0] * 60 + parts[1]
+            osh.error(f"Invalid time: '{input_string}', Error: ':' separator with {len(parts)} parts instead of 2 or 3")
+    except Exception as e:
+        osh.error(f"Invalid time: '{input_string}', Error: {e}")
+        
+    # Check for natural language (e.g., "1 hour 30 minutes")
+    patterns = {
+        # Matches hours in various formats: '1 hour', '2 hours', '1hr', '3hrs', '4h'
+        r"(\d+(\.\d+)?)\s*(hours?|hour?|hrs?|hr?|h)": 3600,
+        # Matches minutes in various formats: '30 minutes', '45 min', '1m'
+        r"(\d+(\.\d+)?)\s*(minutes?|minute?|mins?|min?|m)": 60,
+        # Matches seconds in various formats: '15 seconds', '20 sec', '5s'
+        r"(\d+(\.\d+)?)\s*(seconds?|second?|secs?|sec?|s)": 1,
+    }
+
+    try:
+        for pattern, multiplier in patterns.items():
+            matches = re.findall(pattern, input_string)
+            if len(matches) > 1:
+                osh.error(f"Invalid time: pattern '{pattern}' appears multiple times in '{input_string}'")
+                return 0.0
+            if matches:
+                # Extract the numeric value and multiply by the corresponding unit's multiplier
+                match = matches[0]
+                time_in_seconds += float(match[0]) * multiplier
+                filled = True
+                # Remove the matched part from the input string to prevent re-processing
+                input_string = re.sub(pattern, "", input_string, count=1).strip()
+    except Exception as e:
+        osh.error(f"Invalid time: '{input_string}', Error: {e}")
+
+
+    # If the string is purely numeric, treat it as seconds
+    try:
+        if not(filled):
+            time_in_seconds = float(input_string)
+    except Exception as e:
+        osh.error(f"Invalid time: '{input_string}', Error: {e}")
+
+
+    return time_in_seconds
+
+
+
 def download_file(url: str, file_path: str= ""):
     """download_file function is a shortcut function to download a file from a URL
 
