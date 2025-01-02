@@ -303,7 +303,7 @@ def now_string(format: str = "log") -> str:
 pythonopen = open
 
 
-def open(
+def open_utf8(
     filename: str,
     mode: str = "r",
     buffering: int = -1,
@@ -374,7 +374,6 @@ def error(msg: str, error_code: int = 1) -> None:
     >>> error("Critical failure", error_code=2)
     """
     logging.error(msg)
-    sys.exit(error_code)  # Exit the program with the specified error code
 
 
 def info(msg: str) -> None:
@@ -906,7 +905,7 @@ def system(
     """
     info(cmd)
     args = shlex.split(cmd)
-    proc = Popen(args, stdout=PIPE, stderr=PIPE)
+    proc = Popen(args, stdout=PIPE, stderr=PIPE, shell=True)
     out, err = proc.communicate()
     out, err = out.decode("utf-8"), err.decode("utf-8")
     check(proc.returncode == 0, f"Command {cmd} failed with exit code {proc.returncode}")
@@ -975,7 +974,9 @@ def hash_string(s: str, size: int = -1) -> str:
     h = hashlib.new("ripemd160")
     h.update(s.encode("utf-8"))  # Encode the string and hash it
     res = h.hexdigest()  # Get the hex digest of the hash
-    return "".join(np.random.choice(list(res), size=size)) if size > 0 else res
+    if size > 0:
+        return res[:size]
+    return res
 
 
 
@@ -1628,9 +1629,9 @@ def str2time(input_string: str) -> float:
             elif len(parts) == 2:  # MM:SS
                 filled = True
                 return parts[0] * 60 + parts[1]
-            osh.error(f"Invalid time: '{input_string}', Error: ':' separator with {len(parts)} parts instead of 2 or 3")
+            error(f"Invalid time: '{input_string}', Error: ':' separator with {len(parts)} parts instead of 2 or 3")
     except Exception as e:
-        osh.error(f"Invalid time: '{input_string}', Error: {e}")
+        error(f"Invalid time: '{input_string}', Error: {e}")
         
     # Check for natural language (e.g., "1 hour 30 minutes")
     patterns = {
@@ -1646,7 +1647,7 @@ def str2time(input_string: str) -> float:
         for pattern, multiplier in patterns.items():
             matches = re.findall(pattern, input_string)
             if len(matches) > 1:
-                osh.error(f"Invalid time: pattern '{pattern}' appears multiple times in '{input_string}'")
+                error(f"Invalid time: pattern '{pattern}' appears multiple times in '{input_string}'")
                 return 0.0
             if matches:
                 # Extract the numeric value and multiply by the corresponding unit's multiplier
@@ -1656,7 +1657,7 @@ def str2time(input_string: str) -> float:
                 # Remove the matched part from the input string to prevent re-processing
                 input_string = re.sub(pattern, "", input_string, count=1).strip()
     except Exception as e:
-        osh.error(f"Invalid time: '{input_string}', Error: {e}")
+        error(f"Invalid time: '{input_string}', Error: {e}")
 
 
     # If the string is purely numeric, treat it as seconds
@@ -1664,7 +1665,7 @@ def str2time(input_string: str) -> float:
         if not(filled):
             time_in_seconds = float(input_string)
     except Exception as e:
-        osh.error(f"Invalid time: '{input_string}', Error: {e}")
+        error(f"Invalid time: '{input_string}', Error: {e}")
 
 
     return time_in_seconds
