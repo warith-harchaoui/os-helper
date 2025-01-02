@@ -114,22 +114,19 @@ def verbosity(level: int = None) -> int:
     >>> verbosity(2)  # Set verbosity to show info-level messages
     >>> verbosity()   # Retrieve the current verbosity level (2)
     """
-
-    global VERBOSITY_LEVEL  # Ensure we modify the global verbosity level
-
+    global VERBOSITY_LEVEL
     if level is not None:
-        VERBOSITY_LEVEL = level  # Update the global verbosity level based on user input
-
-        # Adjust logging configuration based on the verbosity level
+        VERBOSITY_LEVEL = level
+        logger = logging.getLogger()
         if level == 0:
-            logging.disable(logging.CRITICAL)  # Disable all logging output
+            logger.setLevel(logging.CRITICAL + 1)  # effectively disables
         elif level == 1:
-            logging.basicConfig(level=logging.ERROR)  # Only show error messages
+            logger.setLevel(logging.ERROR)
         elif level == 2:
-            logging.basicConfig(level=logging.INFO)  # Show info messages
+            logger.setLevel(logging.INFO)
         elif level == 3:
-            logging.basicConfig(level=logging.DEBUG)  # Show debug messages (most verbose)
-
+            logger.setLevel(logging.DEBUG)
+            
     return VERBOSITY_LEVEL  # Return the current verbosity level (after possible modification)
 
 
@@ -374,6 +371,7 @@ def error(msg: str, error_code: int = 1) -> None:
     >>> error("Critical failure", error_code=2)
     """
     logging.error(msg)
+    raise SystemExit((error_code, msg))
 
 
 def info(msg: str) -> None:
@@ -905,7 +903,7 @@ def system(
     """
     info(cmd)
     args = shlex.split(cmd)
-    proc = Popen(args, stdout=PIPE, stderr=PIPE, shell=True)
+    proc = Popen(args, stdout=PIPE, stderr=PIPE, shell=False)
     out, err = proc.communicate()
     out, err = out.decode("utf-8"), err.decode("utf-8")
     check(proc.returncode == 0, f"Command {cmd} failed with exit code {proc.returncode}")
