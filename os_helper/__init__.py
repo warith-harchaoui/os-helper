@@ -15,69 +15,35 @@ Authors:
  - Bachir Zerroug, https://www.linkedin.com/in/bachirzerroug
 """
 
-__all__ = [
-    "verbosity",
-    "windows",
-    "linux",
-    "macos",
-    "unix",
-    "get_nb_workers",
-    "emptystring",
-    "now_string",
-    "temporary_filename",
-    "temporary_folder",
-    "error",
-    "info",
-    "check",
-    "file_exists",
-    "dir_exists",
-    "absolute2relative_path",
-    "relative2absolute_path",
-    "path_without_home",
-    "recursive_glob",
-    "os_path_constructor",
-    "size_file",
-    "checkfile",
-    "getpid",
-    "copyfile",
-    "remove_directory",
-    "remove_files",
-    "make_directory",
-    "system",
-    "openfile",
-    "hash_string",
-    "hashfile",
-    "hashfolder",
-    "format_size",
-    "folder_description",
-    "folder_name_ext",
-    "get_config",
-    "is_working_url",
-    "asciistring",
-    "zip_folder",
-    "time2str",
-    "download_file",
-    "tic",
-    "toc",
-    "join",
-    # "ProgressTask",
-]
+# Re-export everything you want at the top level. 
+# We'll assume you’ve moved your functions into multiple modules like this:
 
-# Import all the necessary functions from the main module
-from .main import (
+from .logging_utils import (
     verbosity,
+    error,
+    info,
+    check,
+    tic,
+    toc,
+)
+
+from .system_utils import (
     windows,
     linux,
     macos,
     unix,
     get_nb_workers,
-    emptystring,
-    now_string,
+    system,
+    openfile,
+    getpid,
+)
+
+from .temp_utils import (
     temporary_filename,
     temporary_folder,
-    error,
-    info,
-    check,
+)
+
+from .path_utils import (
     file_exists,
     dir_exists,
     absolute2relative_path,
@@ -87,31 +53,104 @@ from .main import (
     os_path_constructor,
     size_file,
     checkfile,
-    getpid,
     copyfile,
     remove_directory,
     remove_files,
     make_directory,
-    system,
-    openfile,
+    join,
+    folder_name_ext,
+)
+
+from .hash_utils import (
     hash_string,
     hashfile,
     hashfolder,
-    format_size,
-    folder_description,
-    folder_name_ext,
-    valid_config_file,
-    get_config,
-    is_working_url,
-    asciistring,
-    zip_folder,
-    time2str,
-    download_file,
-    tic,
-    toc,
-    join,
 )
 
-# from .progress_bar import (
-#     ProgressTask,
-# )
+
+from .config_utils import (
+    get_config,
+)
+
+from .string_utils import (
+    emptystring,
+    asciistring,
+)
+
+from .misc_utils import (
+    now_string,
+    format_size,
+    folder_description,
+    is_working_url,
+    zip_folder,
+    download_file,
+    time2str,
+    str2time,
+)
+
+# If you don’t have a main.py (or if everything is distributed among the modules above),
+# then just import from those modules directly.
+
+__all__ = [
+    # logging_utils
+    "verbosity",
+    "error",
+    "info",
+    "check",
+    "tic",
+    "toc",
+
+    # system_utils
+    "windows",
+    "linux",
+    "macos",
+    "unix",
+    "get_nb_workers",
+    "system",
+    "openfile",
+    "getpid",
+
+    # temp_utils
+    "temporary_filename",
+    "temporary_folder",
+
+    # path_utils
+    "file_exists",
+    "dir_exists",
+    "absolute2relative_path",
+    "relative2absolute_path",
+    "path_without_home",
+    "recursive_glob",
+    "os_path_constructor",
+    "size_file",
+    "checkfile",
+    "copyfile",
+    "remove_directory",
+    "remove_files",
+    "make_directory",
+    "join",
+
+    # hash_utils
+    "hash_string",
+    "hashfile",
+    "hashfolder",
+
+    # config_utils
+    "valid_config_file",
+    "get_config",
+
+    # string_utils
+    "emptystring",
+    "asciistring",
+    "time2str",
+    "str2time",
+
+    # main (or wherever you place these if not in main.py)
+    "now_string",
+    "format_size",
+    "folder_description",
+    "folder_name_ext",
+    "is_working_url",
+    "zip_folder",
+    "download_file",
+]
