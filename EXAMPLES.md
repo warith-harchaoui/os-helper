@@ -454,7 +454,7 @@ The download_file function lets you download files from a URL to a specified loc
 from os_helper import download_file, file_exists
 
 # Download a file from the web
-url = "https://example.com/sample.pdf"
+url = "https://example.com/sample.pdf" # put your own URL instead of this fake example one
 file_path = "downloaded_sample.pdf"
 
 download_file(url, file_path)
@@ -476,5 +476,5 @@ The openfile function opens a file using the default application for its type.
 from os_helper import openfile
 
 # Open a PDF file using the default viewer
-openfile("example.pdf")
+openfile("example.pdf") # put your own file to open by your own OS instead of this fake example one
 ```
