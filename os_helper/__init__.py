@@ -86,6 +86,7 @@ from .misc_utils import (
     download_file,
     time2str,
     str2time,
+    get_user_ip,
 )
 
 # If you don’t have a main.py (or if everything is distributed among the modules above),
@@ -145,7 +146,7 @@ __all__ = [
     "time2str",
     "str2time",
 
-    # main (or wherever you place these if not in main.py)
+    # misc_utils
     "now_string",
     "format_size",
     "folder_description",
@@ -153,4 +154,5 @@ __all__ = [
     "is_working_url",
     "zip_folder",
     "download_file",
+    "get_user_ip",
 ]

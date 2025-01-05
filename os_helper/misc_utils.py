@@ -21,12 +21,12 @@ Authors:
 import os
 import time
 import json
+from typing import Dict, Optional
 import zipfile
 import requests
 import validators
 import re
 
-from .path_utils import relative2absolute_path, file_exists, dir_exists
 
 from datetime import datetime
 
@@ -359,8 +359,10 @@ def download_file(url: str, file_path: str = "") -> None:
     if not file_path:
         # Attempt to guess filename from last part of the URL
         stripped_url = url.replace("https://", "").replace("http://", "")
+        # Remove query params
+        stripped_url = stripped_url.split("?")[0]
         segments = stripped_url.split("/")
-        file_path = segments[-1] if segments else "downloaded.file"
+        file_path = segments[-1] 
 
     try:
         resp = requests.get(url)
@@ -373,3 +375,47 @@ def download_file(url: str, file_path: str = "") -> None:
 
     info(f"File downloaded from '{url}' and saved to '{file_path}'")
 
+def get_user_ip() -> Dict[str, Optional[str]]:
+    """
+    Fetches the user's public IP addresses in both IPv4 and IPv6 formats, if available.
+
+    This function attempts to retrieve the user's IP addresses using the `ipify` API.
+    It tries separate endpoints for IPv4 and IPv6 and returns a dictionary containing
+    both addresses, or `None` if an address could not be retrieved.
+
+    Returns
+    -------
+    dict of {str: Optional[str]}
+        A dictionary with the keys "ipv4" and "ipv6". The values are either the IP addresses
+        as strings or `None` if the address could not be fetched.
+        
+    """
+    
+    # Initialize a dictionary to store both IPv4 and IPv6 addresses
+    ip_address = {"ipv4": None, "ipv6": None}
+    
+    some_ip = False
+
+    # Try to get the IPv4 address
+    try:
+        response_v4 = requests.get("https://api.ipify.org?format=json")
+        ip = response_v4.json().get("ip")
+        if not( ip is None):
+            ip_address["ipv4"] = ip
+            some_ip = True
+    except (requests.RequestException, KeyError):
+        ip_address["ipv4"] = None  # Set to None if the request or dict access fails
+
+    # Try to get the IPv6 address
+    try:
+        response_v6 = requests.get("https://api64.ipify.org?format=json")
+        ip = response_v6.json().get("ip")
+        if not( ip is None):
+            ip_address["ipv6"] = ip
+            some_ip = True
+    except (requests.RequestException, KeyError):
+        ip_address["ipv6"] = None  # Set to None if the request or dict access fails
+        
+    check(some_ip, "Failed to retrieve IP address (no IPv4 / IPv6 address found)")
+
+    return ip_address
