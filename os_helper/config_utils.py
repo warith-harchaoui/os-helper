@@ -24,16 +24,19 @@ import yaml
 from dotenv import load_dotenv
 
 # Importing necessary functions from other utility modules
-from .logging_utils import info, error, check
+# from .logging_utils import info, error, check
+import logging
 from .path_utils import file_exists, dir_exists, join, checkfile, folder_name_ext
 from .string_utils import emptystring
 
-def valid_config_file(a_path: str, keys: List[str], config_type: str) -> Optional[Dict]:
+def _valid_config_file(a_path: str, keys: List[str], config_type: str) -> Optional[Dict]:
     """
     Check if a configuration file is valid by verifying it contains the required keys.
 
     This function loads a configuration file (in JSON or YAML format) and checks if it contains 
     all the specified keys.
+
+    You should not use it directly.
 
     Parameters
     ----------
@@ -54,7 +57,7 @@ def valid_config_file(a_path: str, keys: List[str], config_type: str) -> Optiona
     >>> valid_config_file("config.yaml", ["host", "port"], "database")
     {'host': 'localhost', 'port': 5432}
     """    
-    checkfile(f"Configuration file for {config_type} does not exist: {a_path}")
+    checkfile(a_path, f"Configuration file for {config_type} does not exist: {a_path}")
     
     _, _, ext = folder_name_ext(a_path)
     ext = ext.lower()
@@ -67,18 +70,54 @@ def valid_config_file(a_path: str, keys: List[str], config_type: str) -> Optiona
             config = yaml.load(fin, Loader=yaml.SafeLoader)
     
     if config is None:
-        info(f"Unsupported configuration file format {ext}: {a_path}")
+        logging.info(f"Unsupported configuration file format {ext}: {a_path}")
         return None
 
     if all(key in config for key in keys):
-        info(f"Configuration '{config_type}' successfully loaded from '{a_path}'")
+        logging.info(f"Configuration '{config_type}' successfully loaded from '{a_path}'")
         return config
     else:
         missing = [key for key in keys if key not in config]
         m = ", ".join(missing)
-        info(f"Configuration file '{a_path}' does not have all keys. Missing keys are {m}")
+        logging.info(f"Configuration file '{a_path}' does not have all keys. Missing keys are {m}")
     
     return None
+
+def _config_from_env(keys: List[str]) -> Optional[Dict[str, Union[str, int, float]]]:
+    """
+    Extract configuration from system environment variables.
+
+    You should not use it directly.
+
+    Parameters
+    ----------
+    keys : List[str]
+        Keys to retrieve from the environment.
+
+    Returns
+    -------
+    Optional[Dict[str, Union[str, int, float]]]
+        A dictionary of key-value pairs if all keys are found, otherwise None.
+    """
+    config = {}
+    missing_keys = []
+    for key in keys:
+        cap_key = key.upper()
+        # capitals case
+        if cap_key in os.environ:
+            config[key] = os.environ[cap_key]
+        # lowercase case
+        elif key in os.environ:
+            config[key] = os.environ[key]
+        else:
+            missing_keys.append(key)
+    if len(missing_keys) == 0:
+        return config
+    
+    m = ", ".join(missing_keys)
+    logging.info(f"Missing keys in environment variables: {m}")
+    return None
+
 
 def get_config(
     keys: List[str],
@@ -120,97 +159,30 @@ def get_config(
     >>> config
     {'host': 'localhost', 'port': 5432}
     """
-    def config_from_env(keys: List[str]) -> Optional[Dict[str, Union[str, int, float]]]:
-        """
-        Extract configuration from system environment variables.
 
-        Parameters
-        ----------
-        keys : List[str]
-            Keys to retrieve from the environment.
-
-        Returns
-        -------
-        Optional[Dict[str, Union[str, int, float]]]
-            A dictionary of key-value pairs if all keys are found, otherwise None.
-        """
-        config = {}
-        missing_keys = []
-        for key in keys:
-            cap_key = key.upper()
-            # capitals case
-            if cap_key in os.environ:
-                config[key] = os.environ[cap_key]
-            # lowercase case
-            elif key in os.environ:
-                config[key] = os.environ[key]
-            else:
-                missing_keys.append(key)
-        if len(missing_keys) == 0:
-            return config
-        
-        m = ", ".join(missing_keys)
-        info(f"Missing keys in environment variables: {m}")
-        return None
-
-    def config_from_files(path: str, keys: List[str]) -> Optional[Dict[str, Union[str, int, float]]]:
-        """
-        Extract configuration from JSON or YAML files.
-
-        Parameters
-        ----------
-        path : str
-            Path to a specific file or folder containing configuration files.
-        keys : List[str]
-            Keys to retrieve from the configuration file.
-
-        Returns
-        -------
-        Optional[Dict[str, Union[str, int, float]]]
-            A dictionary of key-value pairs if all keys are found, otherwise None.
-        """
-        if file_exists(path):
-            config = valid_config_file(path, keys, config_type=config_type)
-            if config:
-                return config
-
-        if dir_exists(path):
-            # Search for all JSON and YAML files in the directory
-            formats = ["*.json", "*.yaml", "*.yml"]
-            formats += [f"*.{fmt.upper()}" for fmt in formats]
-            candidates = []
-            for fmt in formats:
-                candidates.extend(glob.glob(join(path, fmt)))
-            
-            candidates = sorted(candidates)
-
-            for candidate in candidates:
-                config = valid_config_file(candidate, keys, config_type=config_type)
-                if config:
-                    return config
-        return None
 
     # Step 1: Attempt to load from a specific file or folder if `path` is provided
-    info(f"Loading configuration for '{config_type}'")
+    logging.info(f"Loading configuration for '{config_type}'")
     if not emptystring(path):
-        config = config_from_files(path, keys)
+        if file_exists(path):
+            config = _valid_config_file(path, keys)
         if config:
             return config
-        info(f"No valid configuration found in path: {path}")
+        logging.info(f"No valid configuration found in path: {path}")
 
     # Step 2: Merge all .env files into os.environ
-    info("Loading configuration from env files")
+    logging.info("Loading configuration from env files")
     for env_file in env_files:
         if file_exists(env_file):
             load_dotenv(env_file)
-            info(f"Loaded env file: {env_file}")
+            logging.info(f"Loaded env file: {env_file}")
 
     # Step 3: Check os.environ for required keys
-    info("Loading configuration from environment variables (possibly merged with .env files)")
-    config = config_from_env(keys)
+    logging.info("Loading configuration from environment variables (possibly merged with .env files)")
+    config = _config_from_env(keys)
     if config:
-        info(f"Configuration '{config_type}' successfully loaded from environment variables.")
+        logging.info(f"Configuration '{config_type}' successfully loaded from environment variables.")
         return config
 
     # Step 4: Raise an error if no configuration was found
-    error(f"Missing required keys for '{config_type}' configuration in files, .env files, or environment variables.")
+    logging.error(f"Missing required keys for '{config_type}' configuration in files, .env files, or environment variables.")

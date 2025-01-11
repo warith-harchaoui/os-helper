@@ -17,12 +17,12 @@ import unicodedata
 from typing import Optional
 
 # Importing necessary functions from other utility modules
-from .logging_utils import error, check, info
-
+# from .logging_utils import error, check, info
+import logging
 
 def emptystring(s: Optional[str]) -> bool:
     """
-    Check if a string is empty or None.
+    Check if a string is empty or None or just spaces
 
     This utility function checks if the given string is either None or an empty string.
     It is useful for quickly validating user input or file paths.
@@ -45,7 +45,15 @@ def emptystring(s: Optional[str]) -> bool:
     >>> emptystring("hello")
     False
     """
-    return (s is None) or (isinstance(s, str) and len(s.strip()) == 0)
+    if s is None:
+        return True
+    
+    if isinstance(s, str):
+        if len(s.strip())==0:
+            return True
+
+    return False    
+
 
 
 def asciistring(

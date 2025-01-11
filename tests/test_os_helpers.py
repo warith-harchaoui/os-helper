@@ -5,7 +5,6 @@ import yaml
 import pytest
 from os_helper import (
     emptystring,
-    verbosity,
     now_string,
     file_exists,
     dir_exists,
@@ -15,7 +14,6 @@ from os_helper import (
     asciistring,
     zip_folder,
     recursive_glob,
-    os_path_constructor,
     get_config,
     hashfolder,
     join,
@@ -55,20 +53,6 @@ def test_emptystring():
     assert emptystring(None) is True  # None should return True
     assert emptystring("Non-empty") is False  # A non-empty string should return False
 
-
-def test_verbosity():
-    """
-    Test the `verbosity` function.
-
-    - Verifies it can set and retrieve verbosity levels.
-    - Restores the original verbosity level after testing.
-    """
-    original_level = verbosity()  # Save the current verbosity level
-    assert verbosity(2) == 2  # Set verbosity to 2 and verify
-    assert verbosity() == 2  # Retrieve verbosity and verify
-    verbosity(1)  # Change verbosity to 1
-    assert verbosity() == 1  # Verify the change
-    verbosity(original_level)  # Restore the original verbosity level
 
 
 def test_now_string():
@@ -112,7 +96,7 @@ def test_dir_exists():
     os.makedirs(test_dir)  # Create the test directory
     assert dir_exists(test_dir) is True  # Directory should exist
     assert dir_exists(test_dir, check_empty=True) is False  # Directory should be empty
-    sub_dir = os_path_constructor([test_dir, "sub_folder"])  # Create a non-existent subdirectory path
+    sub_dir = join(test_dir, "sub_folder")  # Create a non-existent subdirectory path
     assert dir_exists(sub_dir) is False  # Non-existent directory should return False
 
 
@@ -150,8 +134,8 @@ def test_zip_folder():
     test_dir = os.path.join(TEST_FOLDER, "test_zip_folder")
     os.makedirs(test_dir)  # Create the test directory
     # Create test files
-    file1 = os_path_constructor([test_dir, "file1.txt"])
-    file2 = os_path_constructor([test_dir, "file2.txt"])
+    file1 = join(test_dir, "file1.txt")
+    file2 = join(test_dir, "file2.txt")
     with open(file1, "w") as f1, open(file2, "w") as f2:
         f1.write("File 1 content")
         f2.write("File 2 content")
@@ -169,8 +153,8 @@ def test_recursive_glob():
     test_dir = os.path.join(TEST_FOLDER, "test_recursive_glob")
     os.makedirs(test_dir)  # Create the test directory
     # Create test files
-    file1 = os_path_constructor([test_dir, "file1.txt"])
-    file2 = os_path_constructor([test_dir, "file2.txt"])
+    file1 = join(test_dir, "file1.txt")
+    file2 = join(test_dir, "file2.txt")
     with open(file1, "w") as f1, open(file2, "w") as f2:
         f1.write("File 1 content")
         f2.write("File 2 content")

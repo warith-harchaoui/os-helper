@@ -30,7 +30,7 @@ import re
 
 from datetime import datetime
 
-from .logging_utils import check, info, error
+import logging
 from .path_utils import file_exists, dir_exists, size_file, join
 
 def now_string(fmt: str = "log") -> str:
@@ -69,95 +69,97 @@ def format_size(size: int) -> str:
     str
         Formatted size string (e.g. '1.23 MB', '456.00 KB', etc.).
     """
-    if size > 1e9:
+    if size > 1e12:
+        return "%.2f TB" % (size / 1e12)
+    elif size > 1e9:
         return "%.2f GB" % (size / 1e9)
     elif size > 1e6:
         return "%.2f MB" % (size / 1e6)
     elif size > 1e3:
         return "%.2f KB" % (size / 1e3)
     else:
-        return "%d B" % size
+        return "%d B" % int(size)
 
 
 
 
-def folder_description(path: str, recursive: bool = True, index_html: bool = True, with_size: bool = True) -> dict:
-    """
-    Describe the contents of a folder, optionally recursively, and generate an HTML index.
+# def folder_description(path: str, recursive: bool = True, index_html: bool = True, with_size: bool = True) -> dict:
+#     """
+#     Describe the contents of a folder, optionally recursively, and generate an HTML index.
 
-    Parameters
-    ----------
-    path : str
-        Path to the folder.
-    recursive : bool, optional
-        If True, descends into subdirectories. Defaults to True.
-    index_html : bool, optional
-        If True, writes an index.html in the folder. Defaults to True.
-    with_size : bool, optional
-        If True, includes file sizes in the listing. Defaults to True.
+#     Parameters
+#     ----------
+#     path : str
+#         Path to the folder.
+#     recursive : bool, optional
+#         If True, descends into subdirectories. Defaults to True.
+#     index_html : bool, optional
+#         If True, writes an index.html in the folder. Defaults to True.
+#     with_size : bool, optional
+#         If True, includes file sizes in the listing. Defaults to True.
 
-    Returns
-    -------
-    dict
-        A dictionary mapping relative file paths -> file sizes in bytes.
-    """
-    check(dir_exists(path), f"Folder {path} cannot be described because it does not exist")
+#     Returns
+#     -------
+#     dict
+#         A dictionary mapping relative file paths -> file sizes in bytes.
+#     """
+#     check(dir_exists(path), f"Folder {path} cannot be described because it does not exist")
 
-    result = {}
-    for root, dirs, files in os.walk(path):
-        if not recursive and root != path:
-            break
-        for file in files:
-            if file.startswith("."):  # skip hidden
-                continue
-            fpath = os.path.join(root, file)
-            relpath = os.path.relpath(fpath, path)
-            result[relpath] = size_file(fpath)
+#     result = {}
+#     for root, dirs, files in os.walk(path):
+#         if not recursive and root != path:
+#             break
+#         for file in files:
+#             if file.startswith("."):  # skip hidden
+#                 continue
+#             fpath = os.path.join(root, file)
+#             relpath = os.path.relpath(fpath, path)
+#             result[relpath] = size_file(fpath)
 
-    # Optionally generate index.html
-    if index_html:
-        index_html_path = join(path, "index.html")
-        with open(index_html_path, "wt") as fout:
-            fout.write(f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Folder Index for {path}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-</head>
-<body class="bg-light">
-    <div class="container mt-4">
-        <h1 class="mb-4">Folder: {path}</h1>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>File</th>
-                    {"<th>Size</th>" if with_size else ""}
-                </tr>
-            </thead>
-            <tbody>
-""")
-            for rel, sz in sorted(result.items()):
-                escaped_name = rel.replace("<","&lt;").replace(">","&gt;").replace("&","&amp;")
-                size_col = f"<td>{format_size(sz)}</td>" if with_size else ""
-                fout.write(f'<tr><td><a href="{escaped_name}">{escaped_name}</a></td>{size_col}</tr>\n')
-            fout.write("""
-            </tbody>
-        </table>
-    </div>
-</body>
-</html>
-""")
-        info(f"HTML index generated at: {index_html_path}")
+#     # Optionally generate index.html
+#     if index_html:
+#         index_html_path = join(path, "index.html")
+#         with open(index_html_path, "wt") as fout:
+#             fout.write(f"""
+# <!DOCTYPE html>
+# <html>
+# <head>
+#     <meta charset="UTF-8">
+#     <title>Folder Index for {path}</title>
+#     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+# </head>
+# <body class="bg-light">
+#     <div class="container mt-4">
+#         <h1 class="mb-4">Folder: {path}</h1>
+#         <table class="table table-striped">
+#             <thead>
+#                 <tr>
+#                     <th>File</th>
+#                     {"<th>Size</th>" if with_size else ""}
+#                 </tr>
+#             </thead>
+#             <tbody>
+# """)
+#             for rel, sz in sorted(result.items()):
+#                 escaped_name = rel.replace("<","&lt;").replace(">","&gt;").replace("&","&amp;")
+#                 size_col = f"<td>{format_size(sz)}</td>" if with_size else ""
+#                 fout.write(f'<tr><td><a href="{escaped_name}">{escaped_name}</a></td>{size_col}</tr>\n')
+#             fout.write("""
+#             </tbody>
+#         </table>
+#     </div>
+# </body>
+# </html>
+# """)
+#         info(f"HTML index generated at: {index_html_path}")
 
-    # Also store a JSON version of the description
-    desc_json_path = join(path, "description.json")
-    with open(desc_json_path, "wt") as jfile:
-        json.dump(result, jfile, indent=2)
-    info(f"Folder description JSON written to: {desc_json_path}")
+#     # Also store a JSON version of the description
+#     desc_json_path = join(path, "description.json")
+#     with open(desc_json_path, "wt") as jfile:
+#         json.dump(result, jfile, indent=2)
+#     info(f"Folder description JSON written to: {desc_json_path}")
 
-    return result
+#     return result
 
 
 def is_working_url(url: str) -> bool:
@@ -197,7 +199,7 @@ def zip_folder(folder_path: str, zip_file_path: str = "") -> None:
         The path/name of the resulting .zip file. If empty,
         defaults to folder_path.zip
     """
-    check(dir_exists(folder_path), f"Folder '{folder_path}' does not exist")
+    assert dir_exists(folder_path), f"Folder '{folder_path}' does not exist"
     if not zip_file_path:
         zip_file_path = folder_path + ".zip"
 
@@ -210,8 +212,7 @@ def zip_folder(folder_path: str, zip_file_path: str = "") -> None:
                 full_path = os.path.join(root, file)
                 arcname = os.path.relpath(full_path, folder_path)
                 zf.write(full_path, arcname)
-    info(f"Zipped folder '{folder_path}' into '{zip_file_path}'")
-
+    logging.info(f"Zipped folder '{folder_path}' into '{zip_file_path}'")
 
 def time2str(seconds: float, no_space: bool = False) -> str:
     """
@@ -239,22 +240,21 @@ def time2str(seconds: float, no_space: bool = False) -> str:
     "1 hr 1 min 1 sec"
     
     """
-    hrs = int(seconds // 3600)
-    mins = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-
+    # Convert seconds to time struct
+    time_struct = time.gmtime(seconds)
+    
     parts = []
+    hrs = time_struct.tm_hour + (time_struct.tm_mday - 1) * 24
     if hrs:
         parts.append(f"{hrs} hr")
-    if mins:
-        parts.append(f"{mins} min")
-    if secs or (not hrs and not mins):
-        parts.append(f"{secs} sec")
+    if time_struct.tm_min:
+        parts.append(f"{time_struct.tm_min} min") 
+    if time_struct.tm_sec or (not hrs and not time_struct.tm_min):
+        parts.append(f"{time_struct.tm_sec} sec")
 
     if no_space:
         parts = [p.replace(" ", "") for p in parts]
     return " ".join(parts)
-
 
 def str2time(input_string: str) -> float:
     """
@@ -272,70 +272,72 @@ def str2time(input_string: str) -> float:
         
     Examples
     --------
-    >> str2time("1:30:00")
+    >>> str2time("1:30:00")
     5400.0
-    >> str2time("1 hr 30 min")
+    >>> str2time("1 hr 30 min") 
     5400.0
-    >> str2time("120 s")
+    >>> str2time("120 s")
     120.0
-    >> str2time("1.5 hours")
+    >>> str2time("1.5 hours")
     5400.0
-    >> str2time("1.5 days")
+    >>> str2time("1.5 days")
     129600.0
-    
     """
-    input_string = (input_string or "").strip().lower()
     if not input_string:
         return 0.0
+        
+    input_string = input_string.strip().lower()
 
-    # If contains HH:MM:SS or MM:SS
+    # Handle HH:MM:SS format
     if ":" in input_string:
-        parts = input_string.split(":")
-        if len(parts) == 3:
-            try:
-                hrs, mins, secs = (float(p) for p in parts)
-                return hrs * 3600 + mins * 60 + secs
-            except ValueError as e:
-                error(f"Invalid time format: {input_string}, {e}")
-        elif len(parts) == 2:
-            try:
-                mins, secs = (float(p) for p in parts)
-                return mins * 60 + secs
-            except ValueError as e:
-                error(f"Invalid time format: {input_string}, {e}")
-        else:
-            error(f"Invalid time format: {input_string} - wanted 2 or 3 parts after splitting by ':'")
+        try:
+            parts = [float(p) for p in input_string.split(":")]
+            if len(parts) == 3:  # HH:MM:SS
+                return parts[0] * 3600 + parts[1] * 60 + parts[2]
+            elif len(parts) == 2:  # MM:SS
+                return parts[0] * 60 + parts[1]
+            else:
+                logging.error(f"Invalid time format: {input_string} - expected 2 or 3 parts")
+                return 0.0
+        except ValueError:
+            logging.error(f"Invalid time format: {input_string}")
+            return 0.0
 
-    # Check for textual patterns like "1 hour 30 minutes"
-    patterns = {
-        r"(\d+(?:\.\d+)?)\s*(days?|day?|d)": 3600*24,
-        r"(\d+(?:\.\d+)?)\s*(hours?|hrs?|h)": 3600,
-        r"(\d+(?:\.\d+)?)\s*(minutes?|mins?|m)": 60,
-        r"(\d+(?:\.\d+)?)\s*(seconds?|secs?|s)": 1,
+    # Handle text formats like "1 hour 30 minutes"
+    time_units = {
+        ("days", "day", "d"): 24 * 3600,
+        ("hours", "hour", "hrs", "hr", "h"): 3600, 
+        ("minutes", "minute", "mins", "min", "m"): 60,
+        ("seconds", "second", "secs", "sec", "s"): 1
     }
+
     total_seconds = 0.0
-    used_pattern = False
+    remaining = input_string
+    found_unit = False
 
-    for pat, multiplier in patterns.items():
-        match = re.search(pat, input_string)
-        if match:
-            val = match.group(1)
-            try:
-                total_seconds += float(val) * multiplier
-            except ValueError as e:
-                error(f"Invalid numeric value in time string: {input_string}, {e}")
-            # Remove the matched chunk from the string to avoid re-parsing
-            input_string = re.sub(pat, "", input_string, count=1).strip()
-            used_pattern = True
+    for units, multiplier in time_units.items():
+        for unit in units:
+            pattern = fr"(\d+(?:\.\d+)?)\s*{unit}\b"
+            match = re.search(pattern, remaining)
+            if match:
+                try:
+                    value = float(match.group(1))
+                    total_seconds += value * multiplier
+                    remaining = re.sub(pattern, "", remaining, count=1).strip()
+                    found_unit = True
+                except ValueError:
+                    logging.error(f"Invalid numeric value in: {input_string}")
+                    continue
 
-    if used_pattern:
+    if found_unit:
         return total_seconds
 
-    # If purely numeric => treat as seconds
+    # Try parsing as raw seconds
     try:
         return float(input_string)
     except ValueError:
-        error(f"Cannot parse time from string: {input_string}")
+        logging.error(f"Cannot parse time from: {input_string}")
+        return 0.0
 
 
 def download_file(url: str, file_path: str = "") -> None:
@@ -354,7 +356,7 @@ def download_file(url: str, file_path: str = "") -> None:
     SystemExit
         If the URL is invalid or unreachable.
     """
-    check(is_working_url(url), msg=f"URL '{url}' is not working")
+    assert is_working_url(url), f"URL '{url}' is not working"
 
     if not file_path:
         # Attempt to guess filename from last part of the URL
@@ -368,12 +370,12 @@ def download_file(url: str, file_path: str = "") -> None:
         resp = requests.get(url)
         resp.raise_for_status()
     except requests.RequestException as e:
-        error(f"Failed to download from '{url}': {e}")
+        logging.error(f"Failed to download from '{url}': {e}")
 
     with open(file_path, "wb") as fout:
         fout.write(resp.content)
 
-    info(f"File downloaded from '{url}' and saved to '{file_path}'")
+    logging.info(f"File downloaded from '{url}' and saved to '{file_path}'")
 
 def get_user_ip() -> Dict[str, Optional[str]]:
     """
@@ -416,6 +418,6 @@ def get_user_ip() -> Dict[str, Optional[str]]:
     except (requests.RequestException, KeyError):
         ip_address["ipv6"] = None  # Set to None if the request or dict access fails
         
-    check(some_ip, "Failed to retrieve IP address (no IPv4 / IPv6 address found)")
+    assert some_ip, "Failed to retrieve IP address (no IPv4 / IPv6 address found)"
 
     return ip_address

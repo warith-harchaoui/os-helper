@@ -15,17 +15,7 @@ Authors:
  - Bachir Zerroug, https://www.linkedin.com/in/bachirzerroug
 """
 
-# Re-export everything you want at the top level. 
-# We'll assume you’ve moved your functions into multiple modules like this:
 
-from .logging_utils import (
-    verbosity,
-    error,
-    info,
-    check,
-    tic,
-    toc,
-)
 
 from .system_utils import (
     windows,
@@ -50,7 +40,6 @@ from .path_utils import (
     relative2absolute_path,
     path_without_home,
     recursive_glob,
-    os_path_constructor,
     size_file,
     checkfile,
     copyfile,
@@ -80,7 +69,6 @@ from .string_utils import (
 from .misc_utils import (
     now_string,
     format_size,
-    folder_description,
     is_working_url,
     zip_folder,
     download_file,
@@ -93,14 +81,6 @@ from .misc_utils import (
 # then just import from those modules directly.
 
 __all__ = [
-    # logging_utils
-    "verbosity",
-    "error",
-    "info",
-    "check",
-    "tic",
-    "toc",
-
     # system_utils
     "windows",
     "linux",
@@ -137,7 +117,6 @@ __all__ = [
     "hashfolder",
 
     # config_utils
-    "valid_config_file",
     "get_config",
 
     # string_utils

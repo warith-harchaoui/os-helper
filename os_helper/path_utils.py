@@ -18,8 +18,8 @@ import pathlib
 from typing import List
 
 # Importing necessary functions from other utility modules
-from .logging_utils import check, info, error
-
+# from .logging_utils import check, info, error
+import logging
 
 
 def folder_name_ext(path: str, checkpath: bool = False) -> tuple:
@@ -48,7 +48,7 @@ def folder_name_ext(path: str, checkpath: bool = False) -> tuple:
 
     path = relative2absolute_path(path)
     if checkpath:
-        check(file_exists(path) or dir_exists(path), f"Path does not exist: {path}")
+        assert file_exists(path) or dir_exists(path), f"Path does not exist: {path}"
 
     base_folder = os.path.dirname(path)
     basename = os.path.basename(path)
@@ -181,7 +181,7 @@ def relative2absolute_path(path: str, checkpath: bool = False) -> str:
     abs_path = os.path.abspath(path)
     if checkpath:
         if not (file_exists(abs_path) or dir_exists(abs_path)):
-            error(f"File or directory does not exist: {abs_path}")
+            logging.error(f"File or directory does not exist: {abs_path}")
     return abs_path
 
 def path_without_home(path: str) -> str:
@@ -259,30 +259,6 @@ def join(*args: str) -> str:
     normalized_path = os.path.normpath(os.path.join(*args))
     return relative2absolute_path(normalized_path, checkpath=False)
 
-def os_path_constructor(ell: List[str]) -> str:
-    """
-    Construct a path from a list of path components.
-
-    Note:
-        This function is retained for legacy support.
-        It is recommended to use `join` instead by passing individual arguments.
-
-    Parameters
-    ----------
-    ell : List[str]
-        A list of path components.
-
-    Returns
-    -------
-    str
-        The constructed absolute path.
-
-    Example
-    -------
-    >>> os_path_constructor(["/home/user", "folder", "file.txt"])
-    '/home/user/folder/file.txt'
-    """
-    return join(*ell)
 
 def size_file(filepath: str) -> int:
     """
@@ -305,7 +281,7 @@ def size_file(filepath: str) -> int:
     """
     return os.path.getsize(filepath) if file_exists(filepath) else -1
 
-def checkfile(filepath: str, msg: str = "", check_empty: bool = False) -> None:
+def checkfile(filepath: str, msg = "", check_empty: bool = False) -> None:
     """
     Check if a file exists and optionally verify it's not empty.
 
@@ -327,10 +303,10 @@ def checkfile(filepath: str, msg: str = "", check_empty: bool = False) -> None:
     -------
     >>> checkfile("data.csv", msg="Data file missing", check_empty=True)
     """
-    check(file_exists(filepath), msg=f"{msg} File '{filepath}' does not exist.")
+    assert file_exists(filepath), f"{msg} File '{filepath}' does not exist."
     if check_empty:
         size = size_file(filepath)
-        check(size > 0, msg=f"{msg} File '{filepath}' is empty.")
+        assert size > 0, f"{msg} File '{filepath}' exists but is empty."
 
 def copyfile(source: str, destination: str) -> None:
     """
@@ -360,13 +336,13 @@ def copyfile(source: str, destination: str) -> None:
         _, basename, ext = folder_name_ext(source_abs)
         destination_abs = join(destination_abs, f"{basename}.{ext}")
 
-    check(source_abs != destination_abs, msg=f"Source and destination paths are the same: '{source_abs}'")
+    assert source_abs != destination_abs, f"Source and destination paths are the same: '{source_abs}'"
     try:
         shutil.copy2(source_abs, destination_abs)
         checkfile(destination_abs, msg=f"Failed to copy '{source}' to '{destination}'", check_empty=True)
-        info(f"Copied '{source}' to '{destination_abs}' successfully.")
+        logging.info(f"Copied '{source}' to '{destination_abs}' successfully.")
     except Exception as e:
-        error(f"Error copying file: {e}")
+        logging.error(f"Error copying file: {e}")
 
 def remove_directory(folder_path: str) -> None:
     """
@@ -389,13 +365,13 @@ def remove_directory(folder_path: str) -> None:
     if dir_exists(folder_path):
         try:
             shutil.rmtree(folder_path)
-            info(f"Removed directory: '{folder_path}'")
+            logging.info(f"Removed directory: '{folder_path}'")
         except Exception as e:
-            error(f"Failed to remove directory '{folder_path}': {e}")
+            logging.error(f"Failed to remove directory '{folder_path}': {e}")
     else:
-        info(f"Directory '{folder_path}' does not exist, nothing to remove.")
+        logging.info(f"Directory '{folder_path}' does not exist, nothing to remove.")
 
-def remove_files(files_list: List[str], verbose: bool = False) -> None:
+def remove_files(files_list: List[str]) -> None:
     """
     Remove a list of files.
 
@@ -403,8 +379,6 @@ def remove_files(files_list: List[str], verbose: bool = False) -> None:
     ----------
     files_list : List[str]
         A list of file paths to remove.
-    verbose : bool, optional
-        If True, logs the removal of each file. Defaults to False.
 
     Raises
     ------
@@ -413,19 +387,17 @@ def remove_files(files_list: List[str], verbose: bool = False) -> None:
 
     Example
     -------
-    >>> remove_files(["temp1.txt", "temp2.log"], verbose=True)
+    >>> remove_files(["temp1.txt", "temp2.log"])
     """
     for file_path in files_list:
         if file_exists(file_path):
             try:
                 pathlib.Path(file_path).unlink()
-                if verbose:
-                    info(f"Removed file: '{file_path}'")
+                logging.info(f"Removed file: '{file_path}'")
             except Exception as e:
-                error(f"Failed to remove file '{file_path}': {e}")
+                logging.error(f"Failed to remove file '{file_path}': {e}")
         else:
-            if verbose:
-                info(f"File '{file_path}' does not exist, skipping.")
+            logging.info(f"File '{file_path}' does not exist, skipping.")
 
 def make_directory(folder_path: str, exist_ok: bool = True) -> None:
     """
@@ -449,35 +421,7 @@ def make_directory(folder_path: str, exist_ok: bool = True) -> None:
     """
     try:
         os.makedirs(folder_path, exist_ok=exist_ok)
-        check(dir_exists(folder_path), msg=f"Failed to create directory: '{folder_path}'")
-        info(f"Directory created: '{folder_path}'")
+        assert dir_exists(folder_path), f"Failed to create directory: '{folder_path}'"
+        logging.info(f"Directory created: '{folder_path}'")
     except Exception as e:
-        error(f"Error creating directory '{folder_path}': {e}")
-
-def checkfile(filepath: str, msg: str = "", check_empty: bool = False) -> None:
-    """
-    Check if a file exists and optionally verify it's not empty.
-
-    Parameters
-    ----------
-    filepath : str
-        The path to the file.
-    msg : str, optional
-        Custom message to include in the error if the check fails. Defaults to "".
-    check_empty : bool, optional
-        If True, also checks that the file is not empty. Defaults to False.
-
-    Raises
-    ------
-    SystemExit
-        If the file does not exist (or is empty if `check_empty` is True).
-
-    Example
-    -------
-    >>> checkfile("data.csv", msg="Data file missing", check_empty=True)
-    """
-    check(file_exists(filepath), msg=f"{msg} File '{filepath}' does not exist.")
-    if check_empty:
-        size = size_file(filepath)
-        check(size > 0, msg=f"{msg} File '{filepath}' is empty.")
-
+        logging.error(f"Error creating directory '{folder_path}': {e}")

@@ -11,15 +11,14 @@ Authors:
 - Bachir Zerroug, https://www.linkedin.com/in/bachirzerroug
 """
 
+import logging
 import os
 import platform
 import shlex
 from subprocess import PIPE, Popen
 
 # Assuming these come from your other utility modules:
-from .logging_utils import check, error, info
 from .path_utils import file_exists, dir_exists
-
 
 def windows() -> bool:
     """
@@ -108,6 +107,7 @@ def get_nb_workers(workers:int = -1) -> int:
     w = max(1, nb_workers + workers + 1)
     return w
 
+# TODO: remove
 def getpid() -> str:
     """
     Get the process ID of the current Python process.
@@ -118,7 +118,6 @@ def getpid() -> str:
         The process ID as a string.
     """
     return str(os.getpid())
-
 
 def system(
     cmd: str,
@@ -148,11 +147,12 @@ def system(
 
     Raises
     ------
-    SystemExit
+    AssertionError
         If the command fails (non-zero exit code) or if the expected output
         does not exist or is empty (depending on `check_empty`).
     """
-    info(f"Executing system command: {cmd}")
+    logging.info(f"Executing system command: {cmd}")
+    
     args = shlex.split(cmd)
     proc = Popen(args, stdout=PIPE, stderr=PIPE, shell=False)
     out_bytes, err_bytes = proc.communicate()
@@ -162,14 +162,14 @@ def system(
 
     # Check exit code
     if check_exitcode:
-        check(proc.returncode == 0, f"Command '{cmd}' failed with exit code {proc.returncode}")
+        assert proc.returncode == 0, f"Command '{cmd}' failed with exit code {proc.returncode}"
 
     # Check for expected output presence (and optionally non-emptiness)
     if expected_output:
         # Either a file or directory. If it doesn't exist or is empty, raise error
         if not (file_exists(expected_output, check_empty=check_empty) or 
                 dir_exists(expected_output, check_empty=check_empty)):
-            error(f"Expected output '{expected_output}' does not exist or is empty.")
+            raise AssertionError(f"Expected output '{expected_output}' does not exist or is empty.")
 
     return {"out": out_str, "err": err_str}
 
@@ -185,16 +185,23 @@ def openfile(filename: str) -> None:
 
     Raises
     ------
-    SystemExit
-        If the operating system is not recognized or if there's an error
-        opening the file.
+    OSError
+        If there's an error opening the file with the system's default application.
     """
-    info(f"Opening file '{filename}' with default application.")
-    if windows():
-        os.startfile(filename)  # Windows-specific
-    elif linux():
-        system(f"xdg-open {filename}", check_exitcode=True)
-    elif macos():
-        system(f"open {filename}", check_exitcode=True)
-    else:
-        error(f"OS not supported: {platform}")
+    logging.info(f"Opening file '{filename}' with default application.")
+    
+    try:
+        if windows():
+            os.startfile(filename)
+            return
+            
+        if macos():
+            cmd = "open"
+
+        if linux():
+            cmd = "xdg-open"
+        
+        system(f"{cmd} {filename}", check_exitcode=True)
+        
+    except Exception as e:
+        raise SystemExit(f"Failed to open file '{filename}': System OS is not supported.")
