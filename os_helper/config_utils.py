@@ -163,10 +163,11 @@ def get_config(
 
     # Step 1: Attempt to load from a specific file or folder if `path` is provided
     logging.info(f"Loading configuration for '{config_type}'")
+    config = None
     if not emptystring(path):
         if file_exists(path):
             config = _valid_config_file(path, keys)
-        if config:
+        if not(config is None):
             return config
         logging.info(f"No valid configuration found in path: {path}")
 
@@ -180,7 +181,7 @@ def get_config(
     # Step 3: Check os.environ for required keys
     logging.info("Loading configuration from environment variables (possibly merged with .env files)")
     config = _config_from_env(keys)
-    if config:
+    if not(config is None):
         logging.info(f"Configuration '{config_type}' successfully loaded from environment variables.")
         return config
 
