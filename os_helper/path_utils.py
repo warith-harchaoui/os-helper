@@ -240,11 +240,13 @@ def recursive_glob(root_dir: str, pattern: str) -> List[str]:
 def join(*args: str) -> str:
     """
     Join multiple path components into a single absolute path.
+    
+    Supports both individual arguments and a single iterable argument.
 
     Parameters
     ----------
     *args : str
-        The path components to join.
+        The path components to join, or a single iterable of path components.
 
     Returns
     -------
@@ -255,7 +257,12 @@ def join(*args: str) -> str:
     -------
     >>> join("folder1", "subfolder2", "file.txt")
     '/home/user/project/folder1/subfolder2/file.txt'
+    >>> join(["folder1", "subfolder2", "file.txt"])
+    '/home/user/project/folder1/subfolder2/file.txt'
     """
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        # If a single iterable is passed, unpack it
+        args = args[0]
     normalized_path = os.path.normpath(os.path.join(*args))
     return relative2absolute_path(normalized_path, checkpath=False)
 
