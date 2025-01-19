@@ -167,8 +167,20 @@ def get_config(
     if not emptystring(path):
         if file_exists(path):
             config = _valid_config_file(path, keys)
-        if not(config is None):
-            return config
+            if not (config is None):
+                logging.info(f"No valid configuration found in path: {path}")
+                return config
+        if dir_exists(path):
+            ext = ["json", "yaml", "yml"]
+            candidates = []
+            for e in ext:
+                candidates.extend(glob.glob(join(path, f"*.{e}")))
+            candidates = sorted(candidates)
+            for candidate_path in candidates:
+                config = _valid_config_file(candidate_path, keys, config_type)
+                if not (config is None):
+                    logging.info(f"No valid configuration found in path: {candidate_path}")
+                    return config
         logging.info(f"No valid configuration found in path: {path}")
 
     # Step 2: Merge all .env files into os.environ
