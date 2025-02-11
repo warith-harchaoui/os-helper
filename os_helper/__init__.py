@@ -26,6 +26,7 @@ from .system_utils import (
     system,
     openfile,
     getpid,
+    init_logging,
 )
 
 from .temp_utils import (
@@ -90,6 +91,7 @@ __all__ = [
     "system",
     "openfile",
     "getpid",
+    "init_logging",
 
     # temp_utils
     "temporary_filename",
