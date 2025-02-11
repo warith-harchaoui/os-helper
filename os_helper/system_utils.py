@@ -16,39 +16,62 @@ import os
 import platform
 import shlex
 from subprocess import PIPE, Popen
+import sys
 
 # Assuming these come from your other utility modules:
 from .path_utils import file_exists, dir_exists
 
-def init_logging(stdout=True, immediate_flush=True, format="%(asctime)s - %(levelname)s - %(message)s", level=logging.DEBUG):
+
+def init_logging(
+    stdout: bool = True,
+    immediate_flush: bool = True,
+    format: str = "%(asctime)s - %(levelname)s - %(message)s",
+    level: int = logging.DEBUG,
+    file: str = None,
+):
     """Initialize global logging configuration.
 
-    This function configures logging globally with DEBUG level and console output.
-    Messages are formatted with timestamp, level and content.
+    This function configures logging globally with the specified log level and output options.
+    Messages are formatted with timestamp, level, and content.
 
     Parameters
     ----------
     stdout : bool, optional
-        Whether to output logs to stdout (True) or stderr (False), by default True
+        Whether to output logs to stdout (True) or stderr (False), by default True.
     immediate_flush : bool, optional
-        Whether to flush log messages immediately, by default True
+        Whether to flush log messages immediately, by default True.
     format : str, optional
-        Format string for log messages, by default "%(asctime)s - %(levelname)s - %(message)s"
+        Format string for log messages, by default "%(asctime)s - %(levelname)s - %(message)s".
     level : int, optional
-        Log level, by default logging.DEBUG
+        Log level, by default logging.DEBUG.
+    file : str, optional
+        If provided, log messages will also be written to this file.
     """
-    # Configure logging globally when this module is imported
-    logging.basicConfig(
-        level=level,  
-        format=format,
-        handlers=[logging.StreamHandler(sys.stdout if stdout else sys.stderr)]
-    )
+    handlers = []
+    
+    # Add console handler
+    stream = sys.stdout if stdout else sys.stderr
+    handlers.append(logging.StreamHandler(stream))
+    
+    # Add file handler if needed
+    if file:
+        handlers.append(logging.FileHandler(file))
 
+    if not logging.getLogger().hasHandlers():  # Avoid duplicate handlers
+        logging.basicConfig(
+            level=level,
+            format=format,
+            handlers=handlers,
+            force=True,  # Ensure reconfiguration if logging is already set
+        )
+
+    # Ensure immediate flush if required
     if immediate_flush:
-        # Ensure messages are flushed immediately
         logger = logging.getLogger()
         for handler in logger.handlers:
-            handler.flush = lambda: sys.stdout.flush() if stdout else sys.stderr.flush()
+            if isinstance(handler, logging.StreamHandler):
+                handler.flush()
+
 
 
 def windows() -> bool:
