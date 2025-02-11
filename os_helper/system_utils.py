@@ -20,6 +20,37 @@ from subprocess import PIPE, Popen
 # Assuming these come from your other utility modules:
 from .path_utils import file_exists, dir_exists
 
+def init_logging(stdout=True, immediate_flush=True, format="%(asctime)s - %(levelname)s - %(message)s", level=logging.DEBUG):
+    """Initialize global logging configuration.
+
+    This function configures logging globally with DEBUG level and console output.
+    Messages are formatted with timestamp, level and content.
+
+    Parameters
+    ----------
+    stdout : bool, optional
+        Whether to output logs to stdout (True) or stderr (False), by default True
+    immediate_flush : bool, optional
+        Whether to flush log messages immediately, by default True
+    format : str, optional
+        Format string for log messages, by default "%(asctime)s - %(levelname)s - %(message)s"
+    level : int, optional
+        Log level, by default logging.DEBUG
+    """
+    # Configure logging globally when this module is imported
+    logging.basicConfig(
+        level=level,  
+        format=format,
+        handlers=[logging.StreamHandler(sys.stdout if stdout else sys.stderr)]
+    )
+
+    if immediate_flush:
+        # Ensure messages are flushed immediately
+        logger = logging.getLogger()
+        for handler in logger.handlers:
+            handler.flush = lambda: sys.stdout.flush() if stdout else sys.stderr.flush()
+
+
 def windows() -> bool:
     """
     Determine if the current operating system is Windows.
@@ -95,7 +126,7 @@ def get_nb_workers(workers:int = -1) -> int:
         try:
             nb_workers = int(os.environ["NB_WORKERS"])
         except ValueError:
-            info("NB_WORKERS environment variable is invalid. Using default CPU count.")
+            logging.info("NB_WORKERS environment variable is invalid. Using default CPU count.")
         
     if workers == 0:
         return nb_workers
