@@ -166,7 +166,7 @@ def get_config(
     config = None
     if not emptystring(path):
         if file_exists(path):
-            config = _valid_config_file(path, keys)
+            config = _valid_config_file(path, keys, config_type)
             if not (config is None):
                 logging.info(f"No valid configuration found in path: {path}")
                 return config
