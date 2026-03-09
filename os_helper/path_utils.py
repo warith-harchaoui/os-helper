@@ -16,10 +16,18 @@ import glob
 import shutil
 import pathlib
 from typing import List
+import contextlib
+
 
 # Importing necessary functions from other utility modules
 # from .logging_utils import check, info, error
 import logging
+
+from os_helper.hash_utils import hash_string
+from os_helper.misc_utils import now_string
+from os_helper.string_utils import emptystring
+from os_helper.system_utils import getpid
+from os_helper.temp_utils import temporary_filename
 
 
 def folder_name_ext(path: str, checkpath: bool = False) -> tuple:
@@ -432,3 +440,113 @@ def make_directory(folder_path: str, exist_ok: bool = True) -> None:
         logging.info(f"Directory created: '{folder_path}'")
     except Exception as e:
         logging.error(f"Error creating directory '{folder_path}': {e}")
+
+@contextlib.contextmanager
+def temporary_remote_file(
+    upload_function,
+    delete_function,
+    prefix: str,
+    suffix: str = '',
+    from_local_file: str = '',
+    checkfile_function=None,
+    mode: str = 'wb',
+    verbosity: int = 2
+):
+    """
+    Context manager for handling a temporary remote file.
+
+    This context manager either uploads a local file or creates a temporary file,
+    uploads it to a remote location, and ensures its deletion after use.
+
+    Parameters
+    ----------
+    upload_function : callable
+        Function to upload a file. Should accept a local file path and return the remote file path.
+    delete_function : callable
+        Function to delete a remote file. Should accept the remote file path.
+    prefix : str
+        Prefix for the temporary file name.
+    suffix : str, optional
+        Suffix (extension) for the temporary file name. Defaults to ''.
+    from_local_file : str, optional
+        Path to a local file to upload instead of creating a temporary one. Defaults to ''.
+    checkfile_function : callable, optional
+        Function to check if the remote file exists/valid. Should accept the remote file path.
+    mode : str, optional
+        File open mode for the temporary file. Defaults to 'wb'.
+    verbosity : int, optional
+        Verbosity level. Defaults to 2.
+
+    Yields
+    ------
+    str
+        The remote file path.
+    """
+
+    # Normalize suffix
+    sfx = suffix
+    if sfx and not sfx.startswith('.'):
+        sfx = '.' + sfx
+    elif not sfx:
+        sfx = ''
+
+    remote_file_path = None
+
+    if from_local_file and not emptystring(from_local_file):
+        # Upload an existing local file
+        if checkfile_function is not None:
+            assert callable(checkfile_function), "checkfile_function must be callable"
+        # Double check the local file exists
+        assert os.path.isfile(from_local_file), f"Local file does not exist: {from_local_file}"
+
+        try:
+            remote_file_path = upload_function(from_local_file)
+            # Double check the remote file after upload
+            if checkfile_function is not None:
+                assert checkfile_function(remote_file_path), f"Upload does not work: {remote_file_path}"
+            yield remote_file_path
+        finally:
+            if remote_file_path is not None:
+                # Double check before deletion
+                try:
+                    delete_function(remote_file_path)
+                except Exception as e:
+                    logging.error(f"Failed to delete remote file '{remote_file_path}': {e}")
+    else:
+        # Create a temporary file, upload it, and clean up
+        i = now_string(format='log')
+        h = hash_string(f'{getpid()}-{i}')
+        h = h[:8] if isinstance(h, str) else 'hash'
+        p = f"{now_string(format='filename')}-{h}-"
+        if prefix and not emptystring(prefix):
+            p = f"{prefix}-{p}"
+
+        with temporary_filename(suffix=sfx, prefix=p, mode=mode) as filename:
+            # Write something to the file to ensure it exists
+            try:
+                with open(filename, mode=mode) as fout:
+                    # Write the prefix as content for demonstration
+                    if 'b' in mode:
+                        fout.write(p.encode('utf8'))
+                    else:
+                        fout.write(p)
+                    fout.flush()
+            except Exception as e:
+                raise RuntimeError(f"Failed to write to temporary file: {filename}") from e
+
+            try:
+                # Double check the file exists before upload
+                import os
+                assert os.path.isfile(filename), f"Temporary file does not exist: {filename}"
+                remote_file_path = upload_function(filename)
+                # Double check the remote file after upload
+                if checkfile_function is not None:
+                    assert checkfile_function(remote_file_path), f"Upload does not work: {remote_file_path}"
+                yield remote_file_path
+            finally:
+                if remote_file_path is not None:
+                    # Double check before deletion
+                    try:
+                        delete_function(remote_file_path)
+                    except Exception as e:
+                        logging.error(f"Failed to delete remote file '{remote_file_path}': {e}")
