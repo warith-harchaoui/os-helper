@@ -30,7 +30,7 @@ import re
 
 from datetime import datetime
 
-import logging
+from .logging_utils import info, error
 from .path_utils import file_exists, dir_exists, size_file, join
 
 def now_string(fmt: str = "log") -> str:
@@ -212,7 +212,7 @@ def zip_folder(folder_path: str, zip_file_path: str = "") -> None:
                 full_path = os.path.join(root, file)
                 arcname = os.path.relpath(full_path, folder_path)
                 zf.write(full_path, arcname)
-    logging.info(f"Zipped folder '{folder_path}' into '{zip_file_path}'")
+    info(f"Zipped folder '{folder_path}' into '{zip_file_path}'")
 
 def time2str(seconds: float, no_space: bool = False) -> str:
     """
@@ -297,10 +297,10 @@ def str2time(input_string: str) -> float:
             elif len(parts) == 2:  # MM:SS
                 return parts[0] * 60 + parts[1]
             else:
-                logging.error(f"Invalid time format: {input_string} - expected 2 or 3 parts")
+                error(f"Invalid time format: {input_string} - expected 2 or 3 parts")
                 return 0.0
         except ValueError:
-            logging.error(f"Invalid time format: {input_string}")
+            error(f"Invalid time format: {input_string}")
             return 0.0
 
     # Handle text formats like "1 hour 30 minutes"
@@ -326,7 +326,7 @@ def str2time(input_string: str) -> float:
                     remaining = re.sub(pattern, "", remaining, count=1).strip()
                     found_unit = True
                 except ValueError:
-                    logging.error(f"Invalid numeric value in: {input_string}")
+                    error(f"Invalid numeric value in: {input_string}")
                     continue
 
     if found_unit:
@@ -336,7 +336,7 @@ def str2time(input_string: str) -> float:
     try:
         return float(input_string)
     except ValueError:
-        logging.error(f"Cannot parse time from: {input_string}")
+        error(f"Cannot parse time from: {input_string}")
         return 0.0
 
 
@@ -370,12 +370,12 @@ def download_file(url: str, file_path: str = "") -> None:
         resp = requests.get(url)
         resp.raise_for_status()
     except requests.RequestException as e:
-        logging.error(f"Failed to download from '{url}': {e}")
+        error(f"Failed to download from '{url}': {e}")
 
     with open(file_path, "wb") as fout:
         fout.write(resp.content)
 
-    logging.info(f"File downloaded from '{url}' and saved to '{file_path}'")
+    info(f"File downloaded from '{url}' and saved to '{file_path}'")
 
 def get_user_ip() -> Dict[str, Optional[str]]:
     """

@@ -19,15 +19,8 @@ from typing import List
 import contextlib
 
 
-# Importing necessary functions from other utility modules
-# from .logging_utils import check, info, error
-import logging
+from .logging_utils import info, error
 
-from os_helper.hash_utils import hash_string
-from os_helper.misc_utils import now_string
-from os_helper.string_utils import emptystring
-from os_helper.system_utils import getpid
-from os_helper.temp_utils import temporary_filename
 
 
 def folder_name_ext(path: str, checkpath: bool = False) -> tuple:
@@ -189,7 +182,7 @@ def relative2absolute_path(path: str, checkpath: bool = False) -> str:
     abs_path = os.path.abspath(path)
     if checkpath:
         if not (file_exists(abs_path) or dir_exists(abs_path)):
-            logging.error(f"File or directory does not exist: {abs_path}")
+            error(f"File or directory does not exist: {abs_path}")
     return abs_path
 
 def path_without_home(path: str) -> str:
@@ -355,9 +348,9 @@ def copyfile(source: str, destination: str) -> None:
     try:
         shutil.copy2(source_abs, destination_abs)
         checkfile(destination_abs, msg=f"Failed to copy '{source}' to '{destination}'", check_empty=True)
-        logging.info(f"Copied '{source}' to '{destination_abs}' successfully.")
+        info(f"Copied '{source}' to '{destination_abs}' successfully.")
     except Exception as e:
-        logging.error(f"Error copying file: {e}")
+        error(f"Error copying file: {e}")
 
 def remove_directory(folder_path: str) -> None:
     """
@@ -380,11 +373,11 @@ def remove_directory(folder_path: str) -> None:
     if dir_exists(folder_path):
         try:
             shutil.rmtree(folder_path)
-            logging.info(f"Removed directory: '{folder_path}'")
+            info(f"Removed directory: '{folder_path}'")
         except Exception as e:
-            logging.error(f"Failed to remove directory '{folder_path}': {e}")
+            error(f"Failed to remove directory '{folder_path}': {e}")
     else:
-        logging.info(f"Directory '{folder_path}' does not exist, nothing to remove.")
+        info(f"Directory '{folder_path}' does not exist, nothing to remove.")
 
 def remove_files(files_list: List[str]) -> None:
     """
@@ -408,11 +401,11 @@ def remove_files(files_list: List[str]) -> None:
         if file_exists(file_path):
             try:
                 pathlib.Path(file_path).unlink()
-                logging.info(f"Removed file: '{file_path}'")
+                info(f"Removed file: '{file_path}'")
             except Exception as e:
-                logging.error(f"Failed to remove file '{file_path}': {e}")
+                error(f"Failed to remove file '{file_path}': {e}")
         else:
-            logging.info(f"File '{file_path}' does not exist, skipping.")
+            info(f"File '{file_path}' does not exist, skipping.")
 
 def make_directory(folder_path: str, exist_ok: bool = True) -> None:
     """
@@ -437,9 +430,9 @@ def make_directory(folder_path: str, exist_ok: bool = True) -> None:
     try:
         os.makedirs(folder_path, exist_ok=exist_ok)
         assert dir_exists(folder_path), f"Failed to create directory: '{folder_path}'"
-        logging.info(f"Directory created: '{folder_path}'")
+        info(f"Directory created: '{folder_path}'")
     except Exception as e:
-        logging.error(f"Error creating directory '{folder_path}': {e}")
+        error(f"Error creating directory '{folder_path}': {e}")
 
 @contextlib.contextmanager
 def temporary_remote_file(
@@ -483,6 +476,13 @@ def temporary_remote_file(
         The remote file path.
     """
 
+    # Lazy imports to avoid circular dependency at module load time
+    from os_helper.hash_utils import hash_string
+    from os_helper.misc_utils import now_string
+    from os_helper.string_utils import emptystring
+    from os_helper.system_utils import getpid
+    from os_helper.temp_utils import temporary_filename
+
     # Normalize suffix
     sfx = suffix
     if sfx and not sfx.startswith('.'):
@@ -511,7 +511,7 @@ def temporary_remote_file(
                 try:
                     delete_function(remote_file_path)
                 except Exception as e:
-                    logging.error(f"Failed to delete remote file '{remote_file_path}': {e}")
+                    error(f"Failed to delete remote file '{remote_file_path}': {e}")
     else:
         # Create a temporary file, upload it, and clean up
         i = now_string(format='log')
@@ -536,7 +536,6 @@ def temporary_remote_file(
 
             try:
                 # Double check the file exists before upload
-                import os
                 assert os.path.isfile(filename), f"Temporary file does not exist: {filename}"
                 remote_file_path = upload_function(filename)
                 # Double check the remote file after upload
@@ -549,4 +548,4 @@ def temporary_remote_file(
                     try:
                         delete_function(remote_file_path)
                     except Exception as e:
-                        logging.error(f"Failed to delete remote file '{remote_file_path}': {e}")
+                        error(f"Failed to delete remote file '{remote_file_path}': {e}")

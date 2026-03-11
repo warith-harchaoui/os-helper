@@ -11,7 +11,7 @@ Authors:
 - Bachir Zerroug, https://www.linkedin.com/in/bachirzerroug
 """
 
-import logging
+from .logging_utils import info
 import os
 import platform
 import shlex
@@ -22,55 +22,6 @@ import sys
 from .path_utils import file_exists, dir_exists
 
 
-def init_logging(
-    stdout: bool = True,
-    immediate_flush: bool = True,
-    format: str = "%(asctime)s - %(levelname)s - %(message)s",
-    level: int = logging.DEBUG,
-    file: str = None,
-):
-    """Initialize global logging configuration.
-
-    This function configures logging globally with the specified log level and output options.
-    Messages are formatted with timestamp, level, and content.
-
-    Parameters
-    ----------
-    stdout : bool, optional
-        Whether to output logs to stdout (True) or stderr (False), by default True.
-    immediate_flush : bool, optional
-        Whether to flush log messages immediately, by default True.
-    format : str, optional
-        Format string for log messages, by default "%(asctime)s - %(levelname)s - %(message)s".
-    level : int, optional
-        Log level, by default logging.DEBUG.
-    file : str, optional
-        If provided, log messages will also be written to this file.
-    """
-    handlers = []
-    
-    # Add console handler
-    stream = sys.stdout if stdout else sys.stderr
-    handlers.append(logging.StreamHandler(stream))
-    
-    # Add file handler if needed
-    if file:
-        handlers.append(logging.FileHandler(file))
-
-    if not logging.getLogger().hasHandlers():  # Avoid duplicate handlers
-        logging.basicConfig(
-            level=level,
-            format=format,
-            handlers=handlers,
-            force=True,  # Ensure reconfiguration if logging is already set
-        )
-
-    # Ensure immediate flush if required
-    if immediate_flush:
-        logger = logging.getLogger()
-        for handler in logger.handlers:
-            if isinstance(handler, logging.StreamHandler):
-                handler.flush()
 
 
 
@@ -149,7 +100,7 @@ def get_nb_workers(workers:int = -1) -> int:
         try:
             nb_workers = int(os.environ["NB_WORKERS"])
         except ValueError:
-            logging.info("NB_WORKERS environment variable is invalid. Using default CPU count.")
+            info("NB_WORKERS environment variable is invalid. Using default CPU count.")
         
     if workers == 0:
         return nb_workers
@@ -205,7 +156,7 @@ def system(
         If the command fails (non-zero exit code) or if the expected output
         does not exist or is empty (depending on `check_empty`).
     """
-    logging.info(f"Executing system command: {cmd}")
+    info(f"Executing system command: {cmd}")
     
     args = shlex.split(cmd)
     proc = Popen(args, stdout=PIPE, stderr=PIPE, shell=False)
@@ -242,7 +193,7 @@ def openfile(filename: str) -> None:
     OSError
         If there's an error opening the file with the system's default application.
     """
-    logging.info(f"Opening file '{filename}' with default application.")
+    info(f"Opening file '{filename}' with default application.")
     
     try:
         if windows():

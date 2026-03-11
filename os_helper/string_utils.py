@@ -16,9 +16,7 @@ import string
 import unicodedata
 from typing import Optional
 
-# Importing necessary functions from other utility modules
-# from .logging_utils import error, check, info
-import logging
+
 
 def emptystring(s: Optional[str]) -> bool:
     """

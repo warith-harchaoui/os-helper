@@ -19,9 +19,7 @@ from .path_utils import file_exists, dir_exists
 
 from .misc_utils import now_string  # or from .main import now_string
 
-# If you need logging or error-checking:
-# from .logging_utils import check, info, error
-import logging
+
 
 def _hash_engine() -> hashlib:
     """

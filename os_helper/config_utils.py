@@ -23,9 +23,7 @@ from typing import List, Dict, Optional, Union
 import yaml
 from dotenv import load_dotenv
 
-# Importing necessary functions from other utility modules
-# from .logging_utils import info, error, check
-import logging
+from .logging_utils import info, error
 from .path_utils import file_exists, dir_exists, join, checkfile, folder_name_ext
 from .string_utils import emptystring
 
@@ -70,16 +68,16 @@ def _valid_config_file(a_path: str, keys: List[str], config_type: str) -> Option
             config = yaml.load(fin, Loader=yaml.SafeLoader)
     
     if config is None:
-        logging.info(f"Unsupported configuration file format {ext}: {a_path}")
+        info(f"Unsupported configuration file format {ext}: {a_path}")
         return None
 
     if all(key in config for key in keys):
-        logging.info(f"Configuration '{config_type}' successfully loaded from '{a_path}'")
+        info(f"Configuration '{config_type}' successfully loaded from '{a_path}'")
         return config
     else:
         missing = [key for key in keys if key not in config]
         m = ", ".join(missing)
-        logging.info(f"Configuration file '{a_path}' does not have all keys. Missing keys are {m}")
+        info(f"Configuration file '{a_path}' does not have all keys. Missing keys are {m}")
     
     return None
 
@@ -115,7 +113,7 @@ def _config_from_env(keys: List[str]) -> Optional[Dict[str, Union[str, int, floa
         return config
     
     m = ", ".join(missing_keys)
-    logging.info(f"Missing keys in environment variables: {m}")
+    info(f"Missing keys in environment variables: {m}")
     return None
 
 
@@ -162,13 +160,13 @@ def get_config(
 
 
     # Step 1: Attempt to load from a specific file or folder if `path` is provided
-    logging.info(f"Loading configuration for '{config_type}'")
+    info(f"Loading configuration for '{config_type}'")
     config = None
     if not emptystring(path):
         if file_exists(path):
             config = _valid_config_file(path, keys, config_type)
             if not (config is None):
-                logging.info(f"No valid configuration found in path: {path}")
+                info(f"No valid configuration found in path: {path}")
                 return config
         if dir_exists(path):
             ext = ["json", "yaml", "yml"]
@@ -179,23 +177,23 @@ def get_config(
             for candidate_path in candidates:
                 config = _valid_config_file(candidate_path, keys, config_type)
                 if not (config is None):
-                    logging.info(f"No valid configuration found in path: {candidate_path}")
+                    info(f"No valid configuration found in path: {candidate_path}")
                     return config
-        logging.info(f"No valid configuration found in path: {path}")
+        info(f"No valid configuration found in path: {path}")
 
     # Step 2: Merge all .env files into os.environ
-    logging.info("Loading configuration from env files")
+    info("Loading configuration from env files")
     for env_file in env_files:
         if file_exists(env_file):
             load_dotenv(env_file)
-            logging.info(f"Loaded env file: {env_file}")
+            info(f"Loaded env file: {env_file}")
 
     # Step 3: Check os.environ for required keys
-    logging.info("Loading configuration from environment variables (possibly merged with .env files)")
+    info("Loading configuration from environment variables (possibly merged with .env files)")
     config = _config_from_env(keys)
     if not(config is None):
-        logging.info(f"Configuration '{config_type}' successfully loaded from environment variables.")
+        info(f"Configuration '{config_type}' successfully loaded from environment variables.")
         return config
 
     # Step 4: Raise an error if no configuration was found
-    logging.error(f"Missing required keys for '{config_type}' configuration in files, .env files, or environment variables.")
+    error(f"Missing required keys for '{config_type}' configuration in files, .env files, or environment variables.")

@@ -17,8 +17,7 @@ import os
 import contextlib
 from typing import Generator
 
-# Importing necessary functions from other utility modules
-import logging
+from .logging_utils import info, error
 from .path_utils import join, relative2absolute_path
 from .misc_utils import now_string
 from .hash_utils import hash_string
@@ -79,17 +78,17 @@ def temporary_filename(
             delete=not delete
         ) as tmp:
             temp_path = relative2absolute_path(tmp.name)
-            logging.info(f"Created temporary file: {temp_path}")
+            info(f"Created temporary file: {temp_path}")
             yield temp_path
     except Exception as e:
-        logging.error(f"Failed to create temporary file: {e}")
+        error(f"Failed to create temporary file: {e}")
     finally:
         if delete and os.path.exists(temp_path):
             try:
                 os.unlink(temp_path)
-                logging.info(f"Deleted temporary file: {temp_path}")
+                info(f"Deleted temporary file: {temp_path}")
             except Exception as e:
-                logging.error(f"Failed to delete temporary file '{temp_path}': {e}")
+                error(f"Failed to delete temporary file '{temp_path}': {e}")
 
 
 @contextlib.contextmanager
@@ -130,14 +129,14 @@ def temporary_folder(prefix: str = "", delete: bool = True) -> Generator[str, No
         # Create the temporary directory
         temp_dir = tempfile.mkdtemp(prefix=unique_prefix)
         temp_dir = relative2absolute_path(temp_dir)
-        logging.info(f"Created temporary directory: {temp_dir}")
+        info(f"Created temporary directory: {temp_dir}")
         yield temp_dir
     except Exception as e:
-        logging.error(f"Failed to create temporary directory: {e}")
+        error(f"Failed to create temporary directory: {e}")
     finally:
         if delete and os.path.exists(temp_dir):
             try:
                 shutil.rmtree(temp_dir)
-                logging.info(f"Deleted temporary directory: {temp_dir}")
+                info(f"Deleted temporary directory: {temp_dir}")
             except Exception as e:
-                logging.error(f"Failed to delete temporary directory '{temp_dir}': {e}")
+                error(f"Failed to delete temporary directory '{temp_dir}': {e}")
