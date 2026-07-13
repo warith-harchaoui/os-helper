@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "os-helper"
+version = "1.5.0"
+description = "Cross-platform Python utility functions for file handling, system operations, string manipulation, folder management, hashing, configuration loading, and timing/profiling primitives — exposed as library, argparse CLI and click CLI."
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "Warith HARCHAOUI", email = "warithmetics@deraison.ai"},
+]
+keywords = ["utilities", "filesystem", "config", "hashing", "timing", "profiling", "cross-platform"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Filesystems",
+]
+dependencies = [
+    "requests>=2.32.3,<3",
+    "python-dotenv>=1.0.1,<2",
+    "pyyaml>=6.0.2,<7",
+    "validators>=0.34.0,<1",
+]
+
+[project.optional-dependencies]
+# CLI-only-with-click extra. argparse variant needs no runtime dep and
+# is always available.
+cli = ["click>=8.1,<9"]
+# `dev` keeps the bar low for CI — pytest + click (so the click CLI
+# import always resolves in tests). No AI inference here, so no
+# DeepEval / Giskard.
+dev = [
+    "pytest>=8",
+    "click>=8.1,<9",
+]
+
+[project.scripts]
+# argparse-based CLI — no runtime dep beyond stdlib + core package.
+os-helper = "os_helper.cli_argparse:main"
+# click-based twin — install with [cli] extra.
+os-helper-click = "os_helper.cli_click:cli"
+
+[project.urls]
+Homepage = "https://github.com/warith-harchaoui/os-helper"
+Issues = "https://github.com/warith-harchaoui/os-helper/issues"
+
+[tool.setuptools.packages.find]
+include = ["os_helper*"]
+exclude = ["tests*", "assets*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["assets", "tests"]
+
+[tool.ruff.lint]
+# Conservative starter set: pyflakes (F), pycodestyle errors (E), warnings (W),
+# isort (I), bugbear (B), comprehensions (C4), pyupgrade (UP), simplify (SIM).
+# Easy to tighten later; this is the baseline.
+select = ["E", "F", "W", "I", "B", "C4", "UP", "SIM"]
+ignore = [
+    "E501",  # line-too-long — handled by formatter / context-dependent
+    "B008",  # function call in argument default — too noisy for our style
+    "SIM108",  # ternary preferred over if/else — sometimes hurts readability
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]  # assert False in pytest is fine

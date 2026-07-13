@@ -1,0 +1,16 @@
+# os-helper — pip requirements (portable, no `file://` deps).
+#
+# For a plain install:
+#     pip install -r requirements.txt
+#     pip install -e .           # os-helper itself (editable) or `pip install .`
+#
+# Optional surfaces live behind extras (not pulled by this file):
+#     pip install '.[cli]'       # click-based CLI twin
+#
+# os-helper is the suite's leaf dependency — it pins no sibling *-helper.
+
+# --- Core runtime ---------------------------------------------------------
+requests>=2.32.3,<3
+python-dotenv>=1.0.1,<2
+pyyaml>=6.0.2,<7
+validators>=0.34.0,<1

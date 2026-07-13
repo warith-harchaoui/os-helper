@@ -1,0 +1,15 @@
+# os-helper — dev + test requirements.
+# Runtime deps plus the test / lint / build tooling used by CI and pytest.
+#
+#     pip install -r requirements-dev.txt
+#     pip install -e .            # the package itself (editable)
+#
+# (No DeepEval / Giskard here: this package performs no LLM/AI inference that
+#  needs an evaluation layer — see CODING.md rule 15.)
+
+# Runtime dependencies:
+-r requirements.txt
+
+# Dev / test tooling:
+pytest>=8
+click>=8.1,<9
