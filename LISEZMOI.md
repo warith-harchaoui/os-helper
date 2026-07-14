@@ -14,6 +14,12 @@ OS Helper est une bibliothèque Python qui fournit des fonctions utilitaires pou
 
 Elle propose un ensemble d'outils pour simplifier les opérations système courantes, la manipulation de fichiers et les tâches spécifiques à chaque OS.
 
+# Documentation
+
+[💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
+
+[📋 Exemples](https://github.com/warith-harchaoui/os-helper/blob/main/EXAMPLES.md)
+
 # Fonctionnalités
 
 - Détection du système d'exploitation (Windows, Linux, macOS, Unix)
@@ -22,12 +28,6 @@ Elle propose un ensemble d'outils pour simplifier les opérations système coura
 - Gestion de chemins multi-plateformes
 - Utilitaires de hash de fichiers et de chaînes
 - Gestion et exécution de processus
-
-# Documentation
-
-[👩‍💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
-
-[📋 Exemples](EXAMPLES.md)
 
 # Installation
 
