@@ -9,16 +9,23 @@ Author:
  - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
+# Postpone annotation evaluation for consistent modern typing on Python 3.10.
+from __future__ import annotations
+
 import hashlib
 import os
+from typing import TYPE_CHECKING
 
-from .misc_utils import now_string  # or from .main import now_string
-
-# If you keep 'file_exists' and 'dir_exists' in path_utils:
+from .misc_utils import now_string
 from .path_utils import dir_exists, file_exists
 
+# ``hashlib._Hash`` is a private runtime type; guard the import behind
+# TYPE_CHECKING so the annotation never triggers an import at runtime.
+if TYPE_CHECKING:
+    from hashlib import _Hash
 
-def _hash_engine():
+
+def _hash_engine() -> _Hash:
     """
     Create a new 160-bit hash engine.
 
@@ -35,8 +42,12 @@ def _hash_engine():
         A fresh hash object producing 40-char hex digests.
     """
     try:
+        # RIPEMD-160 gives a compact 40-hex-char digest, but OpenSSL 3 often
+        # ships it disabled in its legacy provider.
         return hashlib.new("ripemd160")
     except (ValueError, AttributeError):
+        # Fall back to BLAKE2b truncated to 20 bytes so the digest is still
+        # exactly 40 hex characters regardless of the OpenSSL build.
         return hashlib.blake2b(digest_size=20)
 
 
@@ -72,9 +83,13 @@ def hash_string(s: str, size: int = -1) -> str:
     stays 40 hex characters either way.
     """
     h = _hash_engine()
+    # Encode explicitly to UTF-8 so the digest is stable across platforms
+    # regardless of the default filesystem/locale encoding.
     h.update(s.encode("utf-8"))
     full_hash = h.hexdigest()
     if size > 0:
+        # Callers may request a digest LONGER than the native 40 chars; repeat
+        # the hex string until it is long enough, then slice to the exact size.
         while size > len(full_hash):
             full_hash += full_hash
         full_hash = full_hash[:size]
@@ -116,7 +131,9 @@ def hashfile(path: str, hash_content: bool = True, date: bool = False) -> str:
     return h.hexdigest()
 
 
-def hashfolder(path: str, hash_content: bool = True, hash_path: bool = False, date: bool = False) -> str:
+def hashfolder(
+    path: str, hash_content: bool = True, hash_path: bool = False, date: bool = False
+) -> str:
     """
     Generate a hash for the contents of a folder and/or its path.
 

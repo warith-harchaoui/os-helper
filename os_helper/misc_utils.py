@@ -15,6 +15,10 @@ Author:
  - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
+# Postpone annotation evaluation so union syntax like ``str | None`` is legal
+# on the oldest supported interpreter (Python 3.10).
+from __future__ import annotations
+
 import html
 import json
 import os
@@ -23,6 +27,8 @@ import time
 import zipfile
 from datetime import datetime
 
+# ``requests`` powers the URL/download helpers; ``validators`` gives us a
+# quick, dependency-light URL syntax check before we ever touch the network.
 import requests
 import validators
 
@@ -47,7 +53,10 @@ def now_string(fmt: str = "log") -> str:
     str
         The formatted date-time string.
     """
+    # Default "log" layout keeps ``/`` and ``:`` for human readability.
     result = datetime.now().strftime("%Y/%m/%d-%H:%M:%S")
+    # The "filename" variant swaps those characters out because ``/`` and ``:``
+    # are illegal (or awkward) in file names on common filesystems.
     if fmt == "filename":
         result = result.replace("/", "-").replace(":", "-")
     return result
@@ -70,6 +79,10 @@ def format_size(size: int) -> str:
     str
         Formatted size, e.g. ``"1.23 MB"``, ``"456.00 KB"``, ``"42 B"``.
     """
+    # Walk from the largest unit down; the first threshold the size clears wins,
+    # so we always report in the most compact sensible unit. We use decimal
+    # (1000-based) thresholds — matching how disk vendors quote sizes — rather
+    # than binary (1024-based) ones.
     if size > 1e12:
         return f"{size / 1e12:.2f} TB"
     if size > 1e9:
@@ -78,6 +91,7 @@ def format_size(size: int) -> str:
         return f"{size / 1e6:.2f} MB"
     if size > 1e3:
         return f"{size / 1e3:.2f} KB"
+    # Below a kilobyte we show whole bytes — no fractional byte makes sense.
     return f"{int(size)} B"
 
 
@@ -127,20 +141,28 @@ def folder_description(
     assert dir_exists(path), f"Folder '{path}' does not exist"
 
     result: dict[str, int] = {}
+    # Walk the tree, collecting every visible file's size keyed by its path
+    # relative to ``path`` (so the mapping is portable, not tied to absolutes).
     for root, _dirs, files in os.walk(path):
+        # In non-recursive mode, stop as soon as ``os.walk`` steps below the top
+        # level (the first yielded ``root`` is ``path`` itself).
         if not recursive and root != path:
             break
         for file in files:
+            # Skip dotfiles: they are usually editor/OS metadata, not content.
             if file.startswith("."):
                 continue
             fpath = os.path.join(root, file)
             relpath = os.path.relpath(fpath, path)
             result[relpath] = size_file(fpath)
 
+    # Optionally render a browsable HTML index of everything we found.
     if index_html:
         index_html_path = join(path, "index.html")
         size_header = "<th>Size</th>" if with_size else ""
         rows = []
+        # Sort for deterministic output; ``html.escape`` guards against file
+        # names containing characters that would otherwise break the markup.
         for rel, sz in sorted(result.items()):
             safe_name = html.escape(rel)
             size_cell = f"<td>{format_size(sz)}</td>" if with_size else ""
@@ -164,10 +186,12 @@ def folder_description(
             "    </div>\n"
             "</body>\n</html>\n"
         )
+        # UTF-8 so non-ASCII file names survive the round-trip to disk.
         with open(index_html_path, "w", encoding="utf-8") as fout:
             fout.write(page)
         info(f"HTML index generated at: {index_html_path}")
 
+    # Optionally also dump the raw mapping as machine-readable JSON.
     if description_json:
         desc_json_path = join(path, "description.json")
         with open(desc_json_path, "w", encoding="utf-8") as jfile:
@@ -193,12 +217,17 @@ def is_working_url(url: str) -> bool:
         HTTP 200 within five seconds. Network errors and non-200 responses
         both yield False.
     """
+    # Cheap syntactic gate first: reject obviously malformed URLs before we
+    # spend a network round-trip on them.
     if not validators.url(url):
         return False
     try:
+        # HEAD (not GET) so we probe liveness without downloading the body;
+        # a short timeout keeps callers from hanging on dead hosts.
         resp = requests.head(url, timeout=5)
         return resp.status_code == 200
     except requests.RequestException:
+        # Any transport-level failure means "not reachable" for our purposes.
         return False
 
 
@@ -222,18 +251,24 @@ def zip_folder(folder_path: str, zip_file_path: str = "") -> None:
         If ``folder_path`` does not exist.
     """
     assert dir_exists(folder_path), f"Folder '{folder_path}' does not exist"
+    # Default the archive name to ``<folder>.zip`` sitting next to the folder.
     if emptystring(zip_file_path):
         zip_file_path = folder_path + ".zip"
 
+    # ``ZIP_DEFLATED`` actually compresses (vs ``ZIP_STORED`` which just packs).
     with zipfile.ZipFile(zip_file_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for root, _dirs, files in os.walk(folder_path):
             for file in files:
+                # Exclude dotfiles for the same reason as folder_description.
                 if file.startswith("."):
                     continue
                 full_path = os.path.join(root, file)
+                # Store paths relative to the folder so the archive extracts
+                # cleanly without leaking the source machine's directory layout.
                 arcname = os.path.relpath(full_path, folder_path)
                 zf.write(full_path, arcname)
     info(f"Zipped folder '{folder_path}' into '{zip_file_path}'")
+
 
 def time2str(seconds: float, no_space: bool = False) -> str:
     """
@@ -261,21 +296,28 @@ def time2str(seconds: float, no_space: bool = False) -> str:
     "1 hr 1 min 1 sec"
 
     """
-    # Convert seconds to time struct
+    # Reuse ``gmtime`` as a cheap seconds -> (h, m, s) decomposer; UTC/gmtime
+    # avoids any local-timezone offset creeping into a pure duration.
     time_struct = time.gmtime(seconds)
 
     parts = []
+    # ``gmtime`` caps hours at 23 and rolls the rest into the day-of-month, so
+    # fold those extra days back into the hour count to support long durations.
     hrs = time_struct.tm_hour + (time_struct.tm_mday - 1) * 24
     if hrs:
         parts.append(f"{hrs} hr")
     if time_struct.tm_min:
         parts.append(f"{time_struct.tm_min} min")
+    # Always emit a seconds component when everything else is zero, so a tiny
+    # duration renders as "0 sec" rather than an empty string.
     if time_struct.tm_sec or (not hrs and not time_struct.tm_min):
         parts.append(f"{time_struct.tm_sec} sec")
 
+    # Compact form drops the space between number and unit ("1hr" vs "1 hr").
     if no_space:
         parts = [p.replace(" ", "") for p in parts]
     return " ".join(parts)
+
 
 def str2time(input_string: str) -> float:
     """
@@ -304,9 +346,11 @@ def str2time(input_string: str) -> float:
     >>> str2time("1.5 days")
     129600.0
     """
+    # An empty/blank input has no duration — return zero rather than raising.
     if emptystring(input_string):
         return 0.0
 
+    # Normalize case and surrounding whitespace so the matchers below are simple.
     input_string = input_string.strip().lower()
 
     # Handle HH:MM:SS format
@@ -329,31 +373,36 @@ def str2time(input_string: str) -> float:
         ("days", "day", "d"): 24 * 3600,
         ("hours", "hour", "hrs", "hr", "h"): 3600,
         ("minutes", "minute", "mins", "min", "m"): 60,
-        ("seconds", "second", "secs", "sec", "s"): 1
+        ("seconds", "second", "secs", "sec", "s"): 1,
     }
 
     total_seconds = 0.0
     remaining = input_string
     found_unit = False
 
+    # Scan for every "<number> <unit>" occurrence and accumulate its
+    # contribution. We consume each match from ``remaining`` so a unit cannot
+    # be double-counted (e.g. the "h" in "hours" won't also match on its own).
     for units, multiplier in time_units.items():
         for unit in units:
-            pattern = fr"(\d+(?:\.\d+)?)\s*{unit}\b"
+            pattern = rf"(\d+(?:\.\d+)?)\s*{unit}\b"
             match = re.search(pattern, remaining)
             if match:
                 try:
                     value = float(match.group(1))
                     total_seconds += value * multiplier
+                    # Strip the matched span so overlapping units don't re-fire.
                     remaining = re.sub(pattern, "", remaining, count=1).strip()
                     found_unit = True
                 except ValueError:
                     error(f"Invalid numeric value in: {input_string}")
                     continue
 
+    # If any unit token matched, trust the accumulated total.
     if found_unit:
         return total_seconds
 
-    # Try parsing as raw seconds
+    # Otherwise fall back to interpreting the whole string as bare seconds.
     try:
         return float(input_string)
     except ValueError:
@@ -382,6 +431,7 @@ def download_file(url: str, file_path: str = "") -> None:
     requests.RequestException
         If the GET request fails or returns a non-2xx status.
     """
+    # Refuse to start a download we already know will fail (bad or dead URL).
     assert is_working_url(url), f"URL '{url}' is not working"
 
     if emptystring(file_path):
@@ -393,11 +443,14 @@ def download_file(url: str, file_path: str = "") -> None:
 
     try:
         resp = requests.get(url)
+        # Turn any 4xx/5xx into an exception so we never write an error page
+        # to disk as if it were the requested file.
         resp.raise_for_status()
     except requests.RequestException as e:
         error(f"Failed to download from '{url}': {e}")
         raise
 
+    # Binary mode: the payload may be an image, archive, etc., not just text.
     with open(file_path, "wb") as fout:
         fout.write(resp.content)
 
@@ -421,6 +474,8 @@ def get_user_ip() -> dict[str, str | None]:
     """
     ip_address: dict[str, str | None] = {"ipv4": None, "ipv6": None}
 
+    # Query the v4-only and v4/v6 ipify endpoints independently so a failure of
+    # one family still lets the other succeed.
     for family, endpoint in (
         ("ipv4", "https://api.ipify.org?format=json"),
         ("ipv6", "https://api64.ipify.org?format=json"),
@@ -428,7 +483,10 @@ def get_user_ip() -> dict[str, str | None]:
         try:
             ip_address[family] = requests.get(endpoint, timeout=5).json().get("ip")
         except (requests.RequestException, ValueError, KeyError):
+            # Network error, non-JSON body, or missing key all mean "unknown".
             ip_address[family] = None
 
+    # Only fail hard when BOTH lookups came back empty — a single address is
+    # still a useful result for the caller.
     assert any(ip_address.values()), "Failed to retrieve IP address (no IPv4 / IPv6 address found)"
     return ip_address

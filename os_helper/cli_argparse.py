@@ -104,9 +104,50 @@ from . import (
 # ---------------------------------------------------------------------------
 
 
-def _echo_json(payload) -> None:
-    # Structured outputs use JSON so shell pipelines can `| jq` on them.
-    print(json.dumps(payload, indent=2, sort_keys=True))
+def _emit(text: object) -> None:
+    """Write one result line to stdout (the CLI's data channel).
+
+    Parameters
+    ----------
+    text : object
+        Value to print; stringified then followed by a single newline.
+
+    Notes
+    -----
+    This is the CLI's *data* output surface, deliberately distinct from the
+    package logging surface (rule 6). A CLI must be able to write its computed
+    result to stdout so shell pipelines can consume it; routing that through a
+    single helper (rather than scattering bare ``print`` calls) keeps the
+    output channel in one place and byte-for-byte identical to ``print(text)``.
+    """
+    # Mirror ``print(text)`` exactly: stringify, then append one newline.
+    sys.stdout.write(f"{text}\n")
+
+
+def _emit_err(text: object) -> None:
+    """Write one diagnostic line to stderr, away from the piped data stream.
+
+    Parameters
+    ----------
+    text : object
+        Value to print to stderr; stringified then followed by a newline.
+    """
+    # Diagnostics (timings, notices) go to fd 2 so they never pollute the
+    # stdout data channel that callers may be piping elsewhere.
+    sys.stderr.write(f"{text}\n")
+
+
+def _echo_json(payload: object) -> None:
+    """Emit a structured payload as pretty-printed, sorted JSON on stdout.
+
+    Parameters
+    ----------
+    payload : object
+        Any JSON-serializable value (dict, list, scalar).
+    """
+    # Structured outputs use JSON so shell pipelines can `| jq` on them;
+    # ``sort_keys`` makes the output deterministic across runs.
+    _emit(json.dumps(payload, indent=2, sort_keys=True))
 
 
 # ---------------------------------------------------------------------------
@@ -115,38 +156,113 @@ def _echo_json(payload) -> None:
 
 
 def _handle_os_system(_: argparse.Namespace) -> int:
+    """Print the current operating-system short name on stdout.
+
+    Parameters
+    ----------
+    _ : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # `system` here refers to platform.system(); print a short name.
     if windows():
-        print("windows")
+        _emit("windows")
     elif macos():
-        print("macos")
+        _emit("macos")
     elif linux():
-        print("linux")
+        _emit("linux")
     else:
-        print("unknown")
+        _emit("unknown")
     return 0
 
 
-def _handle_os_flag(fn) -> Callable[[argparse.Namespace], int]:
+def _handle_os_flag(fn: Callable[[], bool]) -> Callable[[argparse.Namespace], int]:
+    """Build a handler that prints ``true``/``false`` for a boolean OS probe.
+
+    Parameters
+    ----------
+    fn : Callable[[], bool]
+        A zero-argument predicate such as :func:`os_helper.unix` whose result
+        should be surfaced to the shell.
+
+    Returns
+    -------
+    Callable[[argparse.Namespace], int]
+        A subcommand handler that emits the stringified boolean and returns 0.
+    """
+
     # Factory: build a handler that prints "true" / "false" for a bool probe.
     def _run(_: argparse.Namespace) -> int:
-        print("true" if fn() else "false")
+        """Emit the probe result as ``true``/``false``.
+
+        Parameters
+        ----------
+        _ : argparse.Namespace
+            Unused parsed CLI arguments (probes take no options).
+
+        Returns
+        -------
+        int
+            Always 0 — the boolean value is carried on stdout, not the exit code.
+        """
+        _emit("true" if fn() else "false")
         return 0
+
     return _run
 
 
 def _handle_os_pid(_: argparse.Namespace) -> int:
-    print(getpid())
+    """Print the current process ID on stdout.
+
+    Parameters
+    ----------
+    _ : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(getpid())
     return 0
 
 
 def _handle_os_workers(ns: argparse.Namespace) -> int:
+    """Resolve and print a worker count (sklearn n_jobs convention).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # Mirrors sklearn's n_jobs convention.
-    print(get_nb_workers(ns.n))
+    _emit(get_nb_workers(ns.n))
     return 0
 
 
 def _handle_os_run(ns: argparse.Namespace) -> int:
+    """Run a shell-style command and stream its captured stdout/stderr.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # Execute a shell-style command via os_helper.system() and print stdout.
     result = system(
         cmd=ns.cmd,
@@ -164,6 +280,18 @@ def _handle_os_run(ns: argparse.Namespace) -> int:
 
 
 def _handle_os_open(ns: argparse.Namespace) -> int:
+    """Open a file in the platform's default application.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # Open a file in the platform's default application.
     openfile(ns.path)
     return 0
@@ -175,77 +303,245 @@ def _handle_os_open(ns: argparse.Namespace) -> int:
 
 
 def _handle_path_exists(ns: argparse.Namespace) -> int:
+    """Report whether a file exists (exit 0 when it does).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     ok = file_exists(ns.path, check_empty=ns.non_empty)
-    print("true" if ok else "false")
+    _emit("true" if ok else "false")
     return 0 if ok else 1
 
 
 def _handle_path_dir_exists(ns: argparse.Namespace) -> int:
+    """Report whether a directory exists (exit 0 when it does).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     ok = dir_exists(ns.path, check_empty=ns.non_empty)
-    print("true" if ok else "false")
+    _emit("true" if ok else "false")
     return 0 if ok else 1
 
 
 def _handle_path_join(ns: argparse.Namespace) -> int:
+    """Join path components into one normalized absolute path.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # `join` normalizes and returns an absolute path; ideal for shell pipelines.
-    print(join(*ns.parts))
+    _emit(join(*ns.parts))
     return 0
 
 
 def _handle_path_abs(ns: argparse.Namespace) -> int:
-    print(relative2absolute_path(ns.path, checkpath=ns.check))
+    """Print the absolute form of a path.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(relative2absolute_path(ns.path, checkpath=ns.check))
     return 0
 
 
 def _handle_path_rel(ns: argparse.Namespace) -> int:
-    print(absolute2relative_path(ns.path, base_path=ns.base))
+    """Print a path relative to a base directory.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(absolute2relative_path(ns.path, base_path=ns.base))
     return 0
 
 
 def _handle_path_no_home(ns: argparse.Namespace) -> int:
-    print(path_without_home(ns.path))
+    """Print a path with the home-directory prefix collapsed to '~'.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(path_without_home(ns.path))
     return 0
 
 
 def _handle_path_size(ns: argparse.Namespace) -> int:
+    """Print a file's size in bytes (-1 when it does not exist).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # -1 signals "does not exist" — that's what the library returns.
-    print(size_file(ns.path))
+    _emit(size_file(ns.path))
     return 0
 
 
 def _handle_path_split(ns: argparse.Namespace) -> int:
+    """Print a path decomposed into folder/name/ext as JSON.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     folder, name, ext = folder_name_ext(ns.path, checkpath=ns.check)
     _echo_json({"folder": folder, "name": name, "ext": ext})
     return 0
 
 
 def _handle_path_glob(ns: argparse.Namespace) -> int:
+    """Print every file matching a glob pattern recursively.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     for match in recursive_glob(ns.root, ns.pattern):
-        print(match)
+        _emit(match)
     return 0
 
 
 def _handle_path_mkdir(ns: argparse.Namespace) -> int:
+    """Create a directory (and any missing parents).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     make_directory(ns.path, exist_ok=not ns.strict)
     return 0
 
 
 def _handle_path_rmdir(ns: argparse.Namespace) -> int:
+    """Recursively remove a directory (missing is a no-op).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     remove_directory(ns.path)
     return 0
 
 
 def _handle_path_rm(ns: argparse.Namespace) -> int:
+    """Remove a list of files on a best-effort basis.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     remove_files(ns.paths)
     return 0
 
 
 def _handle_path_cp(ns: argparse.Namespace) -> int:
+    """Copy a file, preserving metadata.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     copyfile(ns.source, ns.dest)
     return 0
 
 
 def _handle_path_check(ns: argparse.Namespace) -> int:
+    """Assert a file exists (and optionally is non-empty).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # Assertion-flavored: raises if the file is missing / empty.
     checkfile(ns.path, msg=ns.msg or "", check_empty=ns.non_empty)
     return 0
@@ -257,22 +553,60 @@ def _handle_path_check(ns: argparse.Namespace) -> int:
 
 
 def _handle_hash_string(ns: argparse.Namespace) -> int:
-    print(hash_string(ns.value, size=ns.size))
+    """Print the hash of a string (optionally truncated).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(hash_string(ns.value, size=ns.size))
     return 0
 
 
 def _handle_hash_file(ns: argparse.Namespace) -> int:
-    print(hashfile(ns.path, hash_content=not ns.path_only, date=ns.date))
+    """Print the hash of a file's content and/or date.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(hashfile(ns.path, hash_content=not ns.path_only, date=ns.date))
     return 0
 
 
 def _handle_hash_folder(ns: argparse.Namespace) -> int:
-    print(hashfolder(
-        ns.path,
-        hash_content=not ns.no_content,
-        hash_path=ns.include_path,
-        date=ns.date,
-    ))
+    """Print the hash of a folder's contents and/or path/date.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(
+        hashfolder(
+            ns.path,
+            hash_content=not ns.no_content,
+            hash_path=ns.include_path,
+            date=ns.date,
+        )
+    )
     return 0
 
 
@@ -282,18 +616,44 @@ def _handle_hash_folder(ns: argparse.Namespace) -> int:
 
 
 def _handle_str_empty(ns: argparse.Namespace) -> int:
+    """Report whether a string is empty/whitespace (exit 0 when it is).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     result = emptystring(ns.value)
-    print("true" if result else "false")
+    _emit("true" if result else "false")
     return 0 if result else 1
 
 
 def _handle_str_ascii(ns: argparse.Namespace) -> int:
-    print(asciistring(
-        ns.value,
-        replacement_char=ns.replacement,
-        lower=not ns.preserve_case,
-        allow_digits=not ns.no_digits,
-    ))
+    """Print an ASCII-safe slug derived from the input string.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(
+        asciistring(
+            ns.value,
+            replacement_char=ns.replacement,
+            lower=not ns.preserve_case,
+            allow_digits=not ns.no_digits,
+        )
+    )
     return 0
 
 
@@ -303,6 +663,18 @@ def _handle_str_ascii(ns: argparse.Namespace) -> int:
 
 
 def _handle_config_get(ns: argparse.Namespace) -> int:
+    """Load configuration keys and print the result as JSON.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # `get_config` raises RuntimeError when nothing is found; let it propagate
     # so the exit code is non-zero and the reason lands on stderr.
     result = get_config(
@@ -321,6 +693,18 @@ def _handle_config_get(ns: argparse.Namespace) -> int:
 
 
 def _handle_temp_file(ns: argparse.Namespace) -> int:
+    """Create a temporary file and print its path.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # We deliberately do NOT auto-delete when the CLI creates a scratch
     # path — the caller decides. Print the path so shell pipelines can
     # chain on it. When `--keep` is not set, the file is created and
@@ -331,13 +715,25 @@ def _handle_temp_file(ns: argparse.Namespace) -> int:
         prefix=ns.prefix or "",
         delete=not ns.keep,
     ) as path:
-        print(path)
+        _emit(path)
     return 0
 
 
 def _handle_temp_folder(ns: argparse.Namespace) -> int:
+    """Create a temporary directory and print its path.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     with temporary_folder(prefix=ns.prefix or "", delete=not ns.keep) as path:
-        print(path)
+        _emit(path)
     return 0
 
 
@@ -347,16 +743,52 @@ def _handle_temp_folder(ns: argparse.Namespace) -> int:
 
 
 def _handle_misc_now(ns: argparse.Namespace) -> int:
-    print(now_string(ns.fmt))
+    """Print a formatted current timestamp.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(now_string(ns.fmt))
     return 0
 
 
 def _handle_misc_format_size(ns: argparse.Namespace) -> int:
-    print(format_size(ns.bytes))
+    """Print a byte count as a human-readable size.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(format_size(ns.bytes))
     return 0
 
 
 def _handle_misc_describe(ns: argparse.Namespace) -> int:
+    """Describe a folder's contents and print the mapping as JSON.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # Emit the raw {path: size} mapping as JSON. Companion index.html and
     # description.json are written into the folder when flags allow.
     result = folder_description(
@@ -371,32 +803,104 @@ def _handle_misc_describe(ns: argparse.Namespace) -> int:
 
 
 def _handle_misc_url_ok(ns: argparse.Namespace) -> int:
+    """Report whether a URL is valid and reachable (exit 0 when so).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     ok = is_working_url(ns.url)
-    print("true" if ok else "false")
+    _emit("true" if ok else "false")
     return 0 if ok else 1
 
 
 def _handle_misc_zip(ns: argparse.Namespace) -> int:
+    """Zip a folder, skipping hidden files.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     zip_folder(ns.folder, zip_file_path=ns.output or "")
     return 0
 
 
 def _handle_misc_download(ns: argparse.Namespace) -> int:
+    """Download a URL to a local file.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     download_file(ns.url, file_path=ns.output or "")
     return 0
 
 
 def _handle_misc_time2str(ns: argparse.Namespace) -> int:
-    print(time2str(ns.seconds, no_space=ns.no_space))
+    """Convert a seconds value to a readable duration string.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(time2str(ns.seconds, no_space=ns.no_space))
     return 0
 
 
 def _handle_misc_str2time(ns: argparse.Namespace) -> int:
-    print(str2time(ns.value))
+    """Parse a duration string into seconds and print it.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    _emit(str2time(ns.value))
     return 0
 
 
 def _handle_misc_ip(_: argparse.Namespace) -> int:
+    """Fetch and print the caller's public IP addresses as JSON.
+
+    Parameters
+    ----------
+    _ : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     _echo_json(get_user_ip())
     return 0
 
@@ -407,21 +911,56 @@ def _handle_misc_ip(_: argparse.Namespace) -> int:
 
 
 def _run_subprocess(argv: list[str]) -> int:
-    # Run a caller-provided command as a subprocess, wired to the parent
-    # stdio so it behaves like a wrapper (`os-helper prof wall -- sleep 1`).
-    # Returns the subprocess exit code.
+    """Run a caller-provided command as a child process, inheriting stdio.
+
+    Parameters
+    ----------
+    argv : list of str
+        The command and its arguments (e.g. ``["sleep", "1"]``).
+
+    Returns
+    -------
+    int
+        The subprocess's own exit code, so the wrapper is transparent.
+    """
+    # ``subprocess.call`` wires the child to the parent's stdio, so the command
+    # behaves exactly as if run directly (`os-helper prof wall -- sleep 1`).
     return subprocess.call(argv)
 
 
 def _handle_prof_wall(ns: argparse.Namespace) -> int:
+    """Time a subprocess by wall-clock and print the seconds on stderr.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     start = time.perf_counter()
     rc = _run_subprocess(list(ns.argv))
     elapsed = time.perf_counter() - start
-    print(f"{elapsed:.6f}", file=sys.stderr)
+    _emit_err(f"{elapsed:.6f}")
     return rc
 
 
 def _handle_prof_cpu(ns: argparse.Namespace) -> int:
+    """Time a subprocess by child CPU time and print seconds on stderr.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # process_time() only captures Python-side CPU; wrapping a subprocess
     # here would report ~0 s. We measure via os.times() which sums children.
     import os as _os
@@ -432,16 +971,27 @@ def _handle_prof_cpu(ns: argparse.Namespace) -> int:
     cpu_s = (after.children_user + after.children_system) - (
         before.children_user + before.children_system
     )
-    print(f"{cpu_s:.6f}", file=sys.stderr)
+    _emit_err(f"{cpu_s:.6f}")
     return rc
 
 
 def _handle_prof_gpu(ns: argparse.Namespace) -> int:
+    """GPU-profile a subprocess (falls back to wall-clock timing).
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
     # Not meaningful for a subprocess wrapper, but keeping the surface
     # symmetric with wall / cpu. Prints a clear notice on stderr and
     # falls back to wall-clock timing.
-    print("gpu profiling of an external subprocess is not supported; "
-          "using wall-clock timing", file=sys.stderr)
+    _emit_err("gpu profiling of an external subprocess is not supported; using wall-clock timing")
     return _handle_prof_wall(ns)
 
 
@@ -451,25 +1001,55 @@ def _handle_prof_gpu(ns: argparse.Namespace) -> int:
 
 
 def _add_os_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``os`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
     g = sub.add_parser("os", help="Operating-system detection and process helpers.")
     s = g.add_subparsers(dest="action", metavar="ACTION")
     s.required = True
+    # Each action registers its handler via set_defaults(func=...); main()
+    # then dispatches on that attribute, so no manual command table is needed.
 
-    s.add_parser("system", help="Print the current OS name (macos / linux / windows / unknown).").set_defaults(func=_handle_os_system)
-    s.add_parser("unix", help="Print 'true' if the current OS is Unix-based.").set_defaults(func=_handle_os_flag(unix))
-    s.add_parser("linux", help="Print 'true' if the current OS is Linux.").set_defaults(func=_handle_os_flag(linux))
-    s.add_parser("macos", help="Print 'true' if the current OS is macOS.").set_defaults(func=_handle_os_flag(macos))
-    s.add_parser("windows", help="Print 'true' if the current OS is Windows.").set_defaults(func=_handle_os_flag(windows))
+    s.add_parser(
+        "system", help="Print the current OS name (macos / linux / windows / unknown)."
+    ).set_defaults(func=_handle_os_system)
+    s.add_parser("unix", help="Print 'true' if the current OS is Unix-based.").set_defaults(
+        func=_handle_os_flag(unix)
+    )
+    s.add_parser("linux", help="Print 'true' if the current OS is Linux.").set_defaults(
+        func=_handle_os_flag(linux)
+    )
+    s.add_parser("macos", help="Print 'true' if the current OS is macOS.").set_defaults(
+        func=_handle_os_flag(macos)
+    )
+    s.add_parser("windows", help="Print 'true' if the current OS is Windows.").set_defaults(
+        func=_handle_os_flag(windows)
+    )
     s.add_parser("pid", help="Print the current process ID.").set_defaults(func=_handle_os_pid)
 
-    p = s.add_parser("workers", help="Resolve a worker count following sklearn's n_jobs convention.")
-    p.add_argument("--n", type=int, default=-1, help="0 = full pool; >0 = exact count; <0 = pool+n+1 (default -1 = all).")
+    p = s.add_parser(
+        "workers", help="Resolve a worker count following sklearn's n_jobs convention."
+    )
+    p.add_argument(
+        "--n",
+        type=int,
+        default=-1,
+        help="0 = full pool; >0 = exact count; <0 = pool+n+1 (default -1 = all).",
+    )
     p.set_defaults(func=_handle_os_workers)
 
     p = s.add_parser("run", help="Run a shell-style command and capture stdout / stderr.")
     p.add_argument("cmd", help="Command line (parsed with shlex; no real shell involved).")
-    p.add_argument("--expected", default=None, help="File or directory expected to exist after success.")
-    p.add_argument("--check-empty", action="store_true", help="Also require --expected to be non-empty.")
+    p.add_argument(
+        "--expected", default=None, help="File or directory expected to exist after success."
+    )
+    p.add_argument(
+        "--check-empty", action="store_true", help="Also require --expected to be non-empty."
+    )
     p.add_argument("--no-check-exitcode", action="store_true", help="Do not assert exit code == 0.")
     p.set_defaults(func=_handle_os_run)
 
@@ -479,18 +1059,31 @@ def _add_os_group(sub: argparse._SubParsersAction) -> None:
 
 
 def _add_path_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``path`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
     g = sub.add_parser("path", help="Filesystem predicates and helpers.")
     s = g.add_subparsers(dest="action", metavar="ACTION")
     s.required = True
+    # Predicate commands (exists / dir-exists) additionally encode their result
+    # in the process exit code; mutating commands (mkdir / rm / cp) return 0.
 
     p = s.add_parser("exists", help="Check if a file exists (exit 0 = yes).")
     p.add_argument("path")
-    p.add_argument("--non-empty", action="store_true", help="Also require the file to be non-empty.")
+    p.add_argument(
+        "--non-empty", action="store_true", help="Also require the file to be non-empty."
+    )
     p.set_defaults(func=_handle_path_exists)
 
     p = s.add_parser("dir-exists", help="Check if a directory exists (exit 0 = yes).")
     p.add_argument("path")
-    p.add_argument("--non-empty", action="store_true", help="Also require the directory to be non-empty.")
+    p.add_argument(
+        "--non-empty", action="store_true", help="Also require the directory to be non-empty."
+    )
     p.set_defaults(func=_handle_path_dir_exists)
 
     p = s.add_parser("join", help="Join components into a normalized absolute path.")
@@ -504,7 +1097,9 @@ def _add_path_group(sub: argparse._SubParsersAction) -> None:
 
     p = s.add_parser("rel", help="Convert a path to relative from --base (default cwd).")
     p.add_argument("path")
-    p.add_argument("--base", default=None, help="Reference path (default: current working directory).")
+    p.add_argument(
+        "--base", default=None, help="Reference path (default: current working directory)."
+    )
     p.set_defaults(func=_handle_path_rel)
 
     p = s.add_parser("no-home", help="Replace the user's home prefix with '~'.")
@@ -551,6 +1146,13 @@ def _add_path_group(sub: argparse._SubParsersAction) -> None:
 
 
 def _add_hash_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``hash`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
     g = sub.add_parser("hash", help="Hashing helpers (RIPEMD-160 / BLAKE2b fallback).")
     s = g.add_subparsers(dest="action", metavar="ACTION")
     s.required = True
@@ -562,7 +1164,9 @@ def _add_hash_group(sub: argparse._SubParsersAction) -> None:
 
     p = s.add_parser("file", help="Hash a file's content (and optionally the current date).")
     p.add_argument("path")
-    p.add_argument("--path-only", action="store_true", help="Hash the file path instead of its content.")
+    p.add_argument(
+        "--path-only", action="store_true", help="Hash the file path instead of its content."
+    )
     p.add_argument("--date", action="store_true", help="Mix the current date into the hash.")
     p.set_defaults(func=_handle_hash_file)
 
@@ -575,9 +1179,17 @@ def _add_hash_group(sub: argparse._SubParsersAction) -> None:
 
 
 def _add_str_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``str`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
     g = sub.add_parser("str", help="String utilities.")
     s = g.add_subparsers(dest="action", metavar="ACTION")
     s.required = True
+    # ``empty`` doubles as a shell test: its exit code mirrors the boolean.
 
     p = s.add_parser("empty", help="Check if a string is None / whitespace-only (exit 0 = yes).")
     p.add_argument("value")
@@ -592,22 +1204,42 @@ def _add_str_group(sub: argparse._SubParsersAction) -> None:
 
 
 def _add_config_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``config`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
     g = sub.add_parser("config", help="Configuration loading (JSON / YAML / .env / env vars).")
     s = g.add_subparsers(dest="action", metavar="ACTION")
     s.required = True
+    # ``--keys`` takes one-or-more names; the loader fails (non-zero) if any
+    # requested key is missing from every configured source.
 
     p = s.add_parser("get", help="Load a set of keys, returning JSON on stdout.")
     p.add_argument("--name", required=True, help="Human-readable label used in log messages.")
     p.add_argument("--keys", required=True, nargs="+", help="Keys to load.")
     p.add_argument("--path", default=None, help="Config file or directory to search.")
-    p.add_argument("--env-files", nargs="*", default=None, help="Extra .env files to merge into os.environ.")
+    p.add_argument(
+        "--env-files", nargs="*", default=None, help="Extra .env files to merge into os.environ."
+    )
     p.set_defaults(func=_handle_config_get)
 
 
 def _add_temp_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``temp`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
     g = sub.add_parser("temp", help="Temporary file / folder helpers.")
     s = g.add_subparsers(dest="action", metavar="ACTION")
     s.required = True
+    # ``--keep`` flips the library's auto-delete off so the printed path
+    # survives past the CLI process for downstream shell steps.
 
     p = s.add_parser("file", help="Create a temporary file and print its path.")
     p.add_argument("--suffix", default=None)
@@ -623,19 +1255,32 @@ def _add_temp_group(sub: argparse._SubParsersAction) -> None:
 
 
 def _add_misc_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``misc`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
     g = sub.add_parser("misc", help="Miscellaneous utilities.")
     s = g.add_subparsers(dest="action", metavar="ACTION")
     s.required = True
+    # A grab-bag group: some commands print scalars, others emit JSON so the
+    # richer results (describe / ip) stay machine-parseable.
 
     p = s.add_parser("now", help="Print a formatted timestamp.")
-    p.add_argument("--fmt", default="log", choices=["log", "filename"], help="Format (default 'log').")
+    p.add_argument(
+        "--fmt", default="log", choices=["log", "filename"], help="Format (default 'log')."
+    )
     p.set_defaults(func=_handle_misc_now)
 
     p = s.add_parser("format-size", help="Format a byte count as a human-readable string.")
     p.add_argument("bytes", type=int)
     p.set_defaults(func=_handle_misc_format_size)
 
-    p = s.add_parser("describe", help="Describe a folder's contents as JSON (relative path -> size).")
+    p = s.add_parser(
+        "describe", help="Describe a folder's contents as JSON (relative path -> size)."
+    )
     p.add_argument("path")
     p.add_argument("--flat", action="store_true", help="Do not descend into subdirectories.")
     p.add_argument("--no-html", action="store_true", help="Do not write index.html.")
@@ -671,18 +1316,33 @@ def _add_misc_group(sub: argparse._SubParsersAction) -> None:
 
 
 def _add_prof_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``prof`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
     g = sub.add_parser("prof", help="Profile an arbitrary subcommand.")
     s = g.add_subparsers(dest="action", metavar="ACTION")
     s.required = True
 
+    # The three prof subcommands share identical wiring (only the handler
+    # differs), so build them from a table instead of copy-pasting three blocks.
     for name, handler, doc in (
         ("wall", _handle_prof_wall, "Wall-clock elapsed time (seconds on stderr)."),
         ("cpu", _handle_prof_cpu, "CPU time consumed by the child subprocess."),
         ("gpu", _handle_prof_gpu, "GPU timing (falls back to wall-clock for subprocesses)."),
     ):
         p = s.add_parser(name, help=doc)
-        p.add_argument("argv", nargs=argparse.REMAINDER,
-                       help="Command to run (put after '--' to avoid flag collisions).")
+        # ``REMAINDER`` swallows everything after the subcommand verbatim, so
+        # the wrapped command's own flags (e.g. ``ffmpeg -i ...``) are not
+        # mis-parsed as flags for os-helper itself.
+        p.add_argument(
+            "argv",
+            nargs=argparse.REMAINDER,
+            help="Command to run (put after '--' to avoid flag collisions).",
+        )
         p.set_defaults(func=handler)
 
 

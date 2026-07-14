@@ -37,13 +37,13 @@ import json
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 
 try:
     import click
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "The click CLI requires the [cli] extra. "
-        "Install with: pip install 'os-helper[cli]'"
+        "The click CLI requires the [cli] extra. Install with: pip install 'os-helper[cli]'"
     ) from exc
 
 # Same underlying functions as the argparse twin — one source of truth.
@@ -117,6 +117,8 @@ def os_grp() -> None:
 @os_grp.command("system")
 def os_system() -> None:
     """Print the current OS name."""
+    # Probe in priority order and emit a single canonical short name; the final
+    # ``unknown`` branch keeps the output well-defined on exotic platforms.
     if windows():
         click.echo("windows")
     elif macos():
@@ -127,12 +129,25 @@ def os_system() -> None:
         click.echo("unknown")
 
 
-def _make_flag(name: str, probe) -> None:
-    # Factory: register a click command that prints 'true' / 'false' for
-    # a boolean OS probe. Keeps the six OS detection commands terse.
+def _make_flag(name: str, probe: Callable[[], bool]) -> None:
+    """Register a click command that prints ``true``/``false`` for a probe.
+
+    Parameters
+    ----------
+    name : str
+        Subcommand name (also used in the generated help text).
+    probe : Callable[[], bool]
+        Zero-argument predicate whose result is surfaced to the shell.
+    """
+
+    # Factory pattern: generating the six OS-detection commands from one closure
+    # avoids six near-identical copy-pasted command bodies.
     @os_grp.command(name)
-    def _cmd() -> None:  # noqa: D401 — command body only
+    def _cmd() -> None:  # noqa: D401 — docstring set dynamically below
+        """Print the boolean probe result as ``true``/``false``."""
         click.echo("true" if probe() else "false")
+
+    # Set the help text per-command since the shared body cannot hardcode it.
     _cmd.__doc__ = f"Print 'true' if the current OS is {name}."
 
 
@@ -149,7 +164,9 @@ def os_pid() -> None:
 
 
 @os_grp.command("workers")
-@click.option("--n", type=int, default=-1, show_default=True, help="0 = full pool; >0 = exact; <0 = pool+n+1.")
+@click.option(
+    "--n", type=int, default=-1, show_default=True, help="0 = full pool; >0 = exact; <0 = pool+n+1."
+)
 def os_workers(n: int) -> None:
     """Resolve a worker count (sklearn n_jobs convention)."""
     click.echo(get_nb_workers(n))
@@ -160,7 +177,9 @@ def os_workers(n: int) -> None:
 @click.option("--expected", default=None, help="File or directory expected to exist after success.")
 @click.option("--check-empty", is_flag=True, help="Also require --expected to be non-empty.")
 @click.option("--no-check-exitcode", is_flag=True, help="Do not assert exit code == 0.")
-def os_run(cmd_string: str, expected: str | None, check_empty: bool, no_check_exitcode: bool) -> None:
+def os_run(
+    cmd_string: str, expected: str | None, check_empty: bool, no_check_exitcode: bool
+) -> None:
     """Run CMD_STRING as a subprocess and capture stdout / stderr."""
     result = system(
         cmd=cmd_string,
@@ -168,6 +187,9 @@ def os_run(cmd_string: str, expected: str | None, check_empty: bool, no_check_ex
         check_exitcode=not no_check_exitcode,
         check_empty=check_empty,
     )
+    # Relay the child's streams to our own: ``nl=False`` preserves the captured
+    # bytes exactly (the command already produced its own newlines), and stderr
+    # is kept on fd 2 so it never contaminates a stdout pipe.
     if result["out"]:
         click.echo(result["out"], nl=False)
     if result["err"]:
@@ -198,6 +220,8 @@ def path_exists(path: str, non_empty: bool) -> None:
     """Check if PATH exists (exit 0 = yes)."""
     ok = file_exists(path, check_empty=non_empty)
     click.echo("true" if ok else "false")
+    # Encode the boolean in the EXIT CODE too, so shell ``if`` guards can branch
+    # on it directly without parsing stdout.
     sys.exit(0 if ok else 1)
 
 
@@ -208,6 +232,7 @@ def path_dir_exists(path: str, non_empty: bool) -> None:
     """Check if PATH is an existing directory (exit 0 = yes)."""
     ok = dir_exists(path, check_empty=non_empty)
     click.echo("true" if ok else "false")
+    # Same dual stdout+exit-code contract as ``path exists`` above.
     sys.exit(0 if ok else 1)
 
 
@@ -254,6 +279,7 @@ def path_size(path: str) -> None:
 def path_split(path: str, check: bool) -> None:
     """Decompose PATH into folder/name/ext as JSON."""
     folder, name, ext = folder_name_ext(path, checkpath=check)
+    # Emit JSON (not three lines) so callers can consume the parts with ``jq``.
     click.echo(json.dumps({"folder": folder, "name": name, "ext": ext}, indent=2))
 
 
@@ -358,6 +384,7 @@ def str_empty(value: str) -> None:
     """Check if VALUE is None / whitespace-only (exit 0 = yes)."""
     result = emptystring(value)
     click.echo("true" if result else "false")
+    # Predicate result mirrored into the exit code for shell-friendly use.
     sys.exit(0 if result else 1)
 
 
@@ -368,12 +395,14 @@ def str_empty(value: str) -> None:
 @click.option("--no-digits", is_flag=True)
 def str_ascii(value: str, replacement: str, preserve_case: bool, no_digits: bool) -> None:
     """Normalize VALUE to a filesystem-safe ASCII slug."""
-    click.echo(asciistring(
-        value,
-        replacement_char=replacement,
-        lower=not preserve_case,
-        allow_digits=not no_digits,
-    ))
+    click.echo(
+        asciistring(
+            value,
+            replacement_char=replacement,
+            lower=not preserve_case,
+            allow_digits=not no_digits,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -391,8 +420,13 @@ def config_grp() -> None:
 @click.option("--keys", required=True, multiple=True, help="Repeat --keys for each key to load.")
 @click.option("--path", default=None, help="Config file or directory to search.")
 @click.option("--env-files", multiple=True, help="Repeat --env-files for each .env file.")
-def config_get(name: str, keys: tuple[str, ...], path: str | None, env_files: tuple[str, ...]) -> None:
+def config_get(
+    name: str, keys: tuple[str, ...], path: str | None, env_files: tuple[str, ...]
+) -> None:
     """Load a set of KEYS and print JSON."""
+    # click gathers repeated ``--keys``/``--env-files`` into tuples; convert to
+    # lists for the library API, and pass None (not an empty list) so the
+    # loader falls back to its own default env-file set.
     result = get_config(
         keys=list(keys),
         config_type=name,
@@ -419,6 +453,8 @@ def temp_grp() -> None:
 @click.option("--keep", is_flag=True, help="Do not delete on exit.")
 def temp_file(suffix: str | None, prefix: str | None, mode: str, keep: bool) -> None:
     """Create a temporary file and print its path."""
+    # Print the path inside the context so it is emitted before cleanup; when
+    # ``--keep`` is absent the file is deleted on block exit (proof-of-life).
     with temporary_filename(
         suffix=suffix or "",
         mode=mode,
@@ -433,6 +469,7 @@ def temp_file(suffix: str | None, prefix: str | None, mode: str, keep: bool) -> 
 @click.option("--keep", is_flag=True, help="Do not delete on exit.")
 def temp_folder_cmd(prefix: str | None, keep: bool) -> None:
     """Create a temporary directory and print its path."""
+    # Same emit-then-cleanup pattern as ``temp file``.
     with temporary_folder(prefix=prefix or "", delete=not keep) as path:
         click.echo(path)
 
@@ -485,6 +522,7 @@ def misc_url_ok(url: str) -> None:
     """Check whether URL is syntactically valid + reachable."""
     ok = is_working_url(url)
     click.echo("true" if ok else "false")
+    # Reachability reflected in the exit code for scripting.
     sys.exit(0 if ok else 1)
 
 
@@ -536,8 +574,19 @@ def prof_grp() -> None:
 
 
 def _run_subprocess(argv: list[str]) -> int:
-    # Run a caller-provided command; wired to parent stdio so it behaves
-    # like a wrapper.
+    """Run a caller-provided command as a child process, inheriting stdio.
+
+    Parameters
+    ----------
+    argv : list of str
+        Command and arguments to execute.
+
+    Returns
+    -------
+    int
+        The child's exit code, so the profiling wrapper stays transparent.
+    """
+    # Inherit the parent's stdio so the wrapped command behaves as if run direct.
     return subprocess.call(argv)
 
 
@@ -545,6 +594,8 @@ def _run_subprocess(argv: list[str]) -> int:
 @click.argument("argv", nargs=-1, type=click.UNPROCESSED)
 def prof_wall(argv: tuple[str, ...]) -> None:
     """Wall-clock elapsed time (seconds on stderr)."""
+    # Bracket the child run with a monotonic clock; the timing goes to stderr so
+    # the child's own stdout stays clean, and we propagate its exit code.
     start = time.perf_counter()
     rc = _run_subprocess(list(argv))
     elapsed = time.perf_counter() - start
@@ -558,6 +609,9 @@ def prof_cpu(argv: tuple[str, ...]) -> None:
     """CPU time consumed by the child subprocess."""
     import os as _os
 
+    # ``time.process_time`` measures only THIS process, so for a subprocess we
+    # read the ``children_*`` counters from ``os.times()`` and diff them across
+    # the run to isolate the child's user+system CPU consumption.
     before = _os.times()
     rc = _run_subprocess(list(argv))
     after = _os.times()
@@ -572,8 +626,13 @@ def prof_cpu(argv: tuple[str, ...]) -> None:
 @click.argument("argv", nargs=-1, type=click.UNPROCESSED)
 def prof_gpu(argv: tuple[str, ...]) -> None:
     """GPU timing (falls back to wall-clock for subprocesses)."""
-    click.echo("gpu profiling of an external subprocess is not supported; "
-               "using wall-clock timing", err=True)
+    # A separate child process has its own CUDA context we cannot instrument
+    # from here, so we warn and degrade gracefully to wall-clock timing rather
+    # than fail — keeping the ``prof`` surface symmetric with wall/cpu.
+    click.echo(
+        "gpu profiling of an external subprocess is not supported; using wall-clock timing",
+        err=True,
+    )
     start = time.perf_counter()
     rc = _run_subprocess(list(argv))
     elapsed = time.perf_counter() - start

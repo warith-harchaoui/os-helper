@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-07-14
+
+### Maintenance
+
+- Apply the project coding standards across `os_helper/` and `tests/`:
+  Numpy-style docstrings on every function/class (including private and
+  nested helpers), full type annotations with `from __future__ import
+  annotations`, and comment density raised above the floor in every
+  module. The argparse CLI's bare `print(...)` calls are routed through
+  thin `_emit`/`_emit_err` stdout/stderr helpers (byte-for-byte
+  identical output) to keep the data channel separate from the logging
+  surface. No public API or behavior changes.
+- Refresh the project logo asset.
+
 ## [1.5.0] - 2026-07-13
 
 ### Removed

@@ -114,7 +114,6 @@ __all__ = [
     "system",
     "openfile",
     "getpid",
-
     # logging_utils
     "init_logging",
     "debug",
@@ -124,12 +123,10 @@ __all__ = [
     "critical",
     "check",
     "verbosity",
-
     # temp_utils
     "temporary_filename",
     "temporary_folder",
     "temporary_remote_file",
-
     # path_utils
     "file_exists",
     "dir_exists",
@@ -145,19 +142,15 @@ __all__ = [
     "make_directory",
     "join",
     "folder_name_ext",
-
     # hash_utils
     "hash_string",
     "hashfile",
     "hashfolder",
-
     # config_utils
     "get_config",
-
     # string_utils
     "emptystring",
     "asciistring",
-
     # misc_utils
     "now_string",
     "format_size",
@@ -168,7 +161,6 @@ __all__ = [
     "time2str",
     "str2time",
     "get_user_ip",
-
     # profile_utils
     "wall_timer",
     "cpu_timer",

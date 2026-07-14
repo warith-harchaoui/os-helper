@@ -9,6 +9,9 @@ Author:
  - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
+# Defer annotation evaluation so ``str | None`` parses on Python 3.10.
+from __future__ import annotations
+
 import re
 import string
 import unicodedata
@@ -42,17 +45,16 @@ def emptystring(s: str | None) -> bool:
     >>> emptystring("hello")
     False
     """
+    # None short-circuits to "empty" without touching string methods.
     if s is None:
         return True
+    # The ``isinstance`` guard means non-str inputs are also reported as empty
+    # rather than raising — this helper is meant to be forgiving at boundaries.
     return bool(isinstance(s, str) and len(s.strip()) == 0)
 
 
-
 def asciistring(
-    input_string: str,
-    replacement_char: str = "-",
-    lower: bool = True,
-    allow_digits: bool = True
+    input_string: str, replacement_char: str = "-", lower: bool = True, allow_digits: bool = True
 ) -> str:
     """
     Convert a given string into a "safe" ASCII string by replacing accented and non-ASCII characters.
@@ -87,7 +89,7 @@ def asciistring(
     'Special-File-2024'
     """
     # Normalize Unicode characters to decompose accents (e.g., é -> e + ´)
-    normalized_string = unicodedata.normalize('NFKD', input_string)
+    normalized_string = unicodedata.normalize("NFKD", input_string)
 
     # Define the set of allowed characters
     allowed_chars = string.ascii_letters
@@ -99,15 +101,12 @@ def asciistring(
         normalized_string = normalized_string.lower()
 
     # Replace disallowed characters with the replacement_char
-    result = ''.join(
-        c if c in allowed_chars and ord(c) < 128 else replacement_char
-        for c in normalized_string
+    result = "".join(
+        c if c in allowed_chars and ord(c) < 128 else replacement_char for c in normalized_string
     )
 
     # Use regex to replace multiple consecutive replacement characters with a single one
-    result = re.sub(f'{re.escape(replacement_char)}+', replacement_char, result)
+    result = re.sub(f"{re.escape(replacement_char)}+", replacement_char, result)
 
     # Strip any leading or trailing replacement characters
     return result.strip(replacement_char)
-
-

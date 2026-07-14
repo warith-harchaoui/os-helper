@@ -1,34 +1,35 @@
-import os
 import json
+import os
 import time
-import yaml
+
 import pytest
+
 from os_helper import (
-    emptystring,
-    now_string,
-    file_exists,
-    dir_exists,
-    folder_description,
-    relative2absolute_path,
-    temporary_folder,
-    temporary_filename,
-    temporary_remote_file,
     asciistring,
-    zip_folder,
-    recursive_glob,
+    copyfile,
+    cpu_timer,
+    dir_exists,
+    emptystring,
+    file_exists,
+    folder_description,
     get_config,
+    gpu_timer,
     hashfolder,
     join,
-    verbosity,
-    copyfile,
     make_directory,
+    now_string,
+    recursive_glob,
+    relative2absolute_path,
     remove_directory,
     remove_files,
-    wall_timer,
-    cpu_timer,
-    gpu_timer,
+    temporary_filename,
+    temporary_folder,
+    temporary_remote_file,
     tic,
     toc,
+    verbosity,
+    wall_timer,
+    zip_folder,
 )
 
 # Define a test folder to isolate test artifacts
@@ -40,7 +41,7 @@ os.makedirs(TEST_FOLDER, exist_ok=True)  # Ensure the folder exists
 def setup_teardown():
     """
     Fixture to handle setup and teardown for all tests.
-    
+
     - Creates the test environment before running the tests.
     - Cleans up all files and folders in `TEST_FOLDER` after tests complete.
     """
@@ -374,12 +375,12 @@ def test_temporary_folder():
     with temporary_folder() as temp_folder:
         assert dir_exists(temp_folder)  # Verify the temporary folder exists
         filename = join(temp_folder, "test.txt")
-        with open(filename, "wt") as f:
+        with open(filename, "w") as f:
             f.write("Temporary file content")
         assert file_exists(filename)
     time.sleep(0.1)  # Wait for the context manager to exit
     assert not dir_exists(temp_folder)  # Verify the temporary folder is deleted
-    
+
 def test_temporary_filename():
     """
     Test the `temporary_filename` function.
@@ -467,16 +468,15 @@ def test_temporary_remote_file_check_failure_raises():
     def always_false(_):
         return False
 
-    with pytest.raises(RuntimeError):
-        with temporary_remote_file(
-            upload,
-            delete,
-            prefix="trf",
-            suffix=".bin",
-            checkfile_function=always_false,
-            initial_content=b"x",
-        ) as _remote:
-            pass
+    with pytest.raises(RuntimeError), temporary_remote_file(
+        upload,
+        delete,
+        prefix="trf",
+        suffix=".bin",
+        checkfile_function=always_false,
+        initial_content=b"x",
+    ) as _remote:
+        pass
 
     assert len(deleted) == 1  # cleanup still ran
 
@@ -547,16 +547,14 @@ def test_gpu_timer_raises_when_no_gpu():
     try:
         import torch  # noqa: F401
     except ImportError:
-        with pytest.raises(RuntimeError):
-            with gpu_timer():
-                pass
+        with pytest.raises(RuntimeError), gpu_timer():
+            pass
         return
 
     import torch
     if not torch.cuda.is_available():
-        with pytest.raises(RuntimeError):
-            with gpu_timer(backend="cuda"):
-                pass
+        with pytest.raises(RuntimeError), gpu_timer(backend="cuda"):
+            pass
 
 
 def test_gpu_timer_rejects_unknown_backend():
@@ -564,6 +562,7 @@ def test_gpu_timer_rejects_unknown_backend():
         import torch  # noqa: F401
     except ImportError:
         pytest.skip("torch not installed — bad-backend test runs only when torch is importable")
-    with pytest.raises(ValueError, match="Unknown gpu_timer backend"):
-        with gpu_timer(backend="bogus"):
-            pass
+    # Combined context: assert the ValueError is raised as the bad backend is
+    # resolved inside the timer's setup.
+    with pytest.raises(ValueError, match="Unknown gpu_timer backend"), gpu_timer(backend="bogus"):
+        pass

@@ -9,11 +9,18 @@ Author:
  - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
+# ``from __future__ import annotations`` keeps every annotation below as a
+# string at runtime. That lets us write modern syntax such as ``str | None``
+# uniformly even on the oldest supported interpreter (Python 3.10).
+from __future__ import annotations
+
 import glob
 import os
 import pathlib
 import shutil
 
+# We route all human-facing messages through the package logging surface
+# (rule 6: no bare ``print`` in library code) rather than writing to stdout.
 from .logging_utils import error, info
 
 
@@ -52,19 +59,26 @@ def folder_name_ext(path: str, checkpath: bool = False) -> tuple[str, str, str]:
     ('/path/to', 'folder', '')
     """
 
+    # Normalize to an absolute path first so the split is independent of the
+    # caller's current working directory.
     path = relative2absolute_path(path)
+    # Optional guard: fail loudly when the caller expects the path to exist.
     if checkpath:
         assert file_exists(path) or dir_exists(path), f"Path does not exist: {path}"
 
     base_folder = os.path.dirname(path)
     basename = os.path.basename(path)
 
+    # Directories have no meaningful extension — return an empty one.
     if os.path.isdir(path):
         return base_folder, basename, ""
 
+    # A basename with no dot (e.g. ``README``) also has no extension.
     if "." not in basename:
         return base_folder, basename, ""
 
+    # Split on the LAST dot only: this preserves multi-part names such as
+    # ``archive.tar`` while still peeling off the final ``gz`` suffix.
     name_part, _, ext_part = basename.rpartition(".")
     return base_folder, name_part, ext_part
 
@@ -93,10 +107,13 @@ def file_exists(file_path: str, check_empty: bool = False) -> bool:
     False
     """
     exists = os.path.isfile(file_path)
+    # Only stat the file for its size when it exists AND the caller asked for
+    # the emptiness check — avoids a needless syscall in the common case.
     if check_empty and exists:
         size = os.path.getsize(file_path)
         exists = size > 0
     return exists
+
 
 def dir_exists(path: str, check_empty: bool = False) -> bool:
     """
@@ -124,12 +141,17 @@ def dir_exists(path: str, check_empty: bool = False) -> bool:
     if not os.path.isdir(path):
         return False
     if check_empty:
-        # Exclude hidden files/directories
-        files = [f for f in glob.glob(os.path.join(path, "*")) if not os.path.basename(f).startswith(".")]
+        # ``glob("*")`` deliberately skips dotfiles, so a folder that only
+        # holds hidden housekeeping files (e.g. ``.DS_Store``) still counts as
+        # "empty" for the caller's intent.
+        files = [
+            f for f in glob.glob(os.path.join(path, "*")) if not os.path.basename(f).startswith(".")
+        ]
         return len(files) > 0
     return True
 
-def absolute2relative_path(path: str, base_path: str = None) -> str:
+
+def absolute2relative_path(path: str, base_path: str | None = None) -> str:
     """
     Convert a path to a relative path expressed from ``base_path``.
 
@@ -150,11 +172,16 @@ def absolute2relative_path(path: str, base_path: str = None) -> str:
     >>> absolute2relative_path("/home/user/project/file.txt", "/home/user")
     'project/file.txt'
     """
+    # Default the reference point to the current working directory so callers
+    # can ask "where is this relative to where I am right now?".
     if base_path is None:
         base_path = os.getcwd()
+    # Absolutize both ends before diffing them; ``os.path.relpath`` needs a
+    # common, unambiguous frame of reference to compute the ``..`` hops.
     abs_path = os.path.abspath(path)
     abs_base = os.path.abspath(base_path)
     return os.path.relpath(abs_path, abs_base)
+
 
 def relative2absolute_path(path: str, checkpath: bool = False) -> str:
     """
@@ -183,11 +210,15 @@ def relative2absolute_path(path: str, checkpath: bool = False) -> str:
     '/home/user/project/docs/readme.md'
     """
     abs_path = os.path.abspath(path)
+    # When asked, verify the target exists as either a file or a directory;
+    # we log before raising so the failure is traceable even if the caller
+    # swallows the exception.
     if checkpath and not (file_exists(abs_path) or dir_exists(abs_path)):
         msg = f"File or directory does not exist: {abs_path}"
         error(msg)
         raise FileNotFoundError(msg)
     return abs_path
+
 
 def path_without_home(path: str) -> str:
     """
@@ -209,10 +240,14 @@ def path_without_home(path: str) -> str:
     '~/project/file.txt'
     """
     home_dir = os.path.expanduser("~")
+    # Normalize first so ``/home/user/../user/x`` still matches the home prefix.
     norm_path = os.path.normpath(path)
+    # Only collapse the leading home segment (``count=1``) — a literal home
+    # path appearing deeper in the string must stay untouched.
     if norm_path.startswith(home_dir):
         return norm_path.replace(home_dir, "~", 1)
     return norm_path
+
 
 def recursive_glob(root_dir: str, pattern: str) -> list[str]:
     """
@@ -239,9 +274,13 @@ def recursive_glob(root_dir: str, pattern: str) -> list[str]:
     ['/home/user/file1.txt', '/home/user/docs/file2.txt']
     """
     matches: list[str] = []
+    # Walk every directory under the root and re-apply the glob at each level;
+    # this makes a flat pattern like ``*.txt`` behave recursively without the
+    # caller having to spell out ``**`` and enable ``recursive=True``.
     for root, _dirs, _files in os.walk(root_dir):
         matches.extend(glob.glob(os.path.join(root, pattern)))
     return matches
+
 
 def join(*args: str) -> str:
     """
@@ -268,9 +307,12 @@ def join(*args: str) -> str:
     >>> join(["folder1", "subfolder2", "file.txt"])
     '/home/user/project/folder1/subfolder2/file.txt'
     """
+    # Ergonomic overload: accept either ``join("a", "b")`` or
+    # ``join(["a", "b"])`` so callers holding a list need not splat it.
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
-        # If a single iterable is passed, unpack it
         args = args[0]
+    # ``normpath`` collapses redundant separators and ``..`` segments; we then
+    # absolutize so the returned path is always fully qualified.
     normalized_path = os.path.normpath(os.path.join(*args))
     return relative2absolute_path(normalized_path, checkpath=False)
 
@@ -294,7 +336,10 @@ def size_file(filepath: str) -> int:
     >>> size_file("example.txt")
     1024
     """
+    # Return the sentinel ``-1`` instead of raising for a missing file, so
+    # callers can branch on the value rather than wrap this in try/except.
     return os.path.getsize(filepath) if file_exists(filepath) else -1
+
 
 def checkfile(filepath: str, msg: str = "", check_empty: bool = False) -> None:
     """
@@ -318,10 +363,15 @@ def checkfile(filepath: str, msg: str = "", check_empty: bool = False) -> None:
     -------
     >>> checkfile("data.csv", msg="Data file missing", check_empty=True)
     """
+    # Existence is the primary contract; the caller-supplied ``msg`` is
+    # prefixed so the assertion text stays actionable in a stack trace.
     assert file_exists(filepath), f"{msg} File '{filepath}' does not exist."
+    # A zero-byte file often signals a truncated download or a half-written
+    # output — treat it as a failure when the caller opts in.
     if check_empty:
         size = size_file(filepath)
         assert size > 0, f"{msg} File '{filepath}' exists but is empty."
+
 
 def copyfile(source: str, destination: str) -> None:
     """
@@ -349,23 +399,37 @@ def copyfile(source: str, destination: str) -> None:
     -------
     >>> copyfile("source.txt", "backup/source_backup.txt")
     """
+    # Fail fast if the source is missing or empty — copying nothing is almost
+    # always a bug in the caller, not something to silently tolerate.
     checkfile(source, msg=f"Copying from '{source}' to '{destination}' failed.", check_empty=True)
     source_abs = relative2absolute_path(source)
     destination_abs = relative2absolute_path(destination)
 
+    # Mirror shell ``cp`` semantics: copying into a directory keeps the source
+    # file name rather than overwriting the directory itself.
     if dir_exists(destination_abs):
         _, basename, ext = folder_name_ext(source_abs)
         filename = f"{basename}.{ext}" if ext else basename
         destination_abs = join(destination_abs, filename)
 
-    assert source_abs != destination_abs, f"Source and destination paths are the same: '{source_abs}'"
+    # Guard against a self-copy, which ``shutil`` would happily truncate.
+    assert source_abs != destination_abs, (
+        f"Source and destination paths are the same: '{source_abs}'"
+    )
     try:
+        # ``copy2`` preserves metadata (mtime, permissions), unlike ``copy``.
         shutil.copy2(source_abs, destination_abs)
     except Exception as e:
+        # Log with both original paths for context, then re-raise unchanged so
+        # the caller still sees the real ``OSError``.
         error(f"Error copying file '{source}' to '{destination}': {e}")
         raise
-    checkfile(destination_abs, msg=f"Failed to copy '{source}' to '{destination}'", check_empty=True)
+    # Post-condition: confirm the destination now exists and is non-empty.
+    checkfile(
+        destination_abs, msg=f"Failed to copy '{source}' to '{destination}'", check_empty=True
+    )
     info(f"Copied '{source}' to '{destination_abs}' successfully.")
+
 
 def remove_directory(folder_path: str) -> None:
     """
@@ -389,15 +453,20 @@ def remove_directory(folder_path: str) -> None:
     -------
     >>> remove_directory("/path/to/temp_folder")
     """
+    # Idempotent by design: removing an already-absent directory is a no-op,
+    # which keeps cleanup code free of existence checks at every call site.
     if not dir_exists(folder_path):
         info(f"Directory '{folder_path}' does not exist, nothing to remove.")
         return
     try:
+        # ``rmtree`` recursively deletes the tree; any failure (permissions,
+        # busy file) is logged and re-raised for the caller to handle.
         shutil.rmtree(folder_path)
     except Exception as e:
         error(f"Failed to remove directory '{folder_path}': {e}")
         raise
     info(f"Removed directory: '{folder_path}'")
+
 
 def remove_files(files_list: list[str]) -> None:
     """
@@ -417,15 +486,20 @@ def remove_files(files_list: list[str]) -> None:
     -------
     >>> remove_files(["temp1.txt", "temp2.log"])
     """
+    # Best-effort batch delete: we intentionally keep going after a failure so
+    # one locked file cannot block cleanup of the rest of the list.
     for file_path in files_list:
         if file_exists(file_path):
             try:
                 pathlib.Path(file_path).unlink()
                 info(f"Removed file: '{file_path}'")
             except Exception as e:
+                # Log and swallow: this helper's contract is not to raise.
                 error(f"Failed to remove file '{file_path}': {e}")
         else:
+            # Missing files are simply skipped — nothing to remove.
             info(f"File '{file_path}' does not exist, skipping.")
+
 
 def make_directory(folder_path: str, exist_ok: bool = True) -> None:
     """
@@ -452,9 +526,13 @@ def make_directory(folder_path: str, exist_ok: bool = True) -> None:
     >>> make_directory("/path/to/new_folder")
     """
     try:
+        # ``makedirs`` creates intermediate parents too; ``exist_ok`` decides
+        # whether a pre-existing leaf is tolerated or is an error.
         os.makedirs(folder_path, exist_ok=exist_ok)
     except Exception as e:
         error(f"Error creating directory '{folder_path}': {e}")
         raise
+    # Defensive post-condition: guard against exotic filesystems where the
+    # call returns cleanly but the directory is not actually visible.
     assert dir_exists(folder_path), f"Failed to create directory: '{folder_path}'"
     info(f"Directory created: '{folder_path}'")

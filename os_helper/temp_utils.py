@@ -9,6 +9,10 @@ Author:
  - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
+# Defer annotation evaluation so ``str | None`` and generic ``Generator[...]``
+# annotations resolve cleanly on Python 3.10.
+from __future__ import annotations
+
 import contextlib
 import os
 import shutil
@@ -24,10 +28,7 @@ from .string_utils import emptystring
 
 @contextlib.contextmanager
 def temporary_filename(
-    suffix: str = "",
-    mode: str = "wt",
-    prefix: str = "",
-    delete: bool = True
+    suffix: str = "", mode: str = "wt", prefix: str = "", delete: bool = True
 ) -> Generator[str, None, None]:
     """
     Create a temporary file with a unique name that persists even after closing.
@@ -72,12 +73,13 @@ def temporary_filename(
         unique_prefix = f"{prefix}-{now_string('filename')}-" if not emptystring(prefix) else ""
         unique_prefix += hash_string(now_string(), size=8)
 
-        # Create the temporary file
+        # We pass ``delete=not delete`` so NamedTemporaryFile does NOT remove
+        # the file when the inner ``with`` closes: the name must stay valid for
+        # the caller inside the yielded block, and WE own final cleanup in the
+        # ``finally`` below (this also makes the file work on Windows, where an
+        # auto-deleting temp file cannot be reopened by name).
         with tempfile.NamedTemporaryFile(
-            mode=mode,
-            suffix=suffix,
-            prefix=unique_prefix,
-            delete=not delete
+            mode=mode, suffix=suffix, prefix=unique_prefix, delete=not delete
         ) as tmp:
             temp_path = relative2absolute_path(tmp.name)
             info(f"Created temporary file: {temp_path}")
@@ -86,11 +88,14 @@ def temporary_filename(
         error(f"Failed to create temporary file: {e}")
         raise
     finally:
+        # Cleanup runs whether the body succeeded or raised; only delete when
+        # asked and only if the file still exists (the caller may have moved it).
         if delete and temp_path is not None and os.path.exists(temp_path):
             try:
                 os.unlink(temp_path)
                 info(f"Deleted temporary file: {temp_path}")
             except Exception as e:
+                # Never let a cleanup failure mask the original result — log only.
                 error(f"Failed to delete temporary file '{temp_path}': {e}")
 
 
@@ -131,6 +136,7 @@ def temporary_folder(prefix: str = "", delete: bool = True) -> Generator[str, No
         unique_prefix = f"{prefix}-{now_string('filename')}-" if not emptystring(prefix) else ""
         unique_prefix += hash_string(now_string(), size=8)
 
+        # ``mkdtemp`` atomically creates the directory with safe permissions.
         temp_dir = tempfile.mkdtemp(prefix=unique_prefix)
         temp_dir = relative2absolute_path(temp_dir)
         info(f"Created temporary directory: {temp_dir}")
@@ -139,6 +145,8 @@ def temporary_folder(prefix: str = "", delete: bool = True) -> Generator[str, No
         error(f"Failed to create temporary directory: {e}")
         raise
     finally:
+        # Recursively remove the whole tree on exit, guarding on existence in
+        # case the caller already cleaned it up.
         if delete and temp_dir is not None and os.path.exists(temp_dir):
             try:
                 shutil.rmtree(temp_dir)
@@ -224,6 +232,8 @@ def temporary_remote_file(
     ...     assert storage[remote] == b"hello"
     >>> # remote artifact is gone after the block
     """
+    # Validate the injected callables up front so misuse fails immediately,
+    # before any file or network side effects happen.
     if not callable(upload_function):
         raise TypeError("upload_function must be callable")
     if not callable(delete_function):
@@ -231,6 +241,7 @@ def temporary_remote_file(
     if checkfile_function is not None and not callable(checkfile_function):
         raise TypeError("checkfile_function must be callable")
 
+    # Normalize the suffix to always carry a leading dot when non-empty.
     sfx = "" if emptystring(suffix) else suffix
     if not emptystring(sfx) and not sfx.startswith("."):
         sfx = "." + sfx
@@ -238,7 +249,27 @@ def temporary_remote_file(
     remote_file_path: str | None = None
 
     def _do_upload(local_path: str) -> str:
+        """Upload one local path, run the optional check, and record the handle.
+
+        Parameters
+        ----------
+        local_path : str
+            Path to the local file to upload; must already exist.
+
+        Returns
+        -------
+        str
+            The remote path/URI returned by ``upload_function``.
+
+        Raises
+        ------
+        FileNotFoundError
+            If ``local_path`` does not point at an existing file.
+        RuntimeError
+            If ``checkfile_function`` is set and rejects the upload.
+        """
         nonlocal remote_file_path
+        # Guard: uploading a missing file is always a caller bug.
         if not os.path.isfile(local_path):
             raise FileNotFoundError(f"Local file does not exist: {local_path}")
         # Capture the remote handle BEFORE the optional check so the finally
@@ -251,22 +282,28 @@ def temporary_remote_file(
         return remote_file_path
 
     try:
+        # Mode A: caller supplied an existing local file. Upload it as-is and
+        # leave the local original untouched — only the remote copy is ours.
         if not emptystring(from_local_file):
             _do_upload(from_local_file)
             yield remote_file_path
+        # Mode B: synthesize a fresh, uniquely named local temp file, optionally
+        # seed it with ``initial_content``, upload, then clean the local copy.
         else:
             ts = now_string("filename")
+            # Mix in the PID so concurrent processes never collide on a name.
             h = hash_string(f"{os.getpid()}-{ts}", size=8)
-            unique_prefix = (
-                f"{prefix}-{ts}-{h}-" if not emptystring(prefix) else f"{ts}-{h}-"
-            )
+            unique_prefix = f"{prefix}-{ts}-{h}-" if not emptystring(prefix) else f"{ts}-{h}-"
             with temporary_filename(suffix=sfx, prefix=unique_prefix, mode=mode) as local_path:
+                # Pre-populate the file only when the caller gave us content.
                 if initial_content is not None:
                     with open(local_path, mode=mode) as fout:
                         fout.write(initial_content)
                 _do_upload(local_path)
                 yield remote_file_path
     finally:
+        # Whatever happened above, if an upload succeeded we must tear down the
+        # remote artifact — that lifecycle guarantee is this helper's whole point.
         if remote_file_path is not None:
             try:
                 delete_function(remote_file_path)

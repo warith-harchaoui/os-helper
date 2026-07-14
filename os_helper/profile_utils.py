@@ -36,10 +36,32 @@ from typing import Literal
 
 
 def _empty_result() -> dict[str, float]:
+    """Return a zero-initialized timing result dict.
+
+    Returns
+    -------
+    dict of str to float
+        A fresh ``{"seconds": 0.0, "milliseconds": 0.0}`` mapping. Each timer
+        yields its own instance so results never alias between ``with`` blocks.
+    """
+    # Pre-seed both fields to 0.0 so the dict is valid even if the timed block
+    # raises before ``_set_result`` runs.
     return {"seconds": 0.0, "milliseconds": 0.0}
 
 
 def _set_result(result: dict[str, float], seconds: float) -> None:
+    """Populate a timing result dict in place from an elapsed-seconds value.
+
+    Parameters
+    ----------
+    result : dict of str to float
+        The dict yielded to the caller; mutated in place so the value survives
+        after the context manager exits.
+    seconds : float
+        Elapsed time in seconds; the millisecond field is derived from it.
+    """
+    # Mutate in place (not reassign) because the caller already holds a
+    # reference to this exact dict from the ``with ... as`` binding.
     result["seconds"] = seconds
     result["milliseconds"] = seconds * 1000.0
 
@@ -66,10 +88,14 @@ def wall_timer() -> Generator[dict[str, float], None, None]:
     >>> assert t["seconds"] >= 0.05
     """
     result = _empty_result()
+    # ``perf_counter`` is monotonic and highest-resolution — never affected by
+    # wall-clock adjustments (NTP, DST) during the measured block.
     start = time.perf_counter()
     try:
         yield result
     finally:
+        # Fill the result on the way out so the elapsed time is recorded even
+        # if the body raised.
         _set_result(result, time.perf_counter() - start)
 
 
@@ -102,6 +128,8 @@ def cpu_timer() -> Generator[dict[str, float], None, None]:
     >>> assert t["seconds"] > 0
     """
     result = _empty_result()
+    # ``process_time`` counts CPU (user+system) time of THIS process only —
+    # sleeps and I/O waits do not advance it, unlike ``perf_counter``.
     start = time.process_time()
     try:
         yield result
@@ -110,33 +138,51 @@ def cpu_timer() -> Generator[dict[str, float], None, None]:
 
 
 def _resolve_gpu_backend(backend: str) -> Literal["cuda", "mps"]:
-    """Pick a concrete GPU backend or raise a clear RuntimeError."""
+    """Pick a concrete GPU backend or raise a clear RuntimeError.
+
+    Parameters
+    ----------
+    backend : str
+        Requested backend: ``"auto"``, ``"cuda"``, or ``"mps"``.
+
+    Returns
+    -------
+    {"cuda", "mps"}
+        The concrete backend to use.
+
+    Raises
+    ------
+    RuntimeError
+        If PyTorch is missing or the requested/derived backend is unavailable.
+    ValueError
+        If ``backend`` is not a recognized value.
+    """
+    # Import lazily: PyTorch is an optional, heavy dependency and most callers
+    # of the wall/cpu timers never need it.
     try:
         import torch  # type: ignore
     except ImportError as exc:
-        raise RuntimeError(
-            "gpu_timer requires PyTorch. Install with: pip install torch"
-        ) from exc
+        raise RuntimeError("gpu_timer requires PyTorch. Install with: pip install torch") from exc
 
+    # Explicit CUDA request: honour it only if a CUDA device is actually present.
     if backend == "cuda":
         if not torch.cuda.is_available():
             raise RuntimeError("gpu_timer(backend='cuda') called but CUDA is unavailable")
         return "cuda"
+    # Explicit MPS (Apple Silicon) request, guarded the same way.
     if backend == "mps":
         if not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()):
             raise RuntimeError("gpu_timer(backend='mps') called but MPS is unavailable")
         return "mps"
+    # Auto: prefer CUDA (faster, has real timing events), fall back to MPS.
     if backend == "auto":
         if torch.cuda.is_available():
             return "cuda"
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             return "mps"
-        raise RuntimeError(
-            "gpu_timer(backend='auto') called but neither CUDA nor MPS is available"
-        )
-    raise ValueError(
-        f"Unknown gpu_timer backend {backend!r}; expected 'auto', 'cuda', or 'mps'"
-    )
+        raise RuntimeError("gpu_timer(backend='auto') called but neither CUDA nor MPS is available")
+    # Anything else is a programming error on the caller's side.
+    raise ValueError(f"Unknown gpu_timer backend {backend!r}; expected 'auto', 'cuda', or 'mps'")
 
 
 @contextlib.contextmanager
@@ -191,7 +237,10 @@ def gpu_timer(backend: str = "auto") -> Generator[dict[str, float], None, None]:
     import torch  # already known to be importable thanks to _resolve_gpu_backend
 
     if chosen == "cuda":
+        # Drain any queued work first so the start event marks a clean baseline.
         torch.cuda.synchronize()
+        # CUDA events timestamp on the GPU itself — far more accurate than
+        # wrapping wall-clock around asynchronous kernel launches.
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
         start_event.record()
@@ -199,6 +248,7 @@ def gpu_timer(backend: str = "auto") -> Generator[dict[str, float], None, None]:
             yield result
         finally:
             end_event.record()
+            # Block until the GPU actually finishes before reading the delta.
             torch.cuda.synchronize()
             elapsed_ms = start_event.elapsed_time(end_event)
             _set_result(result, elapsed_ms / 1000.0)
@@ -279,12 +329,16 @@ def toc(handle: float | None = None, *, log: bool = False) -> float:
     >>> elapsed = toc()
     """
     now = time.perf_counter()
+    # No explicit handle: fall back to the implicit global set by the last tic().
     if handle is None:
         if _LAST_TIC is None:
             raise RuntimeError("toc() called before tic()")
         handle = _LAST_TIC
     elapsed = now - handle
     if log:
+        # Import lazily to avoid a hard module-load dependency on logging_utils
+        # for the common (non-logging) toc() call.
         from .logging_utils import info
+
         info(f"toc: {elapsed:.3f}s")
     return elapsed

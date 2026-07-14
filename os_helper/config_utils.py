@@ -14,10 +14,15 @@ Author:
  - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
+# Defer annotation evaluation so ``dict | None`` unions parse on Python 3.10.
+from __future__ import annotations
+
 import glob
 import json
 import os
 
+# PyYAML is loaded lazily-but-eagerly here because YAML is one of the two
+# accepted on-disk config formats (the other being JSON).
 import yaml
 from dotenv import load_dotenv
 
@@ -54,31 +59,42 @@ def _valid_config_file(a_path: str, keys: list[str], config_type: str) -> dict |
     >>> valid_config_file("config.yaml", ["host", "port"], "database")
     {'host': 'localhost', 'port': 5432}
     """
+    # Fail early if the file is missing — the caller passed us a path it
+    # believed existed, so a missing file is a hard error, not a soft miss.
     checkfile(a_path, f"Configuration file for {config_type} does not exist: {a_path}")
 
+    # Dispatch on the file extension to pick the right parser.
     _, _, ext = folder_name_ext(a_path)
     ext = ext.lower()
 
     config = None
     with open(a_path) as fin:
+        # JSON and YAML are the only two supported on-disk formats.
         if "json" in ext:
             config = json.load(fin)
         elif any(e in ext for e in ["yaml", "yml"]):
+            # ``SafeLoader`` refuses arbitrary object construction — never load
+            # untrusted YAML with the full loader.
             config = yaml.load(fin, Loader=yaml.SafeLoader)
 
+    # An unrecognized extension leaves ``config`` as None: treat it as a soft
+    # miss so the caller can fall through to the next config source.
     if config is None:
         info(f"Unsupported configuration file format {ext}: {a_path}")
         return None
 
+    # A file only counts as valid when it satisfies EVERY required key.
     if all(key in config for key in keys):
         info(f"Configuration '{config_type}' successfully loaded from '{a_path}'")
         return config
     else:
+        # Otherwise report exactly which keys are missing to aid debugging.
         missing = [key for key in keys if key not in config]
         m = ", ".join(missing)
         info(f"Configuration file '{a_path}' does not have all keys. Missing keys are {m}")
 
     return None
+
 
 def _config_from_env(keys: list[str]) -> dict[str, str | int | float] | None:
     """
@@ -100,17 +116,21 @@ def _config_from_env(keys: list[str]) -> dict[str, str | int | float] | None:
     missing_keys = []
     for key in keys:
         cap_key = key.upper()
-        # capitals case
+        # Environment variables are conventionally UPPER_CASE, so try that
+        # spelling first...
         if cap_key in os.environ:
             config[key] = os.environ[cap_key]
-        # lowercase case
+        # ...then fall back to the exact-case key for callers who set it verbatim.
         elif key in os.environ:
             config[key] = os.environ[key]
         else:
+            # Track misses so we can report all of them at once below.
             missing_keys.append(key)
+    # Only a fully-satisfied key set counts as a successful environment load.
     if len(missing_keys) == 0:
         return config
 
+    # Partial matches are treated as a miss so the caller can try another source.
     m = ", ".join(missing_keys)
     info(f"Missing keys in environment variables: {m}")
     return None
