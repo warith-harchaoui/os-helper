@@ -4,23 +4,21 @@
 
 [![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#)
 
-`OS Helper` belongs to a collection of libraries called `AI Helpers` developped for building Artificial Intelligence
+`OS Helper` belongs to a collection of libraries called `AI Helpers` developed for building Artificial Intelligence.
 
 [🌍 AI Helpers](https://harchaoui.org/warith/ai-helpers)
 
 [![logo](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/logo.png)](https://harchaoui.org/warith/ai-helpers)
 
-OS Helper is a Python library that provides utility functions for working with different operating systems.  
+OS Helper is a Python library that provides utility functions for working with different operating systems. It offers a set of tools to simplify common system operations, file handling, and OS-specific tasks.
 
-It offers a set of tools to simplify common system operations, file handling, and OS-specific tasks.
-
-# Documentation
+## Documentation
 
 [💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
 
 [📋 Examples](https://github.com/warith-harchaoui/os-helper/blob/main/EXAMPLES.md)
 
-# Features
+## Features
 
 - Operating system detection (Windows, Linux, macOS, Unix)
 - File system operations (create, delete, move, copy)
@@ -29,27 +27,34 @@ It offers a set of tools to simplify common system operations, file handling, an
 - File hashing and string hashing utilities
 - Process management and execution
 
-# Installation
+## Installation
 
-**Prerequisites** — **Python 3.10–3.13** and **git**, cross-platform:
+**Prerequisites** — **Python 3.10–3.13** and **git**, cross-platform (os-helper needs no heavy system dependency):
 
 - 🍎 **macOS** ([Homebrew](https://brew.sh)): `brew install python git`
 - 🐧 **Ubuntu/Debian**: `sudo apt update && sudo apt install -y python3 python3-pip git`
 - 🪟 **Windows** (PowerShell): `winget install Python.Python.3.12 Git.Git`
 
-Then install the package:
+We recommend using Python environments. Check this link if you're unfamiliar with setting one up: [🥸 Tech tips](https://harchaoui.org/warith/4ml/#install).
 
-
-## Install Package
-
-We can recommand python environments. Check this link if you don't know how
-
-[🥸 Tech tips](https://harchaoui.org/warith/4ml/#install)
-
-We still discuss between different python package managers and try to support as much as possible
+### From PyPI (recommended)
 
 ```bash
-pip install --force-reinstall --no-cache-dir git+https://github.com/warith-harchaoui/os-helper.git@v1.5.0
+# Core utilities (library + argparse CLI)
+pip install os-helper
+
+# Optional click-based CLI twin
+pip install "os-helper[cli]"
+```
+
+### From source (no PyPI)
+
+```bash
+# Core utilities (library + argparse CLI)
+pip install "git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
+
+# Optional click-based CLI twin
+pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
 ```
 
 ## Usage
@@ -173,7 +178,7 @@ osh.zip_folder(folder_to_zip, zip_output)
 osh.info(f"Folder {folder_to_zip} zipped into {zip_output}")
 ```
 
-# Multi-surface exposure
+## Multi-surface exposure
 
 `os-helper` is not just a library — the same functions are exposed as a
 Python import, an argparse CLI, and a click CLI twin:
@@ -190,7 +195,9 @@ os-helper misc format-size 12345678
 os-helper misc now --fmt filename
 
 # click-based CLI twin (needs the [cli] extra)
-pip install 'os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.0'
+pip install "os-helper[cli]"
+# or from source:
+pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
 os-helper-click hash file ./pyproject.toml
 ```
 
@@ -200,8 +207,14 @@ Explorer) lives in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/m
 The competitive landscape (stdlib, pathlib, click, python-dotenv,
 psutil, fsspec, …) is analysed in [LANDSCAPE.md](https://github.com/warith-harchaoui/os-helper/blob/main/LANDSCAPE.md).
 
-# Author
-[Warith HARCHAOUI](https://linkedin.com/in/warith-harchaoui)
+## Author
 
-# Acknowledgements
+ - [Warith HARCHAOUI](https://linkedin.com/in/warith-harchaoui)
+
+## Acknowledgements
+
 Special thanks to [Mohamed Chelali](https://mchelali.github.io) and [Bachir Zerroug](https://www.linkedin.com/in/bachirzerroug) for fruitful discussions.
+
+## License
+
+This project is licensed under the BSD-3-Clause License — see the [LICENSE](LICENSE) file for details.

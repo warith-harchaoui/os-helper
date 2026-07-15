@@ -1,6 +1,6 @@
 # OS Helper
 
-[🇫🇷](LISEZMOI.md) · [🇬🇧](README.md)
+[🇫🇷](https://github.com/warith-harchaoui/os-helper/blob/main/LISEZMOI.md) · [🇬🇧](https://github.com/warith-harchaoui/os-helper/blob/main/README.md)
 
 [![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#)
 
@@ -8,19 +8,17 @@
 
 [🌍 AI Helpers](https://harchaoui.org/warith/ai-helpers)
 
-[![logo](assets/logo.png)](https://harchaoui.org/warith/ai-helpers)
+[![logo](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/logo.png)](https://harchaoui.org/warith/ai-helpers)
 
-OS Helper est une bibliothèque Python qui fournit des fonctions utilitaires pour travailler avec différents systèmes d'exploitation.
+OS Helper est une bibliothèque Python qui fournit des fonctions utilitaires pour travailler avec différents systèmes d'exploitation. Elle propose un ensemble d'outils pour simplifier les opérations système courantes, la manipulation de fichiers et les tâches spécifiques à chaque OS.
 
-Elle propose un ensemble d'outils pour simplifier les opérations système courantes, la manipulation de fichiers et les tâches spécifiques à chaque OS.
-
-# Documentation
+## Documentation
 
 [💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
 
 [📋 Exemples](https://github.com/warith-harchaoui/os-helper/blob/main/EXAMPLES.md)
 
-# Fonctionnalités
+## Fonctionnalités
 
 - Détection du système d'exploitation (Windows, Linux, macOS, Unix)
 - Opérations de fichiers (création, suppression, déplacement, copie)
@@ -29,27 +27,34 @@ Elle propose un ensemble d'outils pour simplifier les opérations système coura
 - Utilitaires de hash de fichiers et de chaînes
 - Gestion et exécution de processus
 
-# Installation
+## Installation
 
-**Prérequis** — **Python 3.10–3.13** et **git**, multiplateforme :
+**Prérequis** — **Python 3.10–3.13** et **git**, multiplateforme (os-helper ne nécessite aucune dépendance système lourde) :
 
 - 🍎 **macOS** ([Homebrew](https://brew.sh)) : `brew install python git`
 - 🐧 **Ubuntu/Debian** : `sudo apt update && sudo apt install -y python3 python3-pip git`
 - 🪟 **Windows** (PowerShell) : `winget install Python.Python.3.12 Git.Git`
 
-Puis installer le paquet :
+Nous recommandons l'utilisation d'environnements Python. Consultez ce lien si vous ne savez pas comment faire : [🥸 Conseils techniques](https://harchaoui.org/warith/4ml/#install).
 
-
-## Installer le paquet
-
-Nous recommandons l'utilisation d'environnements Python. Consultez ce lien si vous ne savez pas comment faire :
-
-[🥸 Conseils techniques](https://harchaoui.org/warith/4ml/#install)
-
-Nous discutons encore entre différents gestionnaires de paquets Python et essayons de supporter autant que possible.
+### Depuis PyPI (recommandé)
 
 ```bash
-pip install --force-reinstall --no-cache-dir git+https://github.com/warith-harchaoui/os-helper.git@v1.5.0
+# Utilitaires principaux (bibliothèque + CLI argparse)
+pip install os-helper
+
+# Jumelle CLI click optionnelle
+pip install "os-helper[cli]"
+```
+
+### Depuis les sources (sans PyPI)
+
+```bash
+# Utilitaires principaux (bibliothèque + CLI argparse)
+pip install "git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
+
+# Jumelle CLI click optionnelle
+pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
 ```
 
 ## Utilisation
@@ -171,7 +176,7 @@ osh.zip_folder(folder_to_zip, zip_output)
 osh.info(f"Dossier {folder_to_zip} zippé dans {zip_output}")
 ```
 
-# Exposition multi-surface
+## Exposition multi-surface
 
 `os-helper` n'est pas qu'une bibliothèque — les mêmes fonctions sont
 exposées comme import Python, comme CLI argparse, et comme jumelle CLI
@@ -189,7 +194,9 @@ os-helper misc format-size 12345678
 os-helper misc now --fmt filename
 
 # Jumelle click (nécessite l'extra [cli])
-pip install 'os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.0'
+pip install "os-helper[cli]"
+# ou depuis les sources :
+pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
 os-helper-click hash file ./pyproject.toml
 ```
 
@@ -199,8 +206,14 @@ détaillé dans [GUI.md](GUI.md).
 Le paysage concurrentiel (stdlib, pathlib, click, python-dotenv, psutil,
 fsspec, …) est analysé dans [LANDSCAPE.md](LANDSCAPE.md).
 
-# Auteur
+## Auteur
+
  - [Warith HARCHAOUI](https://linkedin.com/in/warith-harchaoui)
 
-# Remerciements
+## Remerciements
+
 Remerciements chaleureux à [Mohamed Chelali](https://mchelali.github.io) et [Bachir Zerroug](https://www.linkedin.com/in/bachirzerroug) pour nos échanges fructueux.
+
+## Licence
+
+Ce projet est distribué sous la licence BSD-3-Clause — voir le fichier [LICENSE](LICENSE) pour plus de détails.
