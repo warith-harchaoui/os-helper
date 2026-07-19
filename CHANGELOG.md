@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-07-20
+
+### Changed
+
+- **`download_file` now streams with a progress bar.** It previously loaded the
+  entire response into memory (`resp.content`) before writing — fine for a small
+  file, fatal for a multi-hundred-MB archive. It now streams block-by-block
+  (flat memory footprint) and shows a `tqdm` progress bar on an interactive
+  terminal (auto-suppressed on a non-TTY, e.g. CI). New optional keyword args
+  `chunk_size` and `progress`; the positional signature is unchanged, so callers
+  need no edits. Adds a `(connect, read)` timeout so a stalled server can't hang
+  the download forever.
+- **Adaptive block size.** `chunk_size` defaults to `None` = *auto*: the block
+  size is derived from the download's `Content-Length` (already read for the
+  progress total, so no extra request) to target ~512 chunks, clamped to
+  `[64 KiB, 4 MiB]`, with a 1 MiB fallback when the size is unknown. This keeps
+  progress-bar redraws and per-iteration overhead sensible from a 2 KB config to
+  a multi-GB model. Pass an explicit `chunk_size` to override.
+
+### Added
+
+- **`progress_bar(total, desc, disable, unit)`** — a shared, byte-scaled `tqdm`
+  factory with the suite convention baked in (KiB/MiB/GiB units, ETA from a known
+  total, and auto-suppression when `stderr` is not a TTY). Every helper that
+  moves bytes wraps its transfer library's progress hook around one of these, so
+  HTTP download, S3 up/download and SFTP put/get all show identical progress.
+  `download_file` is refactored to use it.
+- `tqdm>=4.66,<5` dependency (the progress bar for `download_file` / `progress_bar`).
+
 ## [1.5.2] - 2026-07-15
 
 ### Documentation

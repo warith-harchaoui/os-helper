@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "os-helper"
-version = "1.5.2"
+version = "1.5.3"
 description = "Cross-platform Python utility functions for file handling, system operations, string manipulation, folder management, hashing, configuration loading, and timing/profiling primitives — exposed as library, argparse CLI and click CLI."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -31,6 +31,7 @@ dependencies = [
     "python-dotenv>=1.0.1,<2",
     "pyyaml>=6.0.2,<7",
     "validators>=0.34.0,<1",
+    "tqdm>=4.66,<5",
 ]
 
 [project.optional-dependencies]

@@ -26,6 +26,7 @@ import re
 import time
 import zipfile
 from datetime import datetime
+from typing import Any
 
 # ``requests`` powers the URL/download helpers; ``validators`` gives us a
 # quick, dependency-light URL syntax check before we ever touch the network.
@@ -410,9 +411,149 @@ def str2time(input_string: str) -> float:
         return 0.0
 
 
-def download_file(url: str, file_path: str = "") -> None:
+def progress_bar(
+    total: int | None = None,
+    *,
+    desc: str = "",
+    disable: bool | None = None,
+    unit: str = "B",
+) -> Any:
+    """Create a :mod:`tqdm` progress bar configured for file transfers.
+
+    The suite-wide byte-transfer bar, so every helper that moves bytes (HTTP
+    download, S3 up / download, SFTP put / get) shows the *same* progress UI:
+    byte-scaled units (KiB / MiB / GiB), a known total when available (for a
+    percentage + ETA), and — crucially — **auto-suppression when ``stderr`` is
+    not a TTY**, so CI logs and piped output are never flooded with control
+    characters. Each caller simply wraps its transfer library's progress hook
+    (``requests`` chunks, boto3 ``Callback``, paramiko ``callback``) around one
+    of these bars.
+
+    Parameters
+    ----------
+    total : int or None, optional
+        Total number of bytes when known (enables percentage + ETA); ``None``
+        leaves the bar open-ended.
+    desc : str, optional
+        Short label shown at the left of the bar (e.g. the file / key name).
+    disable : bool or None, optional
+        Force the bar on / off. ``None`` (default) auto-disables when ``stderr``
+        is not an interactive terminal.
+    unit : str, optional
+        Progress unit (default ``"B"``; ``unit_scale`` renders raw byte counts as
+        KiB / MiB / GiB).
+
+    Returns
+    -------
+    tqdm.tqdm
+        A ready progress bar; call ``.update(n)`` per transferred chunk and
+        ``.close()`` when done.
+
+    Examples
+    --------
+    >>> bar = progress_bar(total=10, desc="demo", disable=True)
+    >>> bar.total
+    10
+    >>> bar.disable
+    True
+    >>> bar.close()
     """
-    Download a URL to a local file.
+    import sys
+
+    from tqdm import tqdm
+
+    # Auto-suppress on a non-TTY (CI / piped logs) unless the caller forces it.
+    if disable is None:
+        disable = not sys.stderr.isatty()
+    return tqdm(
+        total=total,
+        desc=desc,
+        unit=unit,
+        unit_scale=True,
+        unit_divisor=1024,
+        disable=disable,
+    )
+
+
+def _adaptive_chunk_size(
+    total: int | None,
+    *,
+    target: int = 512,
+    lo: int = 64 * 1024,
+    hi: int = 4 * 1024 * 1024,
+    default: int = 1 << 20,
+) -> int:
+    """Choose a streaming block size proportional to the total download size.
+
+    Sizing the read/write block by the payload keeps two things stable across a
+    2 KB config file and a multi-gigabyte model: the number of progress-bar
+    redraws and the per-iteration Python / syscall overhead. Rather than
+    hand-tuned size buckets, aim for a fixed ``target`` number of chunks and
+    clamp the result to a sane ``[lo, hi]`` window. When the size is unknown (no
+    ``Content-Length`` header), fall back to ``default``. Note the block size is
+    a local buffering knob only — it does not change the bytes on the wire.
+
+    Parameters
+    ----------
+    total : int or None
+        Total download size in bytes, or ``None`` when the server sent no
+        ``Content-Length``.
+    target : int, optional
+        Desired number of chunks over the whole download (default 512).
+    lo, hi : int, optional
+        Lower / upper clamp on the returned block size in bytes (default 64 KiB /
+        4 MiB).
+    default : int, optional
+        Block size used when ``total`` is unknown (default 1 MiB).
+
+    Returns
+    -------
+    int
+        Block size in bytes to pass to ``iter_content`` and the file writes.
+
+    Examples
+    --------
+    >>> _adaptive_chunk_size(750 * 1024 * 1024)  # ~750 MB → ~1.5 MiB
+    1536000
+    >>> _adaptive_chunk_size(None)               # unknown size → 1 MiB default
+    1048576
+    >>> _adaptive_chunk_size(5 * 1024 ** 3) == 4 * 1024 * 1024  # 5 GB → hi clamp
+    True
+    >>> _adaptive_chunk_size(10 * 1024) == 64 * 1024             # 10 KB → lo clamp
+    True
+    """
+    # No size advertised → we cannot scale; use the fixed fallback.
+    if not total:
+        return default
+    # Aim for ``target`` chunks, but never below ``lo`` (so tiny files still
+    # stream) nor above ``hi`` (bounded memory + a bar that keeps moving on huge
+    # files).
+    return max(lo, min(hi, total // target))
+
+
+def download_file(
+    url: str,
+    file_path: str = "",
+    *,
+    chunk_size: int | None = None,
+    progress: bool = True,
+) -> None:
+    """
+    Download a URL to a local file, streaming with a progress bar.
+
+    The response is streamed block-by-block and written as it arrives, so the
+    whole payload is **never** held in memory — a multi-hundred-megabyte archive
+    downloads with a flat memory footprint. A :mod:`tqdm` progress bar is shown
+    on an interactive terminal (auto-suppressed when ``stderr`` is not a TTY,
+    e.g. CI / log files). Start and completion are logged via :func:`info`; a
+    failed request is logged via :func:`error` and re-raised.
+
+    The block size adapts to the payload by default (via
+    :func:`_adaptive_chunk_size`): the server's ``Content-Length`` — already read
+    for the progress total, so no extra request — is turned into a block sized to
+    give ~500 updates, clamped to ``[64 KiB, 4 MiB]``. That keeps a 2 KB config
+    and a multi-GB model both sensible. Pass an explicit ``chunk_size`` to
+    override.
 
     If ``file_path`` is empty, the destination name is derived from the last
     path segment of the URL (query string stripped).
@@ -423,6 +564,12 @@ def download_file(url: str, file_path: str = "") -> None:
         The URL to download from.
     file_path : str, optional
         Destination path. Defaults to the URL's last segment.
+    chunk_size : int or None, optional
+        Streaming block size in bytes. ``None`` (default) picks a size adaptively
+        from the download's ``Content-Length``; an explicit int overrides it.
+    progress : bool, optional
+        Show a progress bar on an interactive terminal (default ``True``). The
+        bar is auto-suppressed when ``stderr`` is not a TTY.
 
     Raises
     ------
@@ -441,20 +588,37 @@ def download_file(url: str, file_path: str = "") -> None:
         stripped_url = stripped_url.split("?")[0]
         file_path = stripped_url.split("/")[-1]
 
+    info(f"Downloading '{url}' → '{file_path}'")
     try:
-        resp = requests.get(url)
-        # Turn any 4xx/5xx into an exception so we never write an error page
-        # to disk as if it were the requested file.
-        resp.raise_for_status()
+        # ``stream=True`` + iter_content keeps memory flat regardless of size;
+        # a (connect, read) timeout avoids hanging forever on a stalled server.
+        with requests.get(url, stream=True, timeout=(10, 60)) as resp:
+            # Turn any 4xx/5xx into an exception so we never write an error page
+            # to disk as if it were the requested file.
+            resp.raise_for_status()
+            # Content-Length gives the bar a total + ETA; absent → open-ended.
+            total = int(resp.headers.get("Content-Length", 0)) or None
+            # Adapt the block size to the payload unless the caller pinned one.
+            block = chunk_size if chunk_size is not None else _adaptive_chunk_size(total)
+            # Shared suite bar: auto-quiet on a non-TTY, forced off when progress=False.
+            bar = progress_bar(
+                total=total,
+                desc=os.path.basename(file_path) or "download",
+                disable=None if progress else True,
+            )
+            # Binary mode: the payload may be an image, archive, etc., not text.
+            with open(file_path, "wb") as fout:
+                for chunk in resp.iter_content(chunk_size=block):
+                    if not chunk:
+                        continue  # keep-alive chunk carries no data
+                    fout.write(chunk)
+                    bar.update(len(chunk))
+            bar.close()
     except requests.RequestException as e:
         error(f"Failed to download from '{url}': {e}")
         raise
 
-    # Binary mode: the payload may be an image, archive, etc., not just text.
-    with open(file_path, "wb") as fout:
-        fout.write(resp.content)
-
-    info(f"File downloaded from '{url}' and saved to '{file_path}'")
+    info(f"File downloaded from '{url}' and saved to '{file_path}' ({size_file(file_path)} bytes)")
 
 
 def get_user_ip() -> dict[str, str | None]:

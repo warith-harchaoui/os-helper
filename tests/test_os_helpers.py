@@ -62,11 +62,11 @@ def test_verbosity_get_and_set():
     """
     previous = verbosity()
     try:
-        assert verbosity(2) == 2   # DEBUG
+        assert verbosity(2) == 2  # DEBUG
         assert verbosity() == 2
-        assert verbosity(0) == 0   # WARNING
+        assert verbosity(0) == 0  # WARNING
         assert verbosity(-1) == -1  # ERROR
-        assert verbosity(3) == 2   # clamped to DEBUG
+        assert verbosity(3) == 2  # clamped to DEBUG
         assert verbosity(-5) == -2  # clamped to CRITICAL
     finally:
         verbosity(previous)
@@ -82,7 +82,6 @@ def test_emptystring():
     assert emptystring("") is True  # An empty string should return True
     assert emptystring(None) is True  # None should return True
     assert emptystring("Non-empty") is False  # A non-empty string should return False
-
 
 
 def test_now_string():
@@ -139,8 +138,12 @@ def test_relative2absolute_path():
     """
     relative_path = os.path.relpath(TEST_FOLDER)  # Get a relative path for testing
     absolute_path = relative2absolute_path(relative_path)  # Convert to absolute path
-    assert os.path.isabs(absolute_path), f"Path is not absolute: {absolute_path}"  # Verify the result is absolute
-    assert not os.path.isabs(relative_path), f"Path is not relative: {relative_path}"  # Ensure the input is relative
+    assert os.path.isabs(absolute_path), (
+        f"Path is not absolute: {absolute_path}"
+    )  # Verify the result is absolute
+    assert not os.path.isabs(relative_path), (
+        f"Path is not relative: {relative_path}"
+    )  # Ensure the input is relative
 
 
 def test_asciistring():
@@ -150,7 +153,9 @@ def test_asciistring():
     - Verifies it converts non-ASCII characters to ASCII equivalents.
     - Verifies it replaces special characters with the replacement character.
     """
-    assert asciistring("Café-Con-Leche!") == "cafe-con-leche"  # Replace accented and special characters
+    assert (
+        asciistring("Café-Con-Leche!") == "cafe-con-leche"
+    )  # Replace accented and special characters
     assert asciistring("Special#File$2024", lower=False) == "Special-File-2024"  # Preserve case
     assert asciistring("Café@2024.txt") == "cafe-2024-txt"  # Replace "@" with a hyphen
 
@@ -314,6 +319,7 @@ def test_hashfolder_content():
     modified_hash = hashfolder(test_folder, hash_content=True)  # Recompute hash
     assert initial_hash != modified_hash  # Verify the hash changes
 
+
 def test_folder_description():
     """
     `folder_description` lists non-hidden files with sizes and emits
@@ -380,6 +386,7 @@ def test_temporary_folder():
         assert file_exists(filename)
     time.sleep(0.1)  # Wait for the context manager to exit
     assert not dir_exists(temp_folder)  # Verify the temporary folder is deleted
+
 
 def test_temporary_filename():
     """
@@ -468,14 +475,17 @@ def test_temporary_remote_file_check_failure_raises():
     def always_false(_):
         return False
 
-    with pytest.raises(RuntimeError), temporary_remote_file(
-        upload,
-        delete,
-        prefix="trf",
-        suffix=".bin",
-        checkfile_function=always_false,
-        initial_content=b"x",
-    ) as _remote:
+    with (
+        pytest.raises(RuntimeError),
+        temporary_remote_file(
+            upload,
+            delete,
+            prefix="trf",
+            suffix=".bin",
+            checkfile_function=always_false,
+            initial_content=b"x",
+        ) as _remote,
+    ):
         pass
 
     assert len(deleted) == 1  # cleanup still ran
@@ -531,6 +541,7 @@ def test_toc_without_tic_raises():
     # Reset the implicit global by forcing it None via a fresh tic+toc cycle,
     # then nuke it. We re-import the module to reset clean module state.
     import os_helper.profile_utils as pu
+
     pu._LAST_TIC = None
     with pytest.raises(RuntimeError, match="toc"):
         toc()
@@ -552,6 +563,7 @@ def test_gpu_timer_raises_when_no_gpu():
         return
 
     import torch
+
     if not torch.cuda.is_available():
         with pytest.raises(RuntimeError), gpu_timer(backend="cuda"):
             pass
@@ -566,3 +578,48 @@ def test_gpu_timer_rejects_unknown_backend():
     # resolved inside the timer's setup.
     with pytest.raises(ValueError, match="Unknown gpu_timer backend"), gpu_timer(backend="bogus"):
         pass
+
+
+def test_adaptive_chunk_size_scales_and_clamps() -> None:
+    """`download_file`'s block-size picker targets ~512 chunks, clamped [64 KiB, 4 MiB].
+
+    The block size is a local buffering knob (not a wire-packet size); sizing it
+    by the payload keeps progress-bar redraws and per-iteration overhead stable
+    from a tiny config to a multi-GB model. This pins the four regimes: a mid
+    size scales linearly, a huge size hits the ceiling, a tiny size hits the
+    floor, and an unknown size (no Content-Length) falls back to the default.
+    """
+    from os_helper.misc_utils import _adaptive_chunk_size
+
+    lo, hi, default = 64 * 1024, 4 * 1024 * 1024, 1 << 20
+    # ~750 MB → 786432000 // 512 = 1_536_000 B, inside the clamp window.
+    assert _adaptive_chunk_size(750 * 1024 * 1024) == 1_536_000
+    # 5 GB → would be ~10 MiB, clamped down to the 4 MiB ceiling.
+    assert _adaptive_chunk_size(5 * 1024**3) == hi
+    # 10 KB → would be tiny, clamped up to the 64 KiB floor so it still streams.
+    assert _adaptive_chunk_size(10 * 1024) == lo
+    # Unknown / zero size (server sent no Content-Length) → fixed 1 MiB fallback.
+    assert _adaptive_chunk_size(None) == default
+    assert _adaptive_chunk_size(0) == default
+
+
+def test_progress_bar_config_and_auto_disable(monkeypatch) -> None:
+    """`progress_bar` is byte-scaled, honours an explicit disable, and auto-quiets off-TTY.
+
+    This is the shared transfer bar every helper reuses (HTTP download, S3, SFTP),
+    so its two contracts matter: byte units with a known total, and — crucially —
+    auto-suppression when stderr is not an interactive terminal so CI logs are not
+    flooded with carriage returns.
+    """
+    from os_helper import progress_bar
+
+    # Explicit disable is honoured verbatim; the known total is wired through.
+    bar = progress_bar(total=2048, desc="x", disable=True)
+    assert bar.total == 2048 and bar.disable is True
+    bar.close()
+
+    # disable=None + a non-TTY stderr → auto-disabled (no control-char spam in CI).
+    monkeypatch.setattr("sys.stderr.isatty", lambda: False)
+    off = progress_bar(total=10, disable=None)
+    assert off.disable is True
+    off.close()
