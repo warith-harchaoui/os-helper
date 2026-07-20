@@ -2,7 +2,7 @@
 
 [🇫🇷](https://github.com/warith-harchaoui/os-helper/blob/main/LISEZMOI.md) · [🇬🇧](https://github.com/warith-harchaoui/os-helper/blob/main/README.md)
 
-[![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#)
+[![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#) [![Local-first](https://img.shields.io/badge/privacy-local--first-2f6f5e.svg)](#la-promesse)
 
 `OS Helper` fait partie d'une collection de bibliothèques appelée `AI Helpers`, développée pour bâtir des applications d'intelligence artificielle.
 
@@ -240,11 +240,59 @@ pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.
 os-helper-click hash file ./pyproject.toml
 ```
 
-Un plan d'IHM innovant (Tree Radar / Dedupe Lens / Config Explorer) est
-détaillé dans [GUI.md](GUI.md).
+### IHM Tree Radar (optionnelle)
+
+Une première tranche réelle du plan [GUI.md](GUI.md) est livrée comme
+surface **optionnelle** : **Tree Radar**, un tableau de bord local de type
+**treemap** d'occupation disque. Chaque rectangle est un fichier ou un
+dossier (surface = taille), coloré selon l'**âge**, le statut de
+**dédoublonnage par hash**, ou la **famille de types**. L'IHM lit votre
+disque et l'affiche dans votre navigateur — rien n'est envoyé ailleurs.
+
+Sa pile web vit derrière l'extra `[gui]` pour que l'import de base
+`import os_helper` reste léger (pas de FastAPI dans l'installation par
+défaut) :
+
+```bash
+pip install "os-helper[gui]"
+
+# Lancer le tableau de bord local (loopback uniquement), puis ouvrir http://127.0.0.1:8017/gui
+os-helper gui --root ~/Downloads
+# ou le point d'entrée dédié :
+os-helper-gui --root ~/Downloads
+```
+
+Les jalons suivants (actions de la Dedupe Lens, Config Explorer) restent
+décrits dans [GUI.md](GUI.md).
 
 Le paysage concurrentiel (stdlib, pathlib, click, python-dotenv, psutil,
 fsspec, …) est analysé dans [LANDSCAPE.md](LANDSCAPE.md).
+
+## La promesse
+
+os-helper fait partie d'une suite « local-first », soucieuse de
+souveraineté. Plutôt que d'en faire un argument marketing, voici la
+réalité honnête, cas par cas :
+
+1. **Garanti local.** os-helper est une boîte à outils purement locale
+   (système de fichiers / utilitaires). Rien n'est envoyé, aucune
+   télémétrie, aucun compte. L'IHM optionnelle Tree Radar lit votre disque
+   et affiche la treemap localement dans votre navigateur (le serveur
+   n'écoute que sur `127.0.0.1`) — vos chemins, tailles et empreintes de
+   contenu ne quittent jamais la machine.
+
+2. **Impossible d'être local — les réserves.** Deux fonctions font du HTTP
+   sortant *par conception*, car récupérer quelque chose est justement leur
+   raison d'être : `download_file()` (elle télécharge l'URL que vous lui
+   donnez) et les vérifications d'URL (`is_working_url()` / `check_url`).
+   `get_user_ip()` interroge aussi, volontairement, un service public. Ce
+   sont les seuls accès réseau de la bibliothèque, et vous ne les déclenchez
+   qu'en les appelant explicitement.
+
+3. **Votre décision.** Rien ici ne force le cloud. `temporary_remote_file()`
+   peut déposer vers S3/GCS/SFTP, mais seulement si *vous* le branchez sur
+   un distant. Si vous construisez du comportement réseau au-dessus
+   d'os-helper, c'est votre choix — jamais un défaut.
 
 ## Auteur
 

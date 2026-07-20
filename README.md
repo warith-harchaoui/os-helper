@@ -2,7 +2,7 @@
 
 [🇫🇷](https://github.com/warith-harchaoui/os-helper/blob/main/LISEZMOI.md) · [🇬🇧](https://github.com/warith-harchaoui/os-helper/blob/main/README.md)
 
-[![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#)
+[![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#) [![Local-first](https://img.shields.io/badge/privacy-local--first-2f6f5e.svg)](#the-promise)
 
 `OS Helper` belongs to a collection of libraries called `AI Helpers` developed for building Artificial Intelligence.
 
@@ -234,11 +234,54 @@ pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.
 os-helper-click hash file ./pyproject.toml
 ```
 
-An innovative GUI plan (Tree Radar treemap, Dedupe Lens, Config
-Explorer) lives in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
+### Optional Tree Radar GUI
+
+A first, real slice of the [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md)
+plan ships as an **optional** surface: **Tree Radar**, a local disk-usage
+**treemap** dashboard. Each rectangle is a file or folder (area = size),
+colored by **age**, **hash-dedupe** status, or **type family**. It reads
+your disk and renders it in your browser — nothing is uploaded.
+
+The GUI's web stack lives behind the `[gui]` extra so the core
+`import os_helper` stays lean (no FastAPI in the default install):
+
+```bash
+pip install "os-helper[gui]"
+
+# Launch the local dashboard (loopback only), then open http://127.0.0.1:8017/gui
+os-helper gui --root ~/Downloads
+# or the dedicated entry point:
+os-helper-gui --root ~/Downloads
+```
+
+The remaining GUI milestones (Dedupe Lens actions, Config Explorer) stay
+described in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 
 The competitive landscape (stdlib, pathlib, click, python-dotenv,
 psutil, fsspec, …) is analysed in [LANDSCAPE.md](https://github.com/warith-harchaoui/os-helper/blob/main/LANDSCAPE.md).
+
+## The Promise
+
+os-helper is part of a local-first, sovereignty-minded suite. Rather than
+market that, here is the honest, case-by-case reality:
+
+1. **Guaranteed local.** os-helper is a pure local filesystem / utility
+   toolbox. Nothing is uploaded, there is no telemetry, and there is no
+   account. The optional Tree Radar GUI reads your disk and renders the
+   treemap locally in your browser (the server binds to `127.0.0.1` only)
+   — your paths, sizes, and content hashes never leave the machine.
+
+2. **Not possible to be local — the caveats.** Two helpers make outbound
+   HTTP *by design*, because fetching something is their whole purpose:
+   `download_file()` (it downloads a URL you hand it) and the URL-liveness
+   checks (`is_working_url()` / `check_url`). `get_user_ip()` also calls a
+   public echo service on purpose. These are the only network in the
+   library, and you only trigger them by explicitly calling them.
+
+3. **Your decision.** Nothing here forces the cloud. `temporary_remote_file()`
+   can stage to S3/GCS/SFTP, but only when *you* wire it to a remote. If you
+   build network behavior on top of os-helper, that is your choice — never a
+   default.
 
 ## Author
 

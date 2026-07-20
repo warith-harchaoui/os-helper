@@ -996,6 +996,69 @@ def _handle_prof_gpu(ns: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# gui — optional Tree Radar treemap dashboard (needs the [gui] extra)
+# ---------------------------------------------------------------------------
+
+
+def _handle_gui(ns: argparse.Namespace) -> int:
+    """Launch the optional Tree Radar treemap GUI.
+
+    The GUI and its web stack (FastAPI/uvicorn) live behind the optional
+    ``os-helper[gui]`` extra, so the import happens *here*, inside the
+    handler — never at module load. This keeps the plain CLI (and the
+    library) usable without the web dependencies.
+
+    Parameters
+    ----------
+    ns : argparse.Namespace
+        Parsed CLI arguments for this subcommand.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success, 1 if the ``gui`` extra is missing).
+    """
+    # Import lazily so `os-helper` (and `import os_helper`) never require
+    # FastAPI. A missing extra becomes a clear message + exit 1, not a stack.
+    try:
+        from .gui import run as _run_gui
+    except ImportError as exc:  # pragma: no cover — only without the extra
+        _emit_err(f"GUI unavailable: {exc}")
+        return 1
+    # run() blocks until Ctrl-C; it raises a friendly ImportError itself if
+    # FastAPI/uvicorn are absent, which we catch and surface as a clean exit.
+    try:
+        _run_gui(root=ns.root, host=ns.host, port=ns.port)
+    except ImportError as exc:
+        _emit_err(f"GUI unavailable: {exc}")
+        return 1
+    return 0
+
+
+def _add_gui_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``gui`` subcommand to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this command on.
+    """
+    # A single verb (no sub-actions): `os-helper gui --root ~/Downloads`.
+    p = sub.add_parser(
+        "gui",
+        help="Launch the optional Tree Radar treemap dashboard (needs the [gui] extra).",
+    )
+    p.add_argument(
+        "--root", default=None, help="Folder to pre-fill and scan (default: current directory)."
+    )
+    p.add_argument(
+        "--host", default="127.0.0.1", help="Bind interface (default: 127.0.0.1, localhost only)."
+    )
+    p.add_argument("--port", type=int, default=8017, help="Port to serve on (default: 8017).")
+    p.set_defaults(func=_handle_gui)
+
+
+# ---------------------------------------------------------------------------
 # Parser construction — one helper per subcommand group keeps this readable
 # ---------------------------------------------------------------------------
 
@@ -1388,6 +1451,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_temp_group(subparsers)
     _add_misc_group(subparsers)
     _add_prof_group(subparsers)
+    _add_gui_group(subparsers)
 
     return parser
 

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Optional "Tree Radar" treemap GUI** (`os_helper.gui`). A local-first,
+  disk-usage treemap disk dashboard: each rectangle is a file/folder
+  (area = size), colored by **age** (mtime), **hash-dedupe** status
+  (content hash via `hashfile`), or **type family** (code/data/media/
+  archive/other). Served locally by FastAPI:
+  - `GET /gui` — a self-contained HTML+JS page (vanilla JS, D3 treemap via
+    CDN, no build step).
+  - `GET /api/tree?root=...&depth=...&dedupe=0|1` — the directory tree as
+    JSON, reusing the `os.walk`-style size collection, `format_size`, and
+    `hashfile` from the core library (no reinvention).
+  - Launchers: an `os-helper gui` subcommand and a dedicated
+    `os-helper-gui` console script; both bind to `127.0.0.1` by default.
+- **New optional extra `gui`** (`pip install "os-helper[gui]"`) carrying
+  `fastapi` / `uvicorn` / `httpx`. The core `import os_helper` stays
+  **FastAPI-free**: all web imports are guarded and load only when the GUI
+  is actually created or run, preserving the deliberate lean-toolbox design
+  the rest of the suite depends on.
+- **"The Promise" / "La promesse"** sections and a `local-first` badge in
+  `README.md` / `LISEZMOI.md`: a brutally honest, case-by-case statement of
+  what is guaranteed local, what makes outbound HTTP by design
+  (`download_file`, URL checks), and what is left to the user's choice.
+
+### Tests
+
+- `tests/test_gui.py` covers the `GET /gui` HTML route, the `/api/tree`
+  JSON endpoint (including size roll-up, dedupe cluster detection, and the
+  400-on-non-directory path). It `pytest.importorskip`s FastAPI so it skips
+  cleanly when the `gui` extra is absent; CI installs `.[dev]` (which now
+  includes the gui stack) so the tests actually run in CI.
+
 ## [1.7.2] - 2026-07-20
 
 ### Documentation

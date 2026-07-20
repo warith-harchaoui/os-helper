@@ -38,12 +38,27 @@ dependencies = [
 # CLI-only-with-click extra. argparse variant needs no runtime dep and
 # is always available.
 cli = ["click>=8.1,<9"]
+# GUI extra — the optional "Tree Radar" treemap dashboard (os_helper.gui).
+# Deliberately kept OUT of the core dependencies: `import os_helper as osh`
+# must stay FastAPI-free so the 9 suite repos that depend on os-helper never
+# pay for a web stack they don't use. Install only when you want the GUI:
+#   pip install "os-helper[gui]"
+# `httpx` is FastAPI's TestClient transport, needed by the GUI route test.
+gui = [
+    "fastapi>=0.110,<1",
+    "uvicorn>=0.29,<1",
+    "httpx>=0.27,<1",
+]
 # `dev` keeps the bar low for CI — pytest + click (so the click CLI
-# import always resolves in tests). No AI inference here, so no
+# import always resolves in tests) + the gui stack (so the GUI route test
+# runs on CI rather than being skipped). No AI inference here, so no
 # DeepEval / Giskard.
 dev = [
     "pytest>=8",
     "click>=8.1,<9",
+    "fastapi>=0.110,<1",
+    "uvicorn>=0.29,<1",
+    "httpx>=0.27,<1",
 ]
 
 [project.scripts]
@@ -51,6 +66,8 @@ dev = [
 os-helper = "os_helper.cli_argparse:main"
 # click-based twin — install with [cli] extra.
 os-helper-click = "os_helper.cli_click:cli"
+# Optional GUI launcher — starts the local Tree Radar server (needs [gui]).
+os-helper-gui = "os_helper.gui:_cli_main"
 
 [project.urls]
 Homepage = "https://github.com/warith-harchaoui/os-helper"
