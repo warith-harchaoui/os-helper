@@ -7,7 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.5.3] - 2026-07-20
+## [1.7.2] - 2026-07-20
+
+### Documentation
+
+- **Rewrite the README / LISEZMOI "Features" sections** to be exhaustive and
+  accurate. The old list over-promised ("system information retrieval (CPU,
+  memory, disk usage)", file "move") for capabilities the library never had, and
+  omitted whole areas that do exist: configuration loading, temporary
+  files/dirs (context-managed and persistent), the logging surface, timing /
+  profiling (`wall_timer` / `cpu_timer` / `gpu_timer` / `tic` / `toc`), streaming
+  downloads with a shared progress bar, duration parse/format, URL liveness
+  checks, public-IP lookup, and the three exposure surfaces (library + argparse +
+  click CLIs).
+- **Backfill the changelog.** Entries for `1.6.0`, `1.7.0` and `1.7.1` were
+  missing even though the features shipped; reconstruct them from the code and
+  git history below. Also correct the mis-dated `1.5.3` entry.
+- Refresh stale `@v1.5.2` source-install pins in README / LISEZMOI to the current
+  release, and point `EXAMPLES.md` setup at `pip install os-helper` (it read
+  `pip install -r requirements.txt`, the wrong entry point for a published
+  package). Add short `EXAMPLES.md` recipes for `make_temporary_directory`,
+  `temporary_filename(directory=...)`, the `download_file` metadata return, and
+  `init_logging`.
+- Fix `CONTRIBUTING.md`: it referenced a `pytest.mark.integration` marker and an
+  `addopts = -m 'not integration'` setting that do not exist in this repo.
+
+### Maintenance
+
+- Add `.ruff_cache/` and `.deepeval/` to `.gitignore`; drop a stray empty
+  `.deepeval/` directory and stale `dist/` 1.5.2 build artifacts. No code changes.
+
+## [1.7.1] - 2026-07-20
+
+### Fixed
+
+- The convenience log functions (`debug` / `info` / `warning` / `error` /
+  `critical` / `check`) now log through a dedicated **named** `"os_helper"`
+  logger instead of the module-level `logging.info` / `logging.warning` / …
+  helpers. The module-level helpers implicitly call `logging.basicConfig()` when
+  the root has no handler — a library anti-pattern that attaches a stray root
+  handler and double-prints records from any other named logger that propagates
+  to root. The named logger avoids both; `init_logging` still catches these
+  records via propagation when it configures the root.
+
+## [1.7.0] - 2026-07-20
+
+### Added
+
+- **`download_file` now returns lightweight metadata** —
+  `{"path", "content_type", "bytes"}` — so a caller can pick a file extension
+  from the server's MIME type without a second request. Historically it returned
+  `None`; callers that ignore the return value are unaffected (additive change).
+- **`download_file(..., check_url=True)`** — new keyword to skip the pre-flight
+  `HEAD` liveness check (some servers/CDNs reject `HEAD` with 405/403 even though
+  `GET` succeeds); the `GET`'s `raise_for_status` remains the backstop.
+- **`temporary_filename(..., directory=...)`** — place the temp file inside a
+  chosen directory (e.g. next to sibling inputs a tool resolves relative paths
+  against) instead of the system temp dir.
+- **`make_temporary_directory(prefix, directory)`** — the non-context-manager
+  companion to `temporary_folder`: creates a directory that **outlives** a `with`
+  block and hands the caller responsibility for cleanup (the suite's `mkdtemp`).
+
+## [1.6.0] - 2026-07-20
+
+### Added
+
+- **Named-logger mode for `init_logging(name=...)`** — configure a single
+  logger tree (e.g. `"mytool"`) instead of the root. The reset step only removes
+  handlers this function installed (so a host's / pytest's handlers survive),
+  repeated calls are idempotent (no stacked duplicate console handler), and
+  `propagate=True` keeps records reaching a host's / pytest's root handlers
+  (`caplog`). This is the CLI-friendly configuration path.
+- **`init_logging(live_stream=True)`** — the console handler re-resolves
+  `sys.stdout` / `sys.stderr` on every emit instead of binding the stream once,
+  so output survives pytest's `capsys` (which swaps the streams per test) and any
+  post-configuration stream redirection.
+
+## [1.5.3] - 2026-07-13
 
 ### Changed
 

@@ -20,12 +20,52 @@ OS Helper est une bibliothèque Python qui fournit des fonctions utilitaires pou
 
 ## Fonctionnalités
 
-- Détection du système d'exploitation (Windows, Linux, macOS, Unix)
-- Opérations de fichiers (création, suppression, déplacement, copie)
-- Récupération d'informations système (CPU, mémoire, disque)
-- Gestion de chemins multi-plateformes
-- Utilitaires de hash de fichiers et de chaînes
-- Gestion et exécution de processus
+Chaque fonction est un enrobage fin, bien typé et bien documenté — sans
+dépendance système lourde, en Python pur sur macOS / Linux / Windows.
+
+- **Détection de l'OS** — `windows()`, `linux()`, `macos()`, `unix()`.
+- **Exécution de commandes & processus** — `system()` (`subprocess` sans shell,
+  stdout/stderr capturés, vérifications optionnelles du code de sortie et de la
+  sortie attendue), `openfile()` (ouvre avec l'application par défaut de l'OS),
+  `getpid()`, `get_nb_workers()` (convention `n_jobs` de scikit-learn,
+  surchargeable via `NB_WORKERS`).
+- **Chemins** — `join()`, `folder_name_ext()` (découpe compatible `.tar.gz`),
+  `absolute2relative_path()`, `relative2absolute_path()`, `path_without_home()`,
+  `recursive_glob()`.
+- **Fichiers & répertoires** — `file_exists()`, `dir_exists()` (avec contrôle de
+  vacuité), `size_file()`, `checkfile()`, `copyfile()`, `make_directory()`,
+  `remove_directory()`, `remove_files()` (lot best-effort).
+- **Ressources temporaires** — `temporary_filename()` (géré par contexte,
+  répertoire cible optionnel), `temporary_folder()`, `make_temporary_directory()`
+  (persistant, nettoyage à la charge de l'appelant), `temporary_remote_file()`
+  (transfert vers S3/GCS/SFTP/n'importe où avec nettoyage distant garanti).
+- **Hachage** — `hash_string()`, `hashfile()`, `hashfolder()` (RIPEMD-160 si
+  disponible, repli sur BLAKE2b ; empreintes hex stables de 40 caractères,
+  multi-plateformes).
+- **Chargement de configuration** — `get_config()` avec un ordre de repli
+  déterministe : fichier JSON/YAML (ou dossier) → fichiers `.env` →
+  environnement du processus.
+- **Chaînes** — `emptystring()` (None / vide / espaces), `asciistring()`
+  (dépliage des accents, slugs sûrs pour le système de fichiers).
+- **Téléchargements & réseau** — `download_file()` (en flux, mémoire plate,
+  taille de bloc adaptative, barre de progression, renvoie
+  `{path, content_type, bytes}`), `progress_bar()` (fabrique `tqdm` partagée
+  échelonnée en octets, silencieuse hors TTY), `is_working_url()`,
+  `get_user_ip()`.
+- **Rapport de dossier & archivage** — `folder_description()` (carte des tailles
+  + `index.html` Bootstrap + `description.json`), `zip_folder()`.
+- **Durées & horodatages** — `now_string()`, `format_size()`, `time2str()`,
+  `str2time()`.
+- **Chronométrage & profilage** — `wall_timer()`, `cpu_timer()`, `gpu_timer()`
+  (événements CUDA / MPS Apple Silicon, `torch` en import paresseux), et
+  `tic()` / `toc()` à la MATLAB.
+- **Surface de journalisation** — `init_logging()` (console colorée + fichier,
+  modes logger nommé et flux « live »), `verbosity()` (niveau entier en
+  lecture/écriture), et `debug()` / `info()` / `warning()` / `error()` /
+  `critical()` / `check()`.
+- **Trois surfaces, un seul code** — bibliothèque importable, une CLI argparse
+  `os-helper` (toujours installée) et sa jumelle `os-helper-click` (via l'extra
+  `[cli]`).
 
 ## Installation
 
@@ -51,10 +91,10 @@ pip install "os-helper[cli]"
 
 ```bash
 # Utilitaires principaux (bibliothèque + CLI argparse)
-pip install "git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
+pip install "git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
 
 # Jumelle CLI click optionnelle
-pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
+pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
 ```
 
 ## Utilisation
@@ -196,7 +236,7 @@ os-helper misc now --fmt filename
 # Jumelle click (nécessite l'extra [cli])
 pip install "os-helper[cli]"
 # ou depuis les sources :
-pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
+pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
 os-helper-click hash file ./pyproject.toml
 ```
 

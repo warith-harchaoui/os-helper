@@ -167,6 +167,12 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
+# ruff linter cache
+.ruff_cache/
+
+# DeepEval artifacts (os-helper does no AI inference; this stray dir is noise)
+.deepeval/
+
 # Cython debug symbols
 cython_debug/
 

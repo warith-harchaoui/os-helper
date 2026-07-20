@@ -20,12 +20,45 @@ OS Helper is a Python library that provides utility functions for working with d
 
 ## Features
 
-- Operating system detection (Windows, Linux, macOS, Unix)
-- File system operations (create, delete, move, copy)
-- System information retrieval (CPU, memory, disk usage)
-- Cross-platform path handling
-- File hashing and string hashing utilities
-- Process management and execution
+Everything is a thin, well-typed, well-documented wrapper — no heavy system
+dependency, pure-Python across macOS / Linux / Windows.
+
+- **OS detection** — `windows()`, `linux()`, `macos()`, `unix()`.
+- **Process & command execution** — `system()` (shell-free `subprocess`, captured
+  stdout/stderr, optional exit-code and expected-output checks), `openfile()`
+  (open with the OS default app), `getpid()`, `get_nb_workers()` (scikit-learn
+  `n_jobs` convention, `NB_WORKERS`-overridable).
+- **Paths** — `join()`, `folder_name_ext()` (`.tar.gz`-aware split),
+  `absolute2relative_path()`, `relative2absolute_path()`, `path_without_home()`,
+  `recursive_glob()`.
+- **Files & directories** — `file_exists()`, `dir_exists()` (with emptiness
+  checks), `size_file()`, `checkfile()`, `copyfile()`, `make_directory()`,
+  `remove_directory()`, `remove_files()` (best-effort batch).
+- **Temporary resources** — `temporary_filename()` (context-managed, optional
+  target directory), `temporary_folder()`, `make_temporary_directory()`
+  (persistent, caller-owned cleanup), `temporary_remote_file()` (stage to
+  S3/GCS/SFTP/anywhere with guaranteed remote cleanup).
+- **Hashing** — `hash_string()`, `hashfile()`, `hashfolder()` (RIPEMD-160 when
+  available, BLAKE2b fallback; stable 40-char hex digests cross-platform).
+- **Configuration loading** — `get_config()` with a deterministic fallback order:
+  JSON/YAML file (or folder) → `.env` files → process environment.
+- **Strings** — `emptystring()` (None / empty / whitespace), `asciistring()`
+  (accent-folding, filesystem-safe slugs).
+- **Downloads & networking** — `download_file()` (streaming, flat memory,
+  adaptive block size, progress bar, returns `{path, content_type, bytes}`),
+  `progress_bar()` (shared byte-scaled `tqdm` factory, auto-quiet off-TTY),
+  `is_working_url()`, `get_user_ip()`.
+- **Folder reporting & archiving** — `folder_description()` (size map +
+  Bootstrap `index.html` + `description.json`), `zip_folder()`.
+- **Durations & timestamps** — `now_string()`, `format_size()`, `time2str()`,
+  `str2time()`.
+- **Timing & profiling** — `wall_timer()`, `cpu_timer()`, `gpu_timer()` (CUDA
+  events / Apple-Silicon MPS, lazy `torch`), and MATLAB-style `tic()` / `toc()`.
+- **Logging surface** — `init_logging()` (colored console + file, named-logger
+  and live-stream modes), `verbosity()` (integer level get/set), and
+  `debug()` / `info()` / `warning()` / `error()` / `critical()` / `check()`.
+- **Three surfaces, one codebase** — importable library, an `os-helper` argparse
+  CLI (always installed), and an `os-helper-click` twin (via the `[cli]` extra).
 
 ## Installation
 
@@ -51,10 +84,10 @@ pip install "os-helper[cli]"
 
 ```bash
 # Core utilities (library + argparse CLI)
-pip install "git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
+pip install "git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
 
 # Optional click-based CLI twin
-pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
+pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
 ```
 
 ## Usage
@@ -197,7 +230,7 @@ os-helper misc now --fmt filename
 # click-based CLI twin (needs the [cli] extra)
 pip install "os-helper[cli]"
 # or from source:
-pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.5.2"
+pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
 os-helper-click hash file ./pyproject.toml
 ```
 

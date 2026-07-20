@@ -20,6 +20,7 @@ This document provides detailed examples for using the `OS Helper` module to sim
 5. [Temporary Resources](#temporary-resources)
    - [Create a Temporary File](#create-a-temporary-file)
    - [Create a Temporary Folder](#create-a-temporary-folder)
+   - [Create a Persistent Temporary Directory](#create-a-persistent-temporary-directory-caller-owned-cleanup)
    - [Stage a File on a Remote Backend](#stage-a-file-on-a-remote-backend)
 6. [System Commands](#system-commands)
    - [Run a System Command](#run-a-system-command)
@@ -51,7 +52,11 @@ This document provides detailed examples for using the `OS Helper` module to sim
 Install the package from PyPI (or directly from GitHub — see the README):
 
 ```bash
-pip install -r requirements.txt
+# Core utilities (library + argparse CLI)
+pip install os-helper
+
+# Optional click-based CLI twin
+pip install "os-helper[cli]"
 ```
 
 Then import the library — examples below use the conventional `osh` alias:
@@ -244,6 +249,35 @@ with temporary_folder(prefix="tempdir") as temp_dir:
     with open(f"{temp_dir}/tempfile.txt", "wt") as f:
         f.write("Temporary content")
 # The folder and its contents are removed automatically after the context ends
+```
+
+### Create a Persistent Temporary Directory (caller-owned cleanup)
+
+`make_temporary_directory` is the non-context-manager companion to
+`temporary_folder`: use it when the directory must **outlive** a `with` block
+(a request handler that cleans up after streaming a response, a
+process-lifetime scratch dir, …). You own the cleanup.
+
+```python
+from os_helper import make_temporary_directory, remove_directory
+
+work = make_temporary_directory(prefix="myjob-")
+try:
+    # ... write intermediate artifacts into `work`, hand the path around ...
+    pass
+finally:
+    remove_directory(work)  # you decide when it dies
+```
+
+You can also pin a `temporary_filename` inside a chosen directory (e.g. so a
+tool that resolves paths relative to the file still finds its siblings):
+
+```python
+from os_helper import temporary_filename
+
+with temporary_filename(suffix=".wav", directory=work) as tmp:
+    # `tmp` sits inside `work`, next to any sibling inputs
+    ...
 ```
 
 ### Stage a File on a Remote Backend
@@ -458,9 +492,34 @@ error("Something went wrong, but execution continues.")
 check(1 + 1 == 2, "arithmetic is broken")
 ```
 
+For a top-level application, script, notebook, or CLI, `init_logging` wires up a
+colored console handler (and optionally a UTF-8 log file) in one call. The
+convenience helpers above (`info` / `warning` / …) log through a dedicated
+`"os_helper"` logger whose records propagate to whatever `init_logging`
+configures.
+
+```python
+import logging
+from os_helper import init_logging, info
+
+# Root logger: colored console + a log file, DEBUG and up.
+init_logging(level=logging.DEBUG, filename="run.log")
+info("logging is configured")
+
+# CLI-friendly variant: configure just your tool's logger tree. Idempotent
+# (a repeat call adds no duplicate handler), and propagate=True keeps records
+# visible to a host's / pytest's root handlers (caplog).
+init_logging(name="mytool", propagate=True, live_stream=True)
+```
+
 ### Download Files
 
 The download_file function lets you download files from a URL to a specified location.
+
+`download_file` streams block-by-block (flat memory footprint even for a
+multi-hundred-MB file), shows a progress bar on an interactive terminal
+(auto-suppressed off-TTY), and returns lightweight metadata so you can pick a
+file extension from the server's MIME type without a second request.
 
 ```python
 from os_helper import download_file, file_exists
@@ -469,7 +528,12 @@ from os_helper import download_file, file_exists
 url = "https://example.com/sample.pdf" # put your own URL instead of this fake example one
 file_path = "downloaded_sample.pdf"
 
-download_file(url, file_path)
+meta = download_file(url, file_path)
+print(meta)  # {'path': 'downloaded_sample.pdf', 'content_type': 'application/pdf', 'bytes': 12345}
+
+# Some servers/CDNs reject the pre-flight HEAD check (405/403) even though GET
+# works — pass check_url=False to skip it and rely on the GET status instead.
+download_file(url, file_path, check_url=False)
 
 # Verify the file exists
 if file_exists(file_path):

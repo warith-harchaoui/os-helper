@@ -96,18 +96,19 @@ will move to version ranges.
 
 ## CI
 
-GitHub Actions runs `pytest` on Python 3.10 / 3.11 / 3.12 / 3.13
-(Linux) plus a non-blocking `ruff` lint job. Integration tests are
-gated by `pytestmark = pytest.mark.integration` and skipped by
-default (`addopts = -m 'not integration'`).
+GitHub Actions runs `pytest` across a cross-OS matrix
+(`ubuntu-latest` × `macos-latest` × `windows-latest`) on Python
+3.10 / 3.11 / 3.12 / 3.13 — os-helper is the most OS-sensitive helper of
+the suite, so all three major operating systems are exercised on every
+push. A separate, non-blocking `ruff` lint job also runs. The whole
+suite is fast and hermetic (no network / model dependencies), so there
+is no separate integration tier to opt into.
 
 ## Running tests locally
 
 ```bash
 pip install -e ".[dev]"
-pytest -v                 # unit only
-pytest -v -m integration  # integration only
-pytest -v -m ""           # everything
+pytest -v
 ```
 
 ## Authorship
