@@ -623,3 +623,64 @@ def test_progress_bar_config_and_auto_disable(monkeypatch) -> None:
     off = progress_bar(total=10, disable=None)
     assert off.disable is True
     off.close()
+
+
+def test_init_logging_named_live_stream(monkeypatch) -> None:
+    """`init_logging(name=..., live_stream=True)` is CLI-friendly: named, idempotent,
+    live-stderr, and propagating.
+
+    This is the mode a CLI needs to route its diagnostics through os_helper without
+    losing pytest's ``capsys``/``caplog`` capture: (1) it configures a *named*
+    logger with a bare format, (2) a repeat call does not stack a duplicate
+    handler, (3) the handler re-resolves ``sys.stderr`` on each emit so a stream
+    swapped *after* configuration still receives records, and (4) ``propagate=True``
+    keeps records visible to a root/``caplog`` handler.
+    """
+    import io
+    import logging
+    import sys
+
+    from os_helper import init_logging
+
+    lg = init_logging(
+        name="oshtest", level=logging.ERROR, stdout=False, log_format="%(message)s",
+        use_colors=False, capture_warnings=False, live_stream=True, propagate=True,
+    )
+    try:
+        assert lg.name == "oshtest" and lg.level == logging.ERROR and lg.propagate is True
+
+        # Idempotency: a second call must not add a second owned console handler.
+        init_logging(name="oshtest", level=logging.ERROR, stdout=False,
+                     log_format="%(message)s", use_colors=False, live_stream=True,
+                     propagate=True)
+        owned = [h for h in logging.getLogger("oshtest").handlers
+                 if getattr(h, "_osh_owned", False)]
+        assert len(owned) == 1
+
+        # Live-stderr: swap sys.stderr AFTER config; the record lands in the new one,
+        # bare (no level/timestamp prefix), and the sub-ERROR line is dropped.
+        child = logging.getLogger("oshtest.sub")
+        buf = io.StringIO()
+        old = sys.stderr
+        sys.stderr = buf
+        try:
+            child.warning("dropped below ERROR")
+            child.error("bare message")
+        finally:
+            sys.stderr = old
+        assert buf.getvalue() == "bare message\n"
+
+        # propagate=True → a root handler still observes the record.
+        seen: list[str] = []
+        probe = logging.Handler()
+        probe.emit = lambda r: seen.append(r.getMessage())
+        logging.getLogger().addHandler(probe)
+        try:
+            child.error("also at root")
+        finally:
+            logging.getLogger().removeHandler(probe)
+        assert "also at root" in seen
+    finally:
+        # Tear down so the named logger doesn't leak into other tests.
+        for h in logging.getLogger("oshtest").handlers[:]:
+            logging.getLogger("oshtest").removeHandler(h)

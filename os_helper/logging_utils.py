@@ -139,6 +139,55 @@ def _supports_ansi(stream: object) -> bool:
         return False
 
 
+# Marker stamped on the handlers this module installs, so init_logging can be
+# called repeatedly against a *named* logger without stacking duplicates (the
+# common "configure once per call site" pattern in CLIs and re-run scripts).
+_OSH_HANDLER_FLAG: Final[str] = "_osh_owned"
+
+
+class _LiveStreamHandler(logging.StreamHandler):
+    """StreamHandler that resolves ``sys.stdout``/``sys.stderr`` live on each emit.
+
+    A plain :class:`logging.StreamHandler` binds its stream once at construction.
+    That breaks whenever the process later swaps ``sys.stdout``/``sys.stderr`` —
+    most notably under pytest's ``capsys`` fixture (which replaces the streams per
+    test) and in any host that redirects a stream *after* logging is configured.
+    Re-reading the current stream on every access keeps records flowing to wherever
+    the stream points now (mirroring what :data:`logging.lastResort` does). Opt in
+    via ``live_stream=True`` on :func:`init_logging`; the default keeps the classic
+    bound-stream handler so existing behaviour is unchanged.
+
+    Parameters
+    ----------
+    use_stdout : bool, optional
+        Resolve ``sys.stdout`` when True, ``sys.stderr`` otherwise.
+    """
+
+    def __init__(self, use_stdout: bool = False) -> None:
+        """Wire up the handler without caching a stream.
+
+        Parameters
+        ----------
+        use_stdout : bool, optional
+            Whether emits resolve ``sys.stdout`` (True) or ``sys.stderr`` (False).
+        """
+        # Remember which stream to resolve live; StreamHandler.__init__ then tries
+        # to store a stream, but the no-op setter below discards it.
+        self._use_stdout = use_stdout
+        super().__init__()
+
+    @property
+    def stream(self):  # type: ignore[override]
+        """Return the *current* ``sys.stdout``/``sys.stderr`` at emit time."""
+        return sys.stdout if self._use_stdout else sys.stderr
+
+    @stream.setter
+    def stream(self, value: object) -> None:
+        """Ignore stream assignments — the stream is computed live, never cached."""
+        # No-op on purpose (see the class docstring): resolution happens in the
+        # getter so a swapped sys.stdout/sys.stderr is always honoured.
+
+
 def init_logging(
     *,
     level: int = logging.INFO,
@@ -150,6 +199,8 @@ def init_logging(
     reset: bool = True,
     use_colors: bool = True,
     propagate: bool = False,
+    name: str | None = None,
+    live_stream: bool = False,
 ) -> logging.Logger:
     """Initialize application-wide logging.
 
@@ -185,13 +236,29 @@ def init_logging(
         If True, colorize console log levels when ANSI colors are supported.
         File logs are never colorized.
     propagate : bool, optional
-        Value assigned to the root logger propagation flag. In most application
-        contexts, ``False`` is appropriate to avoid duplicates.
+        Value assigned to the target logger's propagation flag. ``False`` avoids
+        duplicates for the root logger; a *named* logger (see ``name``) often
+        wants ``True`` so its records still reach a host's / pytest's root
+        handlers (e.g. ``caplog``).
+    name : str | None, optional
+        Configure this named logger instead of the root. When set, the reset
+        step only removes handlers *this* function installed (so a host's /
+        pytest's handlers on that logger survive), and repeated calls are
+        idempotent — a second call does not stack a duplicate console handler.
+        This is the CLI-friendly mode: configure ``"mytool"`` once, keep
+        ``propagate=True``, and every ``logging.getLogger("mytool.*")`` inherits
+        the handler + level.
+    live_stream : bool, optional
+        If True, the console handler re-resolves ``sys.stdout``/``sys.stderr`` on
+        every emit instead of binding the stream once. This keeps output flowing
+        to wherever the stream currently points — surviving pytest's ``capsys``
+        (which swaps the streams per test) and any post-config redirection. The
+        default keeps the classic bound-stream handler.
 
     Returns
     -------
     logging.Logger
-        The configured root logger.
+        The configured logger (the root logger, or the one named by ``name``).
 
     Notes
     -----
@@ -209,38 +276,63 @@ def init_logging(
     >>> logger = init_logging(use_colors=True, reset=True)
     >>> logger.warning("This is a warning.")
     """
-    root_logger = logging.getLogger()
+    # Target the root logger by default, or a named logger when the caller wants
+    # to configure just one package's tree (e.g. a CLI configuring "mytool" so
+    # its records still propagate to a host's / pytest's root handlers).
+    target_logger = logging.getLogger(name) if name else logging.getLogger()
 
     # In notebooks and re-run scripts, stale handlers cause duplicate lines;
-    # tearing them down first makes this function idempotent.
+    # tearing them down first makes this function idempotent. For a *named*
+    # logger we only remove handlers WE installed, so a host's / pytest's
+    # handlers on that logger (e.g. a caplog handler) survive untouched.
     if reset:
-        for handler in root_logger.handlers[:]:
-            root_logger.removeHandler(handler)
+        for handler in target_logger.handlers[:]:
+            if name and not getattr(handler, _OSH_HANDLER_FLAG, False):
+                continue
+            target_logger.removeHandler(handler)
             # Closing releases file descriptors; suppress errors from handlers
             # that are already closed or non-closable.
             with contextlib.suppress(Exception):
                 handler.close()
 
-    root_logger.setLevel(level)
-    root_logger.propagate = propagate
+    target_logger.setLevel(level)
+    target_logger.propagate = propagate
 
     # Pick the console destination; stdout by default so logs interleave with
     # normal program output, stderr when the caller wants them out of the way.
     stream = sys.stdout if stdout else sys.stderr
-    console_handler = logging.StreamHandler(stream)
-    console_handler.setLevel(level)
 
-    # Only colorize when the user allows it AND the sink can render ANSI —
-    # either a real TTY or a notebook front-end.
-    enable_colors = use_colors and (_supports_ansi(stream) or _running_in_notebook())
-
-    console_formatter = _ColorFormatter(
-        fmt=log_format,
-        datefmt=date_format,
-        use_colors=enable_colors,
+    # Idempotency guard for named loggers: if we already own a console handler on
+    # this logger, don't stack a second one (repeated init_logging(name=...) is a
+    # common per-call-site pattern). The root path keeps its reset-then-add flow.
+    owns_console = any(
+        getattr(h, _OSH_HANDLER_FLAG, False) and not isinstance(h, logging.FileHandler)
+        for h in target_logger.handlers
     )
-    console_handler.setFormatter(console_formatter)
-    root_logger.addHandler(console_handler)
+    if not (name and owns_console):
+        # ``live_stream`` picks a handler that re-resolves sys.stdout/stderr on
+        # every emit (survives capsys / stream redirection); the default binds
+        # the stream once, as before.
+        console_handler: logging.Handler = (
+            _LiveStreamHandler(use_stdout=stdout)
+            if live_stream
+            else logging.StreamHandler(stream)
+        )
+        console_handler.setLevel(level)
+
+        # Only colorize when the user allows it AND the sink can render ANSI —
+        # either a real TTY or a notebook front-end.
+        enable_colors = use_colors and (_supports_ansi(stream) or _running_in_notebook())
+
+        console_formatter = _ColorFormatter(
+            fmt=log_format,
+            datefmt=date_format,
+            use_colors=enable_colors,
+        )
+        console_handler.setFormatter(console_formatter)
+        # Stamp our marker so the idempotency guard + named-reset recognise it.
+        setattr(console_handler, _OSH_HANDLER_FLAG, True)
+        target_logger.addHandler(console_handler)
 
     # Optional second sink: a UTF-8 log file that never carries color codes.
     if filename is not None:
@@ -254,12 +346,13 @@ def init_logging(
         # are noise when grepping later.
         file_formatter = logging.Formatter(fmt=log_format, datefmt=date_format)
         file_handler.setFormatter(file_formatter)
-        root_logger.addHandler(file_handler)
+        setattr(file_handler, _OSH_HANDLER_FLAG, True)
+        target_logger.addHandler(file_handler)
 
     # Route ``warnings.warn(...)`` through logging so nothing bypasses our sinks.
     logging.captureWarnings(capture_warnings)
 
-    return root_logger
+    return target_logger
 
 
 # ---------------------------------------------------------------------------
