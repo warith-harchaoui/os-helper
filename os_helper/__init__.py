@@ -100,6 +100,7 @@ from .system_utils import (
     windows,
 )
 from .temp_utils import (
+    make_temporary_directory,
     temporary_filename,
     temporary_folder,
     temporary_remote_file,
@@ -125,6 +126,7 @@ __all__ = [
     "check",
     "verbosity",
     # temp_utils
+    "make_temporary_directory",
     "temporary_filename",
     "temporary_folder",
     "temporary_remote_file",

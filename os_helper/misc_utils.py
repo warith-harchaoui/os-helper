@@ -537,7 +537,8 @@ def download_file(
     *,
     chunk_size: int | None = None,
     progress: bool = True,
-) -> None:
+    check_url: bool = True,
+) -> dict[str, object]:
     """
     Download a URL to a local file, streaming with a progress bar.
 
@@ -570,6 +571,19 @@ def download_file(
     progress : bool, optional
         Show a progress bar on an interactive terminal (default ``True``). The
         bar is auto-suppressed when ``stderr`` is not a TTY.
+    check_url : bool, optional
+        Pre-validate the URL with a HEAD request (default ``True``). Set to
+        ``False`` when the server rejects HEAD (405/403) or you simply want to
+        skip the extra round-trip and let the GET's ``raise_for_status`` be the
+        only gate.
+
+    Returns
+    -------
+    dict of str to object
+        Lightweight metadata about the completed download:
+        ``{"path": <destination>, "content_type": <server MIME or "">,
+        "bytes": <size on disk>}``. Callers that only want the side effect
+        (the file on disk) can ignore it.
 
     Raises
     ------
@@ -579,7 +593,11 @@ def download_file(
         If the GET request fails or returns a non-2xx status.
     """
     # Refuse to start a download we already know will fail (bad or dead URL).
-    assert is_working_url(url), f"URL '{url}' is not working"
+    # The precheck is a HEAD request, which some servers/CDNs reject (405/403)
+    # even though a GET succeeds; pass ``check_url=False`` to skip it and rely on
+    # ``raise_for_status`` below instead.
+    if check_url:
+        assert is_working_url(url), f"URL '{url}' is not working"
 
     if emptystring(file_path):
         # Derive a destination name from the URL: strip the scheme, drop the
@@ -596,6 +614,9 @@ def download_file(
             # Turn any 4xx/5xx into an exception so we never write an error page
             # to disk as if it were the requested file.
             resp.raise_for_status()
+            # Capture the server's declared type so the caller can, e.g., pick a
+            # file extension from it without issuing a second request.
+            content_type = resp.headers.get("Content-Type", "")
             # Content-Length gives the bar a total + ETA; absent → open-ended.
             total = int(resp.headers.get("Content-Length", 0)) or None
             # Adapt the block size to the payload unless the caller pinned one.
@@ -618,7 +639,12 @@ def download_file(
         error(f"Failed to download from '{url}': {e}")
         raise
 
-    info(f"File downloaded from '{url}' and saved to '{file_path}' ({size_file(file_path)} bytes)")
+    size = size_file(file_path)
+    info(f"File downloaded from '{url}' and saved to '{file_path}' ({size} bytes)")
+    # Return lightweight metadata so callers that need the MIME type / final path
+    # (e.g. to choose a file extension) don't have to re-request. Historically
+    # this returned None; existing callers that ignore the return are unaffected.
+    return {"path": file_path, "content_type": content_type, "bytes": size}
 
 
 def get_user_ip() -> dict[str, str | None]:

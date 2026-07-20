@@ -28,7 +28,11 @@ from .string_utils import emptystring
 
 @contextlib.contextmanager
 def temporary_filename(
-    suffix: str = "", mode: str = "wt", prefix: str = "", delete: bool = True
+    suffix: str = "",
+    mode: str = "wt",
+    prefix: str = "",
+    delete: bool = True,
+    directory: str | None = None,
 ) -> Generator[str, None, None]:
     """
     Create a temporary file with a unique name that persists even after closing.
@@ -48,6 +52,10 @@ def temporary_filename(
         Prefix for the file name. Defaults to "".
     delete : bool, optional
         Whether to delete the file after exiting the context. Defaults to True.
+    directory : str or None, optional
+        Parent directory to create the file in (default: the system temp dir).
+        Use this when the temp file must sit *next to* other inputs — e.g. so a
+        tool that resolves paths relative to the file still finds its siblings.
 
     Yields
     ------
@@ -79,7 +87,8 @@ def temporary_filename(
         # ``finally`` below (this also makes the file work on Windows, where an
         # auto-deleting temp file cannot be reopened by name).
         with tempfile.NamedTemporaryFile(
-            mode=mode, suffix=suffix, prefix=unique_prefix, delete=not delete
+            mode=mode, suffix=suffix, prefix=unique_prefix, delete=not delete,
+            dir=directory,
         ) as tmp:
             temp_path = relative2absolute_path(tmp.name)
             info(f"Created temporary file: {temp_path}")
@@ -153,6 +162,43 @@ def temporary_folder(prefix: str = "", delete: bool = True) -> Generator[str, No
                 info(f"Deleted temporary directory: {temp_dir}")
             except Exception as e:
                 error(f"Failed to delete temporary directory '{temp_dir}': {e}")
+
+
+def make_temporary_directory(prefix: str = "", directory: str | None = None) -> str:
+    """Create a temporary directory and return its path — caller owns cleanup.
+
+    The non-context-manager companion to :func:`temporary_folder`. Use this when
+    the directory must **outlive** a ``with`` block: a request handler that
+    schedules deletion *after* streaming a response, a process-lifetime scratch
+    dir cleaned at exit, or any case where the created path is stored and removed
+    later. It is the suite's :func:`tempfile.mkdtemp` — the caller is responsible
+    for removing the tree (e.g. via :func:`remove_directory` / ``shutil.rmtree``
+    / ``atexit``).
+
+    Parameters
+    ----------
+    prefix : str, optional
+        Prefix for the directory name, aiding recognition in ``/tmp``.
+    directory : str or None, optional
+        Parent directory to create it in (default: the system temp location).
+
+    Returns
+    -------
+    str
+        Absolute path to the freshly created directory.
+
+    Example
+    -------
+    >>> work = make_temporary_directory(prefix="myjob-")
+    >>> # ... use `work`, then clean up when you are done ...
+    >>> remove_directory(work)
+    """
+    # ``mkdtemp`` creates the directory atomically with 0o700 perms and returns a
+    # path that persists until the caller removes it — exactly the "deferred /
+    # long-lived cleanup" semantics a context manager cannot express.
+    path = tempfile.mkdtemp(prefix=prefix, dir=directory)
+    info(f"Created temporary directory: {path}")
+    return relative2absolute_path(path)
 
 
 @contextlib.contextmanager

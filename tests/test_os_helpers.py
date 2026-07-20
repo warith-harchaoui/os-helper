@@ -684,3 +684,81 @@ def test_init_logging_named_live_stream(monkeypatch) -> None:
         # Tear down so the named logger doesn't leak into other tests.
         for h in logging.getLogger("oshtest").handlers[:]:
             logging.getLogger("oshtest").removeHandler(h)
+
+
+def test_make_temporary_directory_and_directory_scoped_tempfile() -> None:
+    """`make_temporary_directory` is a caller-cleanup mkdtemp; `temporary_filename`
+    honours a target directory.
+
+    Covers the persistent/deferred-cleanup temp primitives: a directory that must
+    outlive a ``with`` block (returned as a path the caller removes), and a temp
+    file that must sit *inside* a chosen directory (so tools resolving sibling
+    paths still work).
+    """
+    import os
+
+    from os_helper import (
+        make_temporary_directory,
+        remove_directory,
+        temporary_filename,
+    )
+
+    # make_temporary_directory returns a real, empty, persistent directory.
+    d = make_temporary_directory(prefix="oshtest-")
+    try:
+        assert os.path.isdir(d)
+        # A file dropped in it survives (no auto-cleanup on any scope exit).
+        probe = os.path.join(d, "keep.txt")
+        with open(probe, "w") as fh:
+            fh.write("x")
+        assert os.path.isfile(probe)
+
+        # temporary_filename(directory=d) creates the temp file INSIDE d.
+        with temporary_filename(suffix=".md", directory=d) as tmp:
+            assert os.path.dirname(os.path.realpath(tmp)) == os.path.realpath(d)
+            assert os.path.isfile(tmp)
+        # Default delete=True removed the temp file, but d itself remains.
+        assert os.path.isdir(d)
+    finally:
+        remove_directory(d)
+    assert not os.path.isdir(d)
+
+
+def test_download_file_returns_metadata(monkeypatch, tmp_path) -> None:
+    """`download_file` returns {path, content_type, bytes} without a second request.
+
+    The metadata lets a caller pick a file extension from the server's MIME type;
+    the network layer (``requests.get`` + ``is_working_url``) is stubbed so the
+    test is offline and deterministic.
+    """
+    import os
+
+    import os_helper.misc_utils as mu
+    from os_helper import download_file
+
+    payload = b"\x89PNG\r\n\x1a\nfake"
+
+    class _Resp:
+        headers = {"Content-Type": "image/png", "Content-Length": str(len(payload))}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size=1):
+            yield payload
+
+    monkeypatch.setattr(mu, "is_working_url", lambda url: True)
+    monkeypatch.setattr(mu.requests, "get", lambda *a, **k: _Resp())
+
+    dest = str(tmp_path / "out.bin")
+    meta = download_file("https://example.invalid/x.png", dest, progress=False)
+    assert meta["path"] == dest
+    assert meta["content_type"] == "image/png"
+    assert meta["bytes"] == len(payload)
+    assert os.path.getsize(dest) == len(payload)
