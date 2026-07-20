@@ -356,12 +356,20 @@ def init_logging(
 
 
 # ---------------------------------------------------------------------------
-#  Convenience helpers – thin wrappers around the root logger
+#  Convenience helpers – thin wrappers around a dedicated os_helper logger
+# ---------------------------------------------------------------------------
+#  These log via a NAMED logger ("os_helper"), never the root module functions
+#  (logging.info/…). The module functions auto-call logging.basicConfig() when
+#  the root has no handler, which (a) is library-antipattern side-effecting and
+#  (b) attaches a stray root handler that double-prints records from any *other*
+#  named logger that propagates to root. A named logger avoids both; init_logging
+#  still catches these records via propagation when it configures the root.
+_OSH_LOGGER: Final[logging.Logger] = logging.getLogger("os_helper")
 # ---------------------------------------------------------------------------
 
 
 def debug(msg: str, *args: Any, **kwargs: Any) -> None:
-    """Log a message at DEBUG level via the root logger.
+    """Log a message at DEBUG level via the dedicated ``os_helper`` logger.
 
     Parameters
     ----------
@@ -373,11 +381,11 @@ def debug(msg: str, *args: Any, **kwargs: Any) -> None:
         Keyword options (e.g. ``exc_info``) forwarded to ``logging.debug``.
     """
     # Thin passthrough so callers get lazy %-formatting for free.
-    logging.debug(msg, *args, **kwargs)
+    _OSH_LOGGER.debug(msg, *args, **kwargs)
 
 
 def info(msg: str, *args: Any, **kwargs: Any) -> None:
-    """Log a message at INFO level via the root logger.
+    """Log a message at INFO level via the dedicated ``os_helper`` logger.
 
     Parameters
     ----------
@@ -388,11 +396,11 @@ def info(msg: str, *args: Any, **kwargs: Any) -> None:
     **kwargs : Any
         Keyword options forwarded to ``logging.info``.
     """
-    logging.info(msg, *args, **kwargs)
+    _OSH_LOGGER.info(msg, *args, **kwargs)
 
 
 def warning(msg: str, *args: Any, **kwargs: Any) -> None:
-    """Log a message at WARNING level via the root logger.
+    """Log a message at WARNING level via the dedicated ``os_helper`` logger.
 
     Parameters
     ----------
@@ -403,11 +411,11 @@ def warning(msg: str, *args: Any, **kwargs: Any) -> None:
     **kwargs : Any
         Keyword options forwarded to ``logging.warning``.
     """
-    logging.warning(msg, *args, **kwargs)
+    _OSH_LOGGER.warning(msg, *args, **kwargs)
 
 
 def error(msg: str, *args: Any, **kwargs: Any) -> None:
-    """Log a message at ERROR level via the root logger.
+    """Log a message at ERROR level via the dedicated ``os_helper`` logger.
 
     Note: this is a non-raising logger call. It will *not* terminate the
     program. Use :func:`check` (assertion-style) or raise an exception
@@ -422,11 +430,11 @@ def error(msg: str, *args: Any, **kwargs: Any) -> None:
     **kwargs : Any
         Keyword options forwarded to ``logging.error``.
     """
-    logging.error(msg, *args, **kwargs)
+    _OSH_LOGGER.error(msg, *args, **kwargs)
 
 
 def critical(msg: str, *args: Any, **kwargs: Any) -> None:
-    """Log a message at CRITICAL level via the root logger.
+    """Log a message at CRITICAL level via the dedicated ``os_helper`` logger.
 
     Parameters
     ----------
@@ -437,7 +445,7 @@ def critical(msg: str, *args: Any, **kwargs: Any) -> None:
     **kwargs : Any
         Keyword options forwarded to ``logging.critical``.
     """
-    logging.critical(msg, *args, **kwargs)
+    _OSH_LOGGER.critical(msg, *args, **kwargs)
 
 
 def check(condition: bool, msg: str = "Assertion failed") -> None:
@@ -458,7 +466,7 @@ def check(condition: bool, msg: str = "Assertion failed") -> None:
     # Unlike ``error``, this variant DOES stop the program — we log first so
     # the failure is captured by every sink, then raise for control flow.
     if not condition:
-        logging.error(msg)
+        _OSH_LOGGER.error(msg)
         raise AssertionError(msg)
 
 
