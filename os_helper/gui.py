@@ -56,6 +56,7 @@ Warith Harchaoui, Ph.D. — https://linkedin.com/in/warith-harchaoui/
 # signatures without importing FastAPI at module import time.
 from __future__ import annotations
 
+import json
 import os
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -694,9 +695,14 @@ def create_app(default_root: str | None = None) -> FastAPI:
         """
         # Inject the server's launch root into the page as a JS global so the
         # input is pre-filled and the first auto-scan targets a real folder.
+        # Use json.dumps to produce a *valid JS string literal*: it escapes
+        # backslashes and quotes correctly, so Windows paths like
+        # ``C:\Users\...`` embed safely (``C:\\Users\\...``) rather than
+        # breaking the script.
+        root_literal = json.dumps(launch_root)
         page = _INDEX_HTML.replace(
-            "window.__OSH_ROOT__ || \"\"",
-            f"{launch_root!r} || \"\"",
+            'window.__OSH_ROOT__ || ""',
+            f'{root_literal} || ""',
         )
         return HTMLResponse(content=page)
 

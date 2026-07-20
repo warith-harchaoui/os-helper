@@ -24,6 +24,7 @@ Warith Harchaoui, Ph.D. — https://linkedin.com/in/warith-harchaoui/
 
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -121,8 +122,15 @@ def test_gui_route_returns_html(sample_tree):
     body = resp.text
     # Sanity-check that it is really our page, not an error page.
     assert "<title>OS Helper — Tree Radar</title>" in body
-    # The launch root must be injected so the page auto-scans it.
-    assert os.path.abspath(sample_tree) in body
+    # The launch root must be injected so the page auto-scans it. The path is
+    # embedded as a JS string literal, so backslashes are escaped (Windows
+    # paths use "\", which becomes "\\"). Compare against the repr-encoded form
+    # the server actually writes, not the raw OS path — otherwise this fails on
+    # Windows even though the injection is correct.
+    abs_root = os.path.abspath(sample_tree)
+    # json.dumps yields the same backslash-escaping as Python's repr for a
+    # plain path string, and is what a JS string literal expects too.
+    assert json.dumps(abs_root)[1:-1] in body
 
 
 def test_api_tree_route_returns_valid_json(sample_tree):
