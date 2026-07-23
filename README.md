@@ -258,7 +258,8 @@ The remaining GUI milestones (Dedupe Lens actions, Config Explorer) stay
 described in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 
 The competitive landscape (stdlib, pathlib, click, python-dotenv,
-psutil, fsspec, …) is analysed in [LANDSCAPE.md](https://github.com/warith-harchaoui/os-helper/blob/main/LANDSCAPE.md).
+psutil, fsspec, …) is analysed in [LANDSCAPE.md](https://github.com/warith-harchaoui/os-helper/blob/main/LANDSCAPE.md),
+with a positioning map.
 
 ## The Promise
 

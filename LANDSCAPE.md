@@ -1,8 +1,10 @@
-# LANDSCAPE
+# Landscape
+
+[🇫🇷 PAYSAGE.md](https://github.com/warith-harchaoui/os-helper/blob/main/PAYSAGE.md) · 🇬🇧 English
 
 Related and competing Python libraries in the "cross-platform OS +
 filesystem + config helper" space, benchmarked against `os-helper`.
-Ratings are `⭐️` (1) to `⭐️⭐️⭐️⭐️⭐️` (5), scored on `os-helper`'s intended
+Ratings are ⭐ (1) to ⭐⭐⭐⭐⭐ (5), scored on `os-helper`'s intended
 job — utility glue for AI pipelines (OS detection, path handling,
 hashing, config loading, temp scratch, small subprocess wrappers,
 colored logging). A library optimised for a very different job (e.g.
@@ -11,20 +13,38 @@ the score just reflects fit to *this* niche.
 
 ## At a glance
 
-| Library / project | Cross-OS detection (macOS / Linux / Windows) | Path helpers (join / rel / abs / glob / split) | Hashing (string / file / folder) | Config loader (JSON / YAML / .env / env) | Temp files & folders (context managers) | Multi-surface exposure (library + CLI) | AI-helper family cohesion |
+| OS Management | Cross-OS detection | Path helpers | Hashing | Config loading | Temp scratch | Multi-surface | Suite cohesion |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **os-helper** *(this project)* | ⭐️⭐️⭐️⭐️⭐️ | ⭐️⭐️⭐️⭐️⭐️ | ⭐️⭐️⭐️⭐️⭐️ | ⭐️⭐️⭐️⭐️⭐️ | ⭐️⭐️⭐️⭐️⭐️ (incl. remote staging) | ⭐️⭐️⭐️⭐️⭐️ (argparse + click) | ⭐️⭐️⭐️⭐️⭐️ (foundation of every helper) |
-| stdlib `os` / `os.path` / `pathlib` | ⭐️⭐️ (`platform` module, string parsing) | ⭐️⭐️⭐️⭐️⭐️ | ⭐️ (raw `hashlib`) | ⭐️ (raw `os.environ`) | ⭐️⭐️⭐️⭐️ (`tempfile`) | ⭐️ | ⭐️ |
-| `click` | ⭐️ | ⭐️⭐️⭐️ (path types only) | ⭐️ | ⭐️ | ⭐️ | ⭐️⭐️⭐️⭐️ (its own CLI) | ⭐️ |
-| `python-dotenv` | ⭐️ | ⭐️ | ⭐️ | ⭐️⭐️⭐️⭐️⭐️ (`.env`) | ⭐️ | ⭐️ | ⭐️ |
-| `pydantic-settings` | ⭐️ | ⭐️ | ⭐️ | ⭐️⭐️⭐️⭐️⭐️ (typed) | ⭐️ | ⭐️⭐️ (via app frameworks) | ⭐️ |
-| `PyYAML` | ⭐️ | ⭐️ | ⭐️ | ⭐️⭐️⭐️ (YAML only) | ⭐️ | ⭐️ | ⭐️ |
-| `requests` | ⭐️ | ⭐️ | ⭐️ | ⭐️ | ⭐️ | ⭐️⭐️ (via app frameworks) | ⭐️ |
-| `psutil` | ⭐️⭐️⭐️⭐️ (deep system introspection) | ⭐️ | ⭐️ | ⭐️ | ⭐️ | ⭐️ | ⭐️ |
-| `sh` / `plumbum` | ⭐️⭐️ (subprocess focus) | ⭐️⭐️⭐️ (path DSL) | ⭐️ | ⭐️ | ⭐️ | ⭐️⭐️⭐️ (shell-first) | ⭐️ |
-| `fsspec` | ⭐️⭐️ | ⭐️⭐️⭐️⭐️ (remote FS abstraction) | ⭐️⭐️ | ⭐️ | ⭐️⭐️ | ⭐️⭐️ | ⭐️ |
-| `loguru` | ⭐️ | ⭐️ | ⭐️ | ⭐️ | ⭐️ | ⭐️ | ⭐️ |
-| `smart_open` | ⭐️⭐️ | ⭐️⭐️⭐️ (cloud URIs) | ⭐️ | ⭐️ | ⭐️⭐️ (streaming) | ⭐️ | ⭐️ |
+| **os-helper** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| stdlib os | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ | ⭐ |
+| click | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ |
+| python-dotenv | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ |
+| pydantic-settings | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐⭐ | ⭐ |
+| PyYAML | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ |
+| requests | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ |
+| psutil | ⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
+| sh | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ |
+| fsspec | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
+| loguru | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
+| smart_open | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ | ⭐ |
+
+## Positioning map
+
+A PCA of the table above, projected onto two readable axes. The reference,
+`os-helper`, is rotated to the top-right; higher and further right is stronger.
+
+![Positioning map of os-helper against related libraries](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/landscape.png)
+
+The horizontal axis runs **Efficient ↔ Versatile** (63% of the variance),
+driven mostly by path helpers, temp scratch and cross-OS detection; the
+vertical runs **Navigable ↔ Integrated** (18%), driven by config loading and
+suite cohesion. Together the two axes retain **80%** of the variation.
+`os-helper` anchors the top-right corner as the reference — broad across
+every criterion at once — while the single-purpose libraries spread out along
+the edges: `stdlib os` far right (versatile primitives, little integration),
+`python-dotenv` and `pydantic-settings` high-left (config specialists),
+`loguru` and `requests` low-left (narrow fit to this niche). The map is a
+2-D summary, so read it as a shape, not a scoreboard.
 
 ## Positioning
 
