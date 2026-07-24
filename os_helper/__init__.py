@@ -33,7 +33,9 @@ __author__ = "Warith Harchaoui, Ph.D."
 __email__ = "warithmetics@deraison.ai"
 
 from .config_utils import (
+    DEFAULT_LLM_MODEL,
     get_config,
+    llm_model,
 )
 from .hash_utils import (
     hash_string,
@@ -151,6 +153,8 @@ __all__ = [
     "hashfolder",
     # config_utils
     "get_config",
+    "llm_model",
+    "DEFAULT_LLM_MODEL",
     # string_utils
     "emptystring",
     "asciistring",

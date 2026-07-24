@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-07-24
+
 ### Added
+
+- **Suite-wide LLM config.** `os_helper.llm_model()` (and `DEFAULT_LLM_MODEL`)
+  is now the single source of truth for the Ollama model every AI Helper uses —
+  `qwen2.5vl:7b`, overridable once via the `AI_HELPERS_LLM_MODEL` env var. Other
+  helpers read it instead of hard-coding a model name.
 
 - **Optional "Tree Radar" treemap GUI** (`os_helper.gui`). A local-first,
   disk-usage treemap disk dashboard: each rectangle is a file/folder

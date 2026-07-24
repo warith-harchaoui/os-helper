@@ -30,6 +30,22 @@ from .logging_utils import error, info
 from .path_utils import checkfile, dir_exists, file_exists, folder_name_ext, join
 from .string_utils import emptystring
 
+# The single Ollama model the whole AI Helpers suite uses for any LLM task
+# (summaries, alt-text, axis naming, …). It is defined here once; everything else
+# reads it. qwen2.5vl:7b is multimodal (vision + text), so it covers every case.
+# Override with the AI_HELPERS_LLM_MODEL env var; otherwise no other model is used.
+DEFAULT_LLM_MODEL = "qwen2.5vl:7b"
+
+
+def llm_model() -> str:
+    """Return the suite-wide Ollama model name.
+
+    ``qwen2.5vl:7b`` unless the ``AI_HELPERS_LLM_MODEL`` environment variable
+    overrides it. This is the single source of truth for the LLM used across the
+    AI Helpers suite; call it instead of hard-coding a model name anywhere.
+    """
+    return os.environ.get("AI_HELPERS_LLM_MODEL", DEFAULT_LLM_MODEL)
+
 
 def _valid_config_file(a_path: str, keys: list[str], config_type: str) -> dict | None:
     """
