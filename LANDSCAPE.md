@@ -13,6 +13,7 @@ the score just reflects fit to *this* niche.
 
 ## At a glance
 
+<!-- TABLE:START -->
 | OS Management | Cross-OS detection | Path helpers | Hashing | Config loading | Temp scratch | Multi-surface | Suite cohesion |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **os-helper** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
@@ -27,14 +28,17 @@ the score just reflects fit to *this* niche.
 | fsspec | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
 | loguru | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
 | smart_open | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ | ⭐ |
+<!-- TABLE:END -->
 
 ## Positioning map
 
+<!-- FIGURE:START -->
 2D representation of the table above.
 
 ![Positioning map](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/landscape.png)
 
-The map is a 2-D summary of the seven criteria, so read it as a shape, not a scoreboard. `os-helper` is at the top-right corner. The axes read **Horizontal — Loading ↔ Helpers** and **Vertical — Scratch ↔ Cohesion**.
+The map is a 2-D summary of the seven criteria, so read it as a shape, not a scoreboard. `os-helper` is at the top-right corner. The axes read **Horizontal — Efficient ↔ Versatile** and **Vertical — Navigable ↔ Integrated**.
+<!-- FIGURE:END -->
 
 ## Positioning
 

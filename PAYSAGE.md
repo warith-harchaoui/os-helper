@@ -14,6 +14,7 @@ la note reflète seulement l'adéquation à *ce* créneau.
 
 ## En un coup d'œil
 
+<!-- TABLE:START -->
 | Gestion de l'OS | Détection multi-OS | Utilitaires de chemins | Hachage | Chargement de config | Fichiers temporaires | Multi-surface | Cohésion de la suite |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **os-helper** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
@@ -28,14 +29,17 @@ la note reflète seulement l'adéquation à *ce* créneau.
 | fsspec | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
 | loguru | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
 | smart_open | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ | ⭐ |
+<!-- TABLE:END -->
 
 ## Carte de positionnement
 
+<!-- FIGURE:START -->
 Représentation 2D du tableau ci-dessus.
 
 ![Carte de positionnement](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/paysage.png)
 
-La carte est un résumé en 2D des 7 critères : à lire comme une forme, pas comme un classement. « os-helper » se situe dans le coin en haut à droite. Les axes se lisent **Horizontal — Chargement ↔ Utilitaires** et **Vertical — Temporaires ↔ Suite**.
+La carte est un résumé en 2D des 7 critères : à lire comme une forme, pas comme un classement. « os-helper » se situe dans le coin en haut à droite. Les axes se lisent **Horizontal — Efficace ↔ Polyvalent** et **Vertical — Pratique ↔ Sécurisé**.
+<!-- FIGURE:END -->
 
 ## Positionnement
 

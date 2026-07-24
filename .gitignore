@@ -197,6 +197,3 @@ nomoreclaude.sh
 .secrets/
 .pypirc
 
-# Landscape source tables (figures are committed; the CSVs are regenerated)
-assets/landscape.csv
-assets/paysage.csv
