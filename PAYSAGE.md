@@ -31,22 +31,11 @@ la note reflète seulement l'adéquation à *ce* créneau.
 
 ## Carte de positionnement
 
-Une ACP du tableau ci-dessus, projetée sur deux axes lisibles. La référence,
-`os-helper`, est placée en haut à droite ; plus on va vers le haut et la droite,
-plus l'outil est fort sur ces dimensions.
+Représentation 2D du tableau ci-dessus.
 
-![Carte de positionnement d'os-helper face aux bibliothèques voisines](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/paysage.png)
+![Carte de positionnement](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/paysage.png)
 
-L'axe horizontal va d'**Efficace ↔ Polyvalent** (63 % de la variance), porté surtout
-par les utilitaires de chemins, les fichiers temporaires et la détection multi-OS ;
-l'axe vertical va de **Pratique ↔ Sécurisé** (18 %), porté par le chargement de
-configuration et la cohésion de la suite. Ensemble, les deux axes retiennent **80 %**
-de la variation. `os-helper` occupe le coin haut-droit comme référence — large sur
-tous les critères à la fois — tandis que les bibliothèques mono-usage s'étalent sur
-les bords : `stdlib os` à droite (primitives polyvalentes, peu d'intégration),
-`python-dotenv` et `pydantic-settings` en haut à gauche (spécialistes de la config),
-`loguru` et `requests` en bas à gauche. La carte est un résumé en 2D : à lire comme
-une forme, pas comme un classement.
+La carte est un résumé en 2D des 7 critères : à lire comme une forme, pas comme un classement. « os-helper » se situe dans le coin en haut à droite. Les axes se lisent **Horizontal — Chargement ↔ Utilitaires** et **Vertical — Temporaires ↔ Suite**.
 
 ## Positionnement
 

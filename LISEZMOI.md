@@ -16,6 +16,8 @@ OS Helper est une bibliothèque Python qui fournit des fonctions utilitaires pou
 
 [💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
 
+[🗺️ Paysage](https://github.com/warith-harchaoui/os-helper/blob/main/PAYSAGE.md)
+
 [📋 Exemples](https://github.com/warith-harchaoui/os-helper/blob/main/EXAMPLES.md)
 
 ## Fonctionnalités

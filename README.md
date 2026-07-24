@@ -16,6 +16,8 @@ OS Helper is a Python library that provides utility functions for working with d
 
 [💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
 
+[🗺️ Landscape](https://github.com/warith-harchaoui/os-helper/blob/main/LANDSCAPE.md)
+
 [📋 Examples](https://github.com/warith-harchaoui/os-helper/blob/main/EXAMPLES.md)
 
 ## Features
@@ -258,7 +260,6 @@ The remaining GUI milestones (Dedupe Lens actions, Config Explorer) stay
 described in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 
 The competitive landscape (stdlib, pathlib, click, python-dotenv,
-psutil, fsspec, …) is analysed in [LANDSCAPE.md](https://github.com/warith-harchaoui/os-helper/blob/main/LANDSCAPE.md),
 with a positioning map.
 
 ## The Promise

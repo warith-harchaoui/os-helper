@@ -30,21 +30,11 @@ the score just reflects fit to *this* niche.
 
 ## Positioning map
 
-A PCA of the table above, projected onto two readable axes. The reference,
-`os-helper`, is rotated to the top-right; higher and further right is stronger.
+2D representation of the table above.
 
-![Positioning map of os-helper against related libraries](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/landscape.png)
+![Positioning map](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/landscape.png)
 
-The horizontal axis runs **Efficient ↔ Versatile** (63% of the variance),
-driven mostly by path helpers, temp scratch and cross-OS detection; the
-vertical runs **Navigable ↔ Integrated** (18%), driven by config loading and
-suite cohesion. Together the two axes retain **80%** of the variation.
-`os-helper` anchors the top-right corner as the reference — broad across
-every criterion at once — while the single-purpose libraries spread out along
-the edges: `stdlib os` far right (versatile primitives, little integration),
-`python-dotenv` and `pydantic-settings` high-left (config specialists),
-`loguru` and `requests` low-left (narrow fit to this niche). The map is a
-2-D summary, so read it as a shape, not a scoreboard.
+The map is a 2-D summary of the seven criteria, so read it as a shape, not a scoreboard. `os-helper` is at the top-right corner. The axes read **Horizontal — Loading ↔ Helpers** and **Vertical — Scratch ↔ Cohesion**.
 
 ## Positioning
 
