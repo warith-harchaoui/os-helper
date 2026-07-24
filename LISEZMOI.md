@@ -77,7 +77,7 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
 - 🐧 **Ubuntu/Debian** : `sudo apt update && sudo apt install -y python3 python3-pip git`
 - 🪟 **Windows** (PowerShell) : `winget install Python.Python.3.12 Git.Git`
 
-Nous recommandons l'utilisation d'environnements Python. Consultez ce lien si vous ne savez pas comment faire : [🥸 Conseils techniques](https://harchaoui.org/warith/4ml/#install).
+On recommande de travailler dans un environnement Python. Si vous ne savez pas comment en créer un : [🥸 Conseils techniques](https://harchaoui.org/warith/4ml/#install).
 
 ### Depuis PyPI (recommandé)
 
@@ -101,7 +101,7 @@ pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.
 
 ## Utilisation
 
-Les exemples ci-dessous montrent comment utiliser les fonctionnalités de la bibliothèque `os_helper`. Importez la bibliothèque comme `osh` avant de commencer.
+Les exemples ci-dessous couvrent les principales fonctions d'`os_helper`. Importez la bibliothèque sous l'alias `osh` pour commencer.
 
 ```python
 import os_helper as osh
