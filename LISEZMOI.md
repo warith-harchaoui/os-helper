@@ -267,10 +267,6 @@ os-helper-gui --root ~/Downloads
 Les jalons suivants (actions de la Dedupe Lens, Config Explorer) restent
 décrits dans [GUI.md](GUI.md).
 
-Le paysage concurrentiel (stdlib, pathlib, click, python-dotenv, psutil,
-fsspec, …) est analysé dans [PAYSAGE.md](PAYSAGE.md), avec une carte de
-positionnement.
-
 ## La promesse
 
 os-helper fait partie d'une suite « local-first », soucieuse de
