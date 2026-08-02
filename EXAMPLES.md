@@ -516,24 +516,43 @@ init_logging(name="mytool", propagate=True, live_stream=True)
 
 The download_file function lets you download files from a URL to a specified location.
 
-`download_file` streams block-by-block (flat memory footprint even for a
-multi-hundred-MB file), shows a progress bar on an interactive terminal
-(auto-suppressed off-TTY), and returns lightweight metadata so you can pick a
-file extension from the server's MIME type without a second request.
+`download_file` is the suite-wide transfer primitive: it streams block-by-block
+(flat memory footprint even for a multi-GB file), shows a progress bar on an
+interactive terminal (auto-suppressed off-TTY), and by default is **resumable**,
+**retried**, **atomic**, and **idempotent**. It returns metadata so you can pick
+a file extension from the server's MIME type without a second request.
 
 ```python
 from os_helper import download_file, file_exists
 
-# Download a file from the web
-url = "https://example.com/sample.pdf" # put your own URL instead of this fake example one
+# Basic download. Bytes land in a "<file>.part" sidecar and are atomically
+# renamed onto the destination when complete, so the final path only ever exists
+# as a whole file, never a truncated one.
+url = "https://example.com/sample.pdf"  # put your own URL instead of this fake example one
 file_path = "downloaded_sample.pdf"
 
 meta = download_file(url, file_path)
-print(meta)  # {'path': 'downloaded_sample.pdf', 'content_type': 'application/pdf', 'bytes': 12345}
+print(meta)
+# {'path': 'downloaded_sample.pdf', 'content_type': 'application/pdf',
+#  'bytes': 12345, 'sha256': '', 'resumed': False}
+
+# Idempotent by default: a second call sees the complete file and skips the
+# network entirely. Pass overwrite=True to force a fresh download.
+download_file(url, file_path)  # no re-download; returns immediately
+
+# Integrity-checked and resumable: if a partial "<file>.part" exists, the
+# transfer continues with an HTTP Range request instead of restarting; the
+# finished file's SHA-256 is verified and a mismatch raises ValueError. Transient
+# network errors are retried with exponential backoff (retries=3 by default).
+download_file(
+    "https://example.com/model.bin",
+    "model.bin",
+    sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+)
 
 # Some servers/CDNs reject the pre-flight HEAD check (405/403) even though GET
-# works — pass check_url=False to skip it and rely on the GET status instead.
-download_file(url, file_path, check_url=False)
+# works: pass check_url=False to skip it and rely on the GET status instead.
+download_file(url, file_path, check_url=False, overwrite=True)
 
 # Verify the file exists
 if file_exists(file_path):

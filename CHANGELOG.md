@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-02
+
+This release marks os-helper as the stable foundation the whole AI Helpers suite
+pins for three things: logging (`osh.info` / `osh.warning` / `osh.error`), file
+management, and now smart downloads. The download primitive gained resume,
+retries, atomic finalize and integrity checks, so every helper that fetches
+bytes (model mirrors, media, templates, catalogs) can route through one place.
+
+### Added
+
+- `download_file` is now a full transfer primitive, keeping the existing
+  streamed, adaptive-chunk behaviour and adding:
+  - **Resume** (`resume=True`, default): bytes accumulate in a `<file>.part`
+    sidecar and an interrupted transfer continues with an HTTP `Range` request
+    instead of restarting. If the server ignores `Range` (answers `200` rather
+    than `206`), the sidecar restarts from zero automatically.
+  - **Retries** (`retries=3`, default): transient network errors are retried
+    with exponential backoff, each retry resuming from the current sidecar size.
+  - **Integrity check** (`sha256=...`): the finished file's digest is verified
+    and a mismatch raises `ValueError`, discarding the bad sidecar.
+  - **Idempotence** (`overwrite=False`, default): an existing complete
+    destination is reused without re-downloading (its digest re-checked when
+    `sha256` is given), so callers can invoke it unconditionally.
+- Internal `_sha256_file` streams a file through SHA-256 with a flat memory
+  footprint, reused by the download verifier.
+
+### Changed
+
+- **Breaking-ish behaviour**: `download_file` now writes atomically (bytes land
+  in `<file>.part` and are `os.replace`-d onto the destination in one step), so
+  the final path only ever exists as a *complete* download; a crash leaves a
+  `.part`, never a truncated final file. By default it also **skips an existing
+  complete destination** unless `overwrite=True`. The return dict gains
+  `"sha256"` and `"resumed"` keys (additive over `path` / `content_type` /
+  `bytes`; callers reading only the old keys are unaffected).
+- CI `ruff` lint is now **blocking** (was `continue-on-error` + `|| true`), so a
+  style regression fails the build.
+
 ## [1.8.0] - 2026-07-24
 
 ### Added

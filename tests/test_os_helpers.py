@@ -739,6 +739,8 @@ def test_download_file_returns_metadata(monkeypatch, tmp_path) -> None:
     payload = b"\x89PNG\r\n\x1a\nfake"
 
     class _Resp:
+        # status_code 200 = full body (server did not honour any Range header).
+        status_code = 200
         headers = {"Content-Type": "image/png", "Content-Length": str(len(payload))}
 
         def __enter__(self):
@@ -762,3 +764,146 @@ def test_download_file_returns_metadata(monkeypatch, tmp_path) -> None:
     assert meta["content_type"] == "image/png"
     assert meta["bytes"] == len(payload)
     assert os.path.getsize(dest) == len(payload)
+    # Atomic finalize leaves no sidecar behind on success.
+    assert not os.path.exists(dest + ".part")
+
+
+def _fake_get_factory(payload: bytes):
+    """Build a ``requests.get`` stub that honours a byte ``Range`` header.
+
+    Returns a callable with the same shape as ``requests.get`` used by
+    ``download_file``: a context-manager response that serves ``payload`` whole
+    (``200``) or from an offset (``206`` + ``Content-Range``) when the caller
+    sends ``Range: bytes=<n>-``. Used to exercise the resume path offline.
+    """
+
+    class _Resp:
+        def __init__(self, headers):
+            # Parse an optional "Range: bytes=<start>-" into a start offset.
+            self._start = 0
+            rng = headers.get("Range", "") if headers else ""
+            if rng.startswith("bytes="):
+                self._start = int(rng.split("=", 1)[1].split("-", 1)[0])
+            self.status_code = 206 if self._start else 200
+            self.headers = {"Content-Type": "application/octet-stream"}
+            if self._start:
+                end = len(payload) - 1
+                self.headers["Content-Range"] = f"bytes {self._start}-{end}/{len(payload)}"
+            else:
+                self.headers["Content-Length"] = str(len(payload))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size=1):
+            yield payload[self._start :]
+
+    def _get(*a, **k):
+        return _Resp(k.get("headers") or {})
+
+    return _get
+
+
+def test_download_file_resumes_from_partial(monkeypatch, tmp_path) -> None:
+    """A pre-existing ``.part`` is completed via a Range request, not restarted.
+
+    We seed the sidecar with the first bytes, then let the stub serve the rest
+    from the requested offset; the finished file must equal the full payload and
+    the metadata must report ``resumed=True``.
+    """
+    import os
+
+    import os_helper.misc_utils as mu
+    from os_helper import download_file
+
+    payload = b"0123456789abcdef" * 8  # 128 bytes
+    monkeypatch.setattr(mu, "is_working_url", lambda url: True)
+    monkeypatch.setattr(mu.requests, "get", _fake_get_factory(payload))
+
+    dest = str(tmp_path / "big.bin")
+    # Seed a partial sidecar with the first 40 bytes, as an interrupted run would.
+    with open(dest + ".part", "wb") as fh:
+        fh.write(payload[:40])
+
+    meta = download_file("https://example.invalid/big.bin", dest, progress=False)
+    assert meta["resumed"] is True
+    with open(dest, "rb") as fh:
+        assert fh.read() == payload
+    assert not os.path.exists(dest + ".part")
+
+
+def test_download_file_sha256_verify_and_mismatch(monkeypatch, tmp_path) -> None:
+    """A matching ``sha256`` passes; a wrong one raises and discards the sidecar."""
+    import hashlib
+    import os
+
+    import pytest
+
+    import os_helper.misc_utils as mu
+    from os_helper import download_file
+
+    payload = b"verify me"
+    good = hashlib.sha256(payload).hexdigest()
+    monkeypatch.setattr(mu, "is_working_url", lambda url: True)
+    monkeypatch.setattr(mu.requests, "get", _fake_get_factory(payload))
+
+    dest = str(tmp_path / "v.bin")
+    meta = download_file("https://example.invalid/v.bin", dest, progress=False, sha256=good)
+    assert meta["sha256"] == good
+
+    # A wrong digest must raise and leave nothing partial behind to poison a resume.
+    bad_dest = str(tmp_path / "bad.bin")
+    with pytest.raises(ValueError):
+        download_file("https://example.invalid/v.bin", bad_dest, progress=False, sha256="00" * 32)
+    assert not os.path.exists(bad_dest + ".part")
+
+
+def test_download_file_skips_when_present(monkeypatch, tmp_path) -> None:
+    """An existing complete destination is reused (no network) unless overwrite=True."""
+    import os_helper.misc_utils as mu
+    from os_helper import download_file
+
+    dest = str(tmp_path / "cached.bin")
+    with open(dest, "wb") as fh:
+        fh.write(b"cached")
+
+    # If the fast path is taken, requests.get is never called; make it explode if it is.
+    def _boom(*a, **k):
+        raise AssertionError("network should not be touched for a present file")
+
+    monkeypatch.setattr(mu, "is_working_url", lambda url: True)
+    monkeypatch.setattr(mu.requests, "get", _boom)
+
+    meta = download_file("https://example.invalid/cached.bin", dest, progress=False)
+    assert meta["bytes"] == 6
+
+
+def test_download_file_retries_then_succeeds(monkeypatch, tmp_path) -> None:
+    """A transient error is retried with backoff, then the download completes."""
+    import os_helper.misc_utils as mu
+    from os_helper import download_file
+
+    payload = b"eventually"
+    real_get = _fake_get_factory(payload)
+    calls = {"n": 0}
+
+    def _flaky(*a, **k):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise mu.requests.ConnectionError("boom")  # first attempt fails
+        return real_get(*a, **k)
+
+    monkeypatch.setattr(mu, "is_working_url", lambda url: True)
+    monkeypatch.setattr(mu.requests, "get", _flaky)
+    monkeypatch.setattr(mu.time, "sleep", lambda s: None)  # no real backoff wait
+
+    dest = str(tmp_path / "r.bin")
+    meta = download_file("https://example.invalid/r.bin", dest, progress=False)
+    assert meta["bytes"] == len(payload)
+    assert calls["n"] == 2  # failed once, succeeded on the retry

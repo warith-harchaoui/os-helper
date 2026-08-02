@@ -19,6 +19,7 @@ Author:
 # on the oldest supported interpreter (Python 3.10).
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import os
@@ -33,8 +34,8 @@ from typing import Any
 import requests
 import validators
 
-from .logging_utils import error, info
-from .path_utils import dir_exists, join, size_file
+from .logging_utils import error, info, warning
+from .path_utils import dir_exists, file_exists, join, size_file
 from .string_utils import emptystring
 
 
@@ -531,6 +532,40 @@ def _adaptive_chunk_size(
     return max(lo, min(hi, total // target))
 
 
+def _sha256_file(path: str, *, block: int = 1 << 20) -> str:
+    """Return the lowercase hex SHA-256 of a file, read in ``block``-byte blocks.
+
+    Streaming the file through the hasher keeps memory flat, so a multi-GB model
+    is digested with the same footprint as a small config.
+
+    Parameters
+    ----------
+    path : str
+        File to digest.
+    block : int, optional
+        Read block size in bytes (default 1 MiB).
+
+    Returns
+    -------
+    str
+        Lowercase hex SHA-256 digest.
+
+    Examples
+    --------
+    >>> import tempfile, os
+    >>> p = os.path.join(tempfile.mkdtemp(), "x.txt")
+    >>> _ = open(p, "wb").write(b"abc")
+    >>> _sha256_file(p)
+    'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
+    """
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        # Iterate fixed-size reads so the whole file is never resident at once.
+        for chunk in iter(lambda: fh.read(block), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def download_file(
     url: str,
     file_path: str = "",
@@ -538,59 +573,82 @@ def download_file(
     chunk_size: int | None = None,
     progress: bool = True,
     check_url: bool = True,
+    resume: bool = True,
+    retries: int = 3,
+    sha256: str | None = None,
+    overwrite: bool = False,
 ) -> dict[str, object]:
     """
-    Download a URL to a local file, streaming with a progress bar.
+    Download a URL to a local file: streamed, resumable, retried, atomic, verified.
 
-    The response is streamed block-by-block and written as it arrives, so the
-    whole payload is **never** held in memory — a multi-hundred-megabyte archive
-    downloads with a flat memory footprint. A :mod:`tqdm` progress bar is shown
-    on an interactive terminal (auto-suppressed when ``stderr`` is not a TTY,
-    e.g. CI / log files). Start and completion are logged via :func:`info`; a
-    failed request is logged via :func:`error` and re-raised.
+    This is the suite-wide download primitive; every helper that fetches bytes
+    from HTTP (model mirrors, media, templates, catalogs) routes through it so
+    the smart behaviour lives in one place:
 
-    The block size adapts to the payload by default (via
-    :func:`_adaptive_chunk_size`): the server's ``Content-Length`` — already read
-    for the progress total, so no extra request — is turned into a block sized to
-    give ~500 updates, clamped to ``[64 KiB, 4 MiB]``. That keeps a 2 KB config
-    and a multi-GB model both sensible. Pass an explicit ``chunk_size`` to
-    override.
+    - **Streamed** block-by-block, so the payload is never held in memory (a
+      multi-GB model downloads with a flat footprint). The block size adapts to
+      the payload via :func:`_adaptive_chunk_size` (~500 progress updates,
+      clamped ``[64 KiB, 4 MiB]``); pass ``chunk_size`` to override.
+    - **Resumable** (``resume=True``): bytes land in a ``<file>.part`` sidecar,
+      and an interrupted transfer continues with an HTTP ``Range`` request
+      instead of restarting. If the server ignores ``Range`` (answers ``200``
+      instead of ``206``), the sidecar is restarted from zero automatically.
+    - **Retried** (``retries`` attempts) on transient network errors, with
+      exponential backoff, each retry resuming from the current sidecar size.
+    - **Atomic**: the finished sidecar is ``os.replace``-d onto ``file_path`` in
+      one step, so ``file_path`` only ever exists as a *complete* download; a
+      crash leaves a ``.part``, never a truncated final file.
+    - **Verified** (optional ``sha256``): the finished file's digest is checked
+      and a mismatch raises (the bad sidecar is discarded).
+    - **Idempotent** (``overwrite=False``): an existing, complete ``file_path``
+      is reused without re-downloading (its digest re-checked when ``sha256`` is
+      given), so callers can invoke it unconditionally.
 
-    If ``file_path`` is empty, the destination name is derived from the last
-    path segment of the URL (query string stripped).
+    A :mod:`tqdm` progress bar is shown on an interactive terminal
+    (auto-suppressed off-TTY). Progress and completion are logged via
+    :func:`info`, retries via :func:`warning`, hard failures via :func:`error`.
+    If ``file_path`` is empty, the name is derived from the URL's last segment.
 
     Parameters
     ----------
     url : str
         The URL to download from.
     file_path : str, optional
-        Destination path. Defaults to the URL's last segment.
+        Destination path. Defaults to the URL's last path segment.
     chunk_size : int or None, optional
-        Streaming block size in bytes. ``None`` (default) picks a size adaptively
-        from the download's ``Content-Length``; an explicit int overrides it.
+        Streaming block size in bytes. ``None`` (default) adapts to the size.
     progress : bool, optional
-        Show a progress bar on an interactive terminal (default ``True``). The
-        bar is auto-suppressed when ``stderr`` is not a TTY.
+        Show a progress bar on an interactive terminal (default ``True``).
     check_url : bool, optional
-        Pre-validate the URL with a HEAD request (default ``True``). Set to
-        ``False`` when the server rejects HEAD (405/403) or you simply want to
-        skip the extra round-trip and let the GET's ``raise_for_status`` be the
-        only gate.
+        Pre-validate the URL with a HEAD request (default ``True``). Set
+        ``False`` when the server rejects HEAD (405/403).
+    resume : bool, optional
+        Continue a partial ``<file>.part`` via HTTP ``Range`` (default ``True``).
+        ``False`` discards any sidecar and downloads from scratch.
+    retries : int, optional
+        Extra attempts on transient network errors, with exponential backoff
+        (default ``3``, so up to four tries total).
+    sha256 : str or None, optional
+        Expected lowercase hex SHA-256. When given, the finished file is verified
+        and a mismatch raises :class:`ValueError`.
+    overwrite : bool, optional
+        Re-download even if ``file_path`` already exists (default ``False``:
+        reuse a complete destination, re-checking ``sha256`` when supplied).
 
     Returns
     -------
     dict of str to object
-        Lightweight metadata about the completed download:
         ``{"path": <destination>, "content_type": <server MIME or "">,
-        "bytes": <size on disk>}``. Callers that only want the side effect
-        (the file on disk) can ignore it.
+        "bytes": <size on disk>, "sha256": <hex or "">, "resumed": <bool>}``.
 
     Raises
     ------
     AssertionError
         If the URL fails the :func:`is_working_url` precondition.
+    ValueError
+        If ``sha256`` is given and the finished file's digest does not match.
     requests.RequestException
-        If the GET request fails or returns a non-2xx status.
+        If every attempt fails or the server returns a non-2xx status.
     """
     # Refuse to start a download we already know will fail (bad or dead URL).
     # The precheck is a HEAD request, which some servers/CDNs reject (405/403)
@@ -606,45 +664,113 @@ def download_file(
         stripped_url = stripped_url.split("?")[0]
         file_path = stripped_url.split("/")[-1]
 
-    info(f"Downloading '{url}' → '{file_path}'")
-    try:
-        # ``stream=True`` + iter_content keeps memory flat regardless of size;
-        # a (connect, read) timeout avoids hanging forever on a stalled server.
-        with requests.get(url, stream=True, timeout=(10, 60)) as resp:
-            # Turn any 4xx/5xx into an exception so we never write an error page
-            # to disk as if it were the requested file.
-            resp.raise_for_status()
-            # Capture the server's declared type so the caller can, e.g., pick a
-            # file extension from it without issuing a second request.
-            content_type = resp.headers.get("Content-Type", "")
-            # Content-Length gives the bar a total + ETA; absent → open-ended.
-            total = int(resp.headers.get("Content-Length", 0)) or None
-            # Adapt the block size to the payload unless the caller pinned one.
-            block = chunk_size if chunk_size is not None else _adaptive_chunk_size(total)
-            # Shared suite bar: auto-quiet on a non-TTY, forced off when progress=False.
-            bar = progress_bar(
-                total=total,
-                desc=os.path.basename(file_path) or "download",
-                disable=None if progress else True,
-            )
-            # Binary mode: the payload may be an image, archive, etc., not text.
-            with open(file_path, "wb") as fout:
-                for chunk in resp.iter_content(chunk_size=block):
-                    if not chunk:
-                        continue  # keep-alive chunk carries no data
-                    fout.write(chunk)
-                    bar.update(len(chunk))
-            bar.close()
-    except requests.RequestException as e:
-        error(f"Failed to download from '{url}': {e}")
-        raise
+    # Idempotent fast path: a complete destination already exists. Atomic finalize
+    # (below) guarantees ``file_path`` is only ever a *finished* download, so its
+    # mere presence means "done" — re-verify the digest when the caller pinned one.
+    if not overwrite and file_exists(file_path):
+        if sha256 is not None:
+            have = _sha256_file(file_path)
+            if have == sha256.lower():
+                info(f"'{file_path}' already present and sha256-verified; skipping download")
+                return {
+                    "path": file_path,
+                    "content_type": "",
+                    "bytes": size_file(file_path),
+                    "sha256": have,
+                    "resumed": False,
+                }
+            warning(f"'{file_path}' exists but sha256 mismatch; re-downloading")
+        else:
+            info(f"'{file_path}' already present; skipping (pass overwrite=True to force)")
+            return {
+                "path": file_path,
+                "content_type": "",
+                "bytes": size_file(file_path),
+                "sha256": "",
+                "resumed": False,
+            }
 
+    # Bytes accumulate in a sidecar; only a fully-finished transfer is renamed
+    # onto ``file_path``. ``resume=False`` starts clean by dropping a stale one.
+    part_path = file_path + ".part"
+    if not resume and os.path.exists(part_path):
+        os.remove(part_path)
+
+    info(f"Downloading '{url}' → '{file_path}'")
+    content_type = ""
+    resumed = False
+    # Attempt loop: on a transient error we back off and retry, each retry
+    # resuming from whatever the sidecar already holds.
+    for attempt in range(retries + 1):
+        # How many bytes we already have decides whether this is a resume.
+        have = size_file(part_path) if os.path.exists(part_path) else 0
+        headers = {"Range": f"bytes={have}-"} if have > 0 else {}
+        try:
+            # ``stream=True`` keeps memory flat; a (connect, read) timeout avoids
+            # hanging forever on a stalled server.
+            with requests.get(url, stream=True, timeout=(10, 60), headers=headers) as resp:
+                # Turn 4xx/5xx into an exception so we never save an error page.
+                resp.raise_for_status()
+                content_type = resp.headers.get("Content-Type", "")
+                # A ``206 Partial Content`` honours our Range → append. Anything
+                # else (``200``) means the server sent the whole body → restart.
+                partial = resp.status_code == 206
+                if have > 0 and partial:
+                    resumed = True
+                    # ``Content-Range: bytes start-end/total`` carries the full size.
+                    crange = resp.headers.get("Content-Range", "")
+                    total = int(crange.split("/")[-1]) if "/" in crange else None
+                    mode = "ab"
+                else:
+                    have = 0  # server ignored Range (or fresh start): overwrite sidecar
+                    total = int(resp.headers.get("Content-Length", 0)) or None
+                    mode = "wb"
+                block = chunk_size if chunk_size is not None else _adaptive_chunk_size(total)
+                # Shared suite bar; pre-advance it past the bytes we already hold.
+                bar = progress_bar(
+                    total=total,
+                    desc=os.path.basename(file_path) or "download",
+                    disable=None if progress else True,
+                )
+                if have:
+                    bar.update(have)
+                with open(part_path, mode) as fout:
+                    for chunk in resp.iter_content(chunk_size=block):
+                        if not chunk:
+                            continue  # keep-alive chunk carries no data
+                        fout.write(chunk)
+                        bar.update(len(chunk))
+                bar.close()
+            break  # transfer completed without raising
+        except requests.RequestException as e:
+            if attempt < retries:
+                # Exponential backoff (1s, 2s, 4s, ...); the sidecar is kept so
+                # the next attempt resumes instead of starting over.
+                wait = 2**attempt
+                warning(f"Download attempt {attempt + 1} for '{url}' failed ({e}); retry in {wait}s")
+                time.sleep(wait)
+                continue
+            error(f"Failed to download from '{url}' after {retries + 1} attempts: {e}")
+            raise
+
+    # Optional integrity gate: verify BEFORE finalizing so a corrupt transfer
+    # never lands at ``file_path``. A bad sidecar is discarded (no poisoned resume).
+    digest = ""
+    if sha256 is not None:
+        digest = _sha256_file(part_path)
+        if digest != sha256.lower():
+            os.remove(part_path)
+            msg = f"sha256 mismatch for '{url}': expected {sha256.lower()}, got {digest}"
+            error(msg)
+            raise ValueError(msg)
+
+    # Atomic finalize: one rename, so ``file_path`` appears complete or not at all.
+    os.replace(part_path, file_path)
     size = size_file(file_path)
     info(f"File downloaded from '{url}' and saved to '{file_path}' ({size} bytes)")
-    # Return lightweight metadata so callers that need the MIME type / final path
-    # (e.g. to choose a file extension) don't have to re-request. Historically
-    # this returned None; existing callers that ignore the return are unaffected.
-    return {"path": file_path, "content_type": content_type, "bytes": size}
+    # Metadata is additive over the historical {path, content_type, bytes}; callers
+    # that ignore the return, or read only the old keys, are unaffected.
+    return {"path": file_path, "content_type": content_type, "bytes": size, "sha256": digest, "resumed": resumed}
 
 
 def get_user_ip() -> dict[str, str | None]:
