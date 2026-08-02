@@ -7,7 +7,8 @@ multi-OS + système de fichiers + configuration », comparées à `os-helper`.
 Les notes vont de ⭐ (1) à ⭐⭐⭐⭐⭐ (5), évaluées sur la tâche visée par
 `os-helper` — la colle utilitaire des pipelines d'IA (détection de l'OS,
 manipulation de chemins, hachage, chargement de configuration, dossiers
-temporaires, petits wrappers de sous-processus, journalisation colorée). Une
+temporaires, téléchargements intelligents, petits wrappers de sous-processus,
+journalisation colorée). Une
 bibliothèque optimisée pour un tout autre usage (par ex. un système de
 fichiers asynchrone complet, du stockage objet distant) n'est pas pénalisée —
 la note reflète seulement l'adéquation à *ce* créneau.
@@ -15,20 +16,21 @@ la note reflète seulement l'adéquation à *ce* créneau.
 ## En un coup d'œil
 
 <!-- TABLE:START -->
-| Gestion de l'OS | Détection multi-OS | Utilitaires de chemins | Hachage | Chargement de config | Fichiers temporaires | Multi-surface | Cohésion de la suite |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **os-helper** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| stdlib os | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ | ⭐ |
-| click | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ |
-| python-dotenv | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ |
-| pydantic-settings | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐⭐ | ⭐ |
-| PyYAML | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ |
-| requests | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ |
-| psutil | ⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
-| sh | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ |
-| fsspec | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
-| loguru | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
-| smart_open | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ | ⭐ |
+| Gestion de l'OS | Détection multi-OS | Utilitaires de chemins | Hachage | Chargement de config | Fichiers temporaires | Téléchargements intelligents | Multi-surface | Cohésion de la suite |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **os-helper** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| stdlib os | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ |
+| click | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ |
+| python-dotenv | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
+| pydantic-settings | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ |
+| PyYAML | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
+| requests | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ |
+| psutil | ⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
+| sh | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ |
+| fsspec | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ |
+| smart_open | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ |
+| pooch | ⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ |
+| platformdirs | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐ | ⭐ | ⭐ | ⭐ |
 <!-- TABLE:END -->
 
 ## Carte de positionnement
@@ -38,7 +40,7 @@ Représentation 2D du tableau ci-dessus.
 
 ![Carte de positionnement](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/paysage.png)
 
-La carte est un résumé en 2D des 7 critères : à lire comme une forme, pas comme un classement. « os-helper » se situe dans le coin en haut à droite. Les axes se lisent **Horizontal — Rapidité ↔ Polyvalence** et **Vertical — Précision ↔ Intelligence**.
+La carte est un résumé en 2D des 8 critères : à lire comme une forme, pas comme un classement. « os-helper » se situe dans le coin en haut à droite. Les axes se lisent **Horizontal — Rapidité ↔ Polyvalence** et **Vertical — Précision ↔ Intégration**.
 <!-- FIGURE:END -->
 
 ## Positionnement
@@ -49,11 +51,12 @@ bibliothèque standard** (rien d'exotique ici ; chaque primitive correspond à
 l'**ergonomie des pipelines d'IA** (journalisation colorée ``info`` /
 ``warning`` / ``error``, raccourcis ``verbosity(-2..2)``, retours ``dict`` de
 ``system()`` / ``get_config()`` / ``get_user_ip()``, ``get_nb_workers``
-suivant la convention ``n_jobs`` de scikit-learn, gestionnaire de contexte de
-mise en attente distante pour les backends de stockage objet). Il ne cherche
-délibérément **pas** à concurrencer `fsspec` sur les systèmes de fichiers
-distants, `psutil` sur la télémétrie système, ou `pydantic-settings` sur la
-configuration typée.
+suivant la convention ``n_jobs`` de scikit-learn, téléchargements intelligents
+vérifiés par hachage avec cache local, gestionnaire de contexte de mise en
+attente distante pour les backends de stockage objet). Il ne cherche
+délibérément **pas** à concurrencer `pooch` sur la récupération de données
+scientifiques, `fsspec` sur les systèmes de fichiers distants, `psutil` sur la
+télémétrie système, ou `pydantic-settings` sur la configuration typée.
 
 Là où `os-helper` gagne dans la famille :
 
@@ -82,7 +85,10 @@ Là où `os-helper` gagne dans la famille :
   validée contre un schéma.
 - **`fsspec` / `smart_open`** — quand on a besoin d'une abstraction uniforme
   de système de fichiers sur S3 / GCS / Azure / disque local.
+- **`pooch`** — quand on a besoin de téléchargements vérifiés par hachage de
+  fichiers de données scientifiques, avec registre, contrôles d'intégrité et
+  cache local.
+- **`platformdirs`** — quand on veut seulement les répertoires utilisateur
+  multi-OS canoniques (cache / config / données) et rien d'autre.
 - **`psutil`** — quand on a besoin de télémétrie système fine (cartes mémoire,
   affinité CPU, compteurs d'E/S par processus).
-- **`loguru`** — quand on veut une pile de journalisation structurée entièrement
-  personnalisée (os-helper enveloppe ``logging`` et reste interopérable).

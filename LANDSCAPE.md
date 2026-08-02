@@ -6,28 +6,30 @@ Related and competing Python libraries in the "cross-platform OS +
 filesystem + config helper" space, benchmarked against `os-helper`.
 Ratings are ⭐ (1) to ⭐⭐⭐⭐⭐ (5), scored on `os-helper`'s intended
 job — utility glue for AI pipelines (OS detection, path handling,
-hashing, config loading, temp scratch, small subprocess wrappers,
-colored logging). A library optimised for a very different job (e.g.
+hashing, config loading, temp scratch, smart downloads, small
+subprocess wrappers, colored logging). A library optimised for a very
+different job (e.g.
 full-blown async filesystem, cloud object storage) is not penalised —
 the score just reflects fit to *this* niche.
 
 ## At a glance
 
 <!-- TABLE:START -->
-| OS Management | Cross-OS detection | Path helpers | Hashing | Config loading | Temp scratch | Multi-surface | Suite cohesion |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **os-helper** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| stdlib os | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ | ⭐ |
-| click | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ |
-| python-dotenv | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ |
-| pydantic-settings | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐⭐ | ⭐ |
-| PyYAML | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ |
-| requests | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ |
-| psutil | ⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
-| sh | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ |
-| fsspec | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
-| loguru | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
-| smart_open | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ | ⭐ |
+| OS Management | Cross-OS detection | Path helpers | Hashing | Config loading | Temp scratch | Smart downloads | Multi-surface | Suite cohesion |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **os-helper** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| stdlib os | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ |
+| click | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐ |
+| python-dotenv | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
+| pydantic-settings | ⭐ | ⭐ | ⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐⭐ | ⭐ |
+| PyYAML | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
+| requests | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ |
+| psutil | ⭐⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
+| sh | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ |
+| fsspec | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ |
+| smart_open | ⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐⭐⭐ | ⭐ | ⭐ |
+| pooch | ⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ |
+| platformdirs | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐ | ⭐ | ⭐ | ⭐ |
 <!-- TABLE:END -->
 
 ## Positioning map
@@ -37,7 +39,7 @@ the score just reflects fit to *this* niche.
 
 ![Positioning map](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/landscape.png)
 
-The map is a 2-D summary of the seven criteria, so read it as a shape, not a scoreboard. `os-helper` is at the top-right corner. The axes read **Horizontal — Efficient ↔ Versatile** and **Vertical — Convenient ↔ Robust**.
+The map is a 2-D summary of the eight criteria, so read it as a shape, not a scoreboard. `os-helper` is at the top-right corner. The axes read **Horizontal — Efficiency ↔ Versatility** and **Vertical — Utility ↔ Integration**.
 <!-- FIGURE:END -->
 
 ## Positioning
@@ -48,10 +50,12 @@ completeness** (nothing here is exotic; every primitive maps to
 **AI-pipeline ergonomics** (colored ``info`` / ``warning`` / ``error``
 logging, ``verbosity(-2..2)`` shortcuts, ``dict`` returns from
 ``system()`` / ``get_config()`` / ``get_user_ip()``, ``get_nb_workers``
-following the sklearn ``n_jobs`` convention, remote-staging context
-manager for object-storage backends). It intentionally does **not**
-try to compete with `fsspec` on remote filesystems, `psutil` on
-system telemetry, or `pydantic-settings` on typed configuration.
+following the sklearn ``n_jobs`` convention, hash-verified smart
+downloads with local caching, remote-staging context manager for
+object-storage backends). It intentionally does **not** try to compete
+with `pooch` on scientific-data fetching, `fsspec` on remote
+filesystems, `psutil` on system telemetry, or `pydantic-settings` on
+typed configuration.
 
 Where `os-helper` uniquely wins in the family:
 
@@ -80,7 +84,9 @@ Where `os-helper` uniquely wins in the family:
   validated against a schema.
 - **`fsspec` / `smart_open`** — when you need a uniform filesystem
   abstraction across S3 / GCS / Azure / local disks.
+- **`pooch`** — when you need hash-verified downloads of scientific
+  data files with a registry, integrity checks, and local caching.
+- **`platformdirs`** — when all you need is the canonical cross-OS
+  user directories (cache / config / data) and nothing else.
 - **`psutil`** — when you need deep system telemetry (memory maps,
   CPU affinity, per-process I/O counters).
-- **`loguru`** — when you want a fully custom, structured logging
-  stack (os-helper wraps ``logging`` and stays interoperable).
