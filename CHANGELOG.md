@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-08-02
+
+Documentation-only follow-up to the stable foundation. The install commands now
+point at PyPI (`pip install os-helper`) instead of a pinned git tag, so the
+rendered PyPI project page never drifts to an old version, and the remaining
+relative links (LICENSE, GUI.md) are now absolute GitHub URLs that resolve
+off-repo.
+
+### Fixed
+
+- README / LISEZMOI install commands no longer self-pin to a git tag; they use
+  `pip install os-helper` (and `"os-helper[cli]"`), which always resolves to the
+  latest published release.
+- Absolutized the remaining relative Markdown links (LICENSE badge, GUI.md) so
+  they resolve on the PyPI page.
+
+### Added
+
+- `tests/test_readme_install_pin.py` guards against the stale git self-pin ever
+  returning to any Markdown file.
+
+### Changed
+
+- Normalized formatting on four modules (`gui`, `logging_utils`, `misc_utils`,
+  `temp_utils`) so `ruff format --check` is clean; no behaviour change.
+
 ## [2.0.0] - 2026-08-02
 
 This release marks os-helper as the stable foundation the whole AI Helpers suite

@@ -322,7 +322,9 @@ def _scan_tree(
     }
 
 
-def _dedupe_groups(node: TreeNode, groups: dict[str, list[str]] | None = None) -> dict[str, list[str]]:
+def _dedupe_groups(
+    node: TreeNode, groups: dict[str, list[str]] | None = None
+) -> dict[str, list[str]]:
     """Group file paths by shared content hash (the Dedupe Lens data).
 
     Walks an already-scanned :class:`TreeNode` tree, hashes every file with
@@ -780,8 +782,7 @@ def run(
     except ImportError as exc:  # pragma: no cover — exercised only without extra
         error("Tree Radar GUI requires uvicorn (install the 'gui' extra).")
         raise ImportError(
-            "The Tree Radar GUI needs uvicorn. Install the extra:\n"
-            '    pip install "os-helper[gui]"'
+            'The Tree Radar GUI needs uvicorn. Install the extra:\n    pip install "os-helper[gui]"'
         ) from exc
 
     # Build the app bound to the chosen launch root, then serve it.

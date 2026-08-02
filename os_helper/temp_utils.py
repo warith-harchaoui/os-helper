@@ -87,7 +87,10 @@ def temporary_filename(
         # ``finally`` below (this also makes the file work on Windows, where an
         # auto-deleting temp file cannot be reopened by name).
         with tempfile.NamedTemporaryFile(
-            mode=mode, suffix=suffix, prefix=unique_prefix, delete=not delete,
+            mode=mode,
+            suffix=suffix,
+            prefix=unique_prefix,
+            delete=not delete,
             dir=directory,
         ) as tmp:
             temp_path = relative2absolute_path(tmp.name)

@@ -314,9 +314,7 @@ def init_logging(
         # every emit (survives capsys / stream redirection); the default binds
         # the stream once, as before.
         console_handler: logging.Handler = (
-            _LiveStreamHandler(use_stdout=stdout)
-            if live_stream
-            else logging.StreamHandler(stream)
+            _LiveStreamHandler(use_stdout=stdout) if live_stream else logging.StreamHandler(stream)
         )
         console_handler.setLevel(level)
 

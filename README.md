@@ -2,7 +2,7 @@
 
 [🇫🇷](https://github.com/warith-harchaoui/os-helper/blob/main/LISEZMOI.md) · [🇬🇧](https://github.com/warith-harchaoui/os-helper/blob/main/README.md)
 
-[![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#) [![Local-first](https://img.shields.io/badge/privacy-local--first-2f6f5e.svg)](#the-promise)
+[![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#) [![Local-first](https://img.shields.io/badge/privacy-local--first-2f6f5e.svg)](#the-promise)
 
 `OS Helper` belongs to a collection of libraries called `AI Helpers` developed for building Artificial Intelligence.
 
@@ -86,10 +86,10 @@ pip install "os-helper[cli]"
 
 ```bash
 # Core utilities (library + argparse CLI)
-pip install "git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
+pip install os-helper
 
 # Optional click-based CLI twin
-pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
+pip install "os-helper[cli]"
 ```
 
 ## Usage
@@ -232,7 +232,7 @@ os-helper misc now --fmt filename
 # click-based CLI twin (needs the [cli] extra)
 pip install "os-helper[cli]"
 # or from source:
-pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
+pip install "os-helper[cli]"
 os-helper-click hash file ./pyproject.toml
 ```
 
@@ -295,4 +295,4 @@ Special thanks to [Mohamed Chelali](https://mchelali.github.io) and [Bachir Zerr
 
 ## License
 
-This project is licensed under the BSD-3-Clause License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the BSD-3-Clause License — see the [LICENSE](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) file for details.

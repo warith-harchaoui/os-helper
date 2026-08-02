@@ -2,7 +2,7 @@
 
 [🇫🇷](https://github.com/warith-harchaoui/os-helper/blob/main/LISEZMOI.md) · [🇬🇧](https://github.com/warith-harchaoui/os-helper/blob/main/README.md)
 
-[![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#) [![Local-first](https://img.shields.io/badge/privacy-local--first-2f6f5e.svg)](#la-promesse)
+[![CI](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/warith-harchaoui/os-helper/actions/workflows/ci.yml) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](#) [![Local-first](https://img.shields.io/badge/privacy-local--first-2f6f5e.svg)](#la-promesse)
 
 `OS Helper` fait partie d'une collection de bibliothèques appelée `AI Helpers`, développée pour bâtir des applications d'intelligence artificielle.
 
@@ -93,10 +93,10 @@ pip install "os-helper[cli]"
 
 ```bash
 # Utilitaires principaux (bibliothèque + CLI argparse)
-pip install "git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
+pip install os-helper
 
 # Jumelle CLI click optionnelle
-pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
+pip install "os-helper[cli]"
 ```
 
 ## Utilisation
@@ -238,13 +238,13 @@ os-helper misc now --fmt filename
 # Jumelle click (nécessite l'extra [cli])
 pip install "os-helper[cli]"
 # ou depuis les sources :
-pip install "os-helper[cli] @ git+https://github.com/warith-harchaoui/os-helper.git@v1.7.2"
+pip install "os-helper[cli]"
 os-helper-click hash file ./pyproject.toml
 ```
 
 ### IHM Tree Radar (optionnelle)
 
-Une première tranche réelle du plan [GUI.md](GUI.md) est livrée comme
+Une première tranche réelle du plan [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md) est livrée comme
 surface **optionnelle** : **Tree Radar**, un tableau de bord local de type
 **treemap** d'occupation disque. Chaque rectangle est un fichier ou un
 dossier (surface = taille), coloré selon l'**âge**, le statut de
@@ -265,7 +265,7 @@ os-helper-gui --root ~/Downloads
 ```
 
 Les jalons suivants (actions de la Dedupe Lens, Config Explorer) restent
-décrits dans [GUI.md](GUI.md).
+décrits dans [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 
 ## La promesse
 
@@ -303,4 +303,4 @@ Remerciements chaleureux à [Mohamed Chelali](https://mchelali.github.io) et [Ba
 
 ## Licence
 
-Ce projet est distribué sous la licence BSD-3-Clause — voir le fichier [LICENSE](LICENSE) pour plus de détails.
+Ce projet est distribué sous la licence BSD-3-Clause — voir le fichier [LICENSE](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) pour plus de détails.

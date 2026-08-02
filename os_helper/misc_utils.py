@@ -747,7 +747,9 @@ def download_file(
                 # Exponential backoff (1s, 2s, 4s, ...); the sidecar is kept so
                 # the next attempt resumes instead of starting over.
                 wait = 2**attempt
-                warning(f"Download attempt {attempt + 1} for '{url}' failed ({e}); retry in {wait}s")
+                warning(
+                    f"Download attempt {attempt + 1} for '{url}' failed ({e}); retry in {wait}s"
+                )
                 time.sleep(wait)
                 continue
             error(f"Failed to download from '{url}' after {retries + 1} attempts: {e}")
@@ -770,7 +772,13 @@ def download_file(
     info(f"File downloaded from '{url}' and saved to '{file_path}' ({size} bytes)")
     # Metadata is additive over the historical {path, content_type, bytes}; callers
     # that ignore the return, or read only the old keys, are unaffected.
-    return {"path": file_path, "content_type": content_type, "bytes": size, "sha256": digest, "resumed": resumed}
+    return {
+        "path": file_path,
+        "content_type": content_type,
+        "bytes": size,
+        "sha256": digest,
+        "resumed": resumed,
+    }
 
 
 def get_user_ip() -> dict[str, str | None]:
