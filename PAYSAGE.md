@@ -56,7 +56,7 @@ vérifiés par hachage avec cache local, gestionnaire de contexte de mise en
 attente distante pour les backends de stockage objet). Il ne cherche
 délibérément **pas** à concurrencer `pooch` sur la récupération de données
 scientifiques, `fsspec` sur les systèmes de fichiers distants, `psutil` sur la
-télémétrie système, ou `pydantic-settings` sur la configuration typée.
+télémétrie système ou `pydantic-settings` sur la configuration typée.
 
 Là où `os-helper` gagne dans la famille :
 
