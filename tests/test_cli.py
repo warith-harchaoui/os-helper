@@ -30,7 +30,7 @@ from click.testing import CliRunner  # noqa: E402
 # ---------------------------------------------------------------------------
 
 
-EXPECTED_GROUPS = {"os", "path", "hash", "str", "config", "temp", "misc", "prof"}
+EXPECTED_GROUPS = {"os", "hardware", "path", "hash", "str", "config", "temp", "misc", "prof"}
 
 
 def test_argparse_parser_builds_without_error():
@@ -73,6 +73,19 @@ def test_argparse_os_system_runs(capsys):
     assert rc == 0
     out = capsys.readouterr().out.strip()
     assert out in {"macos", "linux", "windows", "unknown"}
+
+
+def test_argparse_hardware_info_runs(capsys):
+    """`os-helper hardware info` should print a JSON hardware snapshot."""
+    import json
+
+    from os_helper.cli_argparse import main
+
+    rc = main(["hardware", "info"])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ram_gb"] > 0
+    assert payload["cpu"]["logical_cores"] >= 1
 
 
 def test_argparse_hash_string_runs(capsys):
@@ -132,6 +145,19 @@ def test_click_group_help_exits_zero(group):
     runner = CliRunner()
     result = runner.invoke(cli, [group, "--help"])
     assert result.exit_code == 0
+
+
+def test_click_hardware_info_runs():
+    """`os-helper-click hardware info` should print a JSON hardware snapshot."""
+    import json
+
+    from os_helper.cli_click import cli
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["hardware", "info"])
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["ram_gb"] > 0
 
 
 def test_click_hash_string_runs():

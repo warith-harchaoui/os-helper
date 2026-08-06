@@ -26,6 +26,11 @@ Chaque fonction est un enrobage fin, bien typé et bien documenté — sans
 dépendance système lourde, en Python pur sur macOS / Linux / Windows.
 
 - **Détection de l'OS** — `windows()`, `linux()`, `macos()`, `unix()`.
+- **Inspection matérielle** — `hardware_info()` (instantané en un appel) et ses
+  briques : `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
+  `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
+  (nom + VRAM par GPU discret), `apple_chip_name()` /
+  `apple_unified_memory_gb()` pour la mémoire unifiée Apple Silicon.
 - **Exécution de commandes & processus** — `system()` (`subprocess` sans shell,
   stdout/stderr capturés, vérifications optionnelles du code de sortie et de la
   sortie attendue), `openfile()` (ouvre avec l'application par défaut de l'OS),
@@ -65,9 +70,13 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   modes logger nommé et flux « live »), `verbosity()` (niveau entier en
   lecture/écriture), et `debug()` / `info()` / `warning()` / `error()` /
   `critical()` / `check()`.
-- **Trois surfaces, un seul code** — bibliothèque importable, une CLI argparse
-  `os-helper` (toujours installée) et sa jumelle `os-helper-click` (via l'extra
-  `[cli]`).
+- **Plusieurs surfaces, un seul code** — bibliothèque importable, une CLI argparse
+  `os-helper` (toujours installée), sa jumelle `os-helper-click` (via l'extra
+  `[cli]`), une API HTTP (`os-helper-api`, via `[api]`) et des outils MCP
+  (`os-helper-mcp`, via `[mcp]`) — les surfaces API/MCP n'exposent que le
+  sous-ensemble sûr et sans effet de bord (info matérielle, hachage, ASCII,
+  formatage, vérification d'URL, chargement de config ; aucune mutation du
+  système de fichiers).
 
 ## Installation
 
@@ -221,8 +230,8 @@ osh.info(f"Dossier {folder_to_zip} zippé dans {zip_output}")
 ## Exposition multi-surface
 
 `os-helper` n'est pas qu'une bibliothèque — les mêmes fonctions sont
-exposées comme import Python, comme CLI argparse, et comme jumelle CLI
-click :
+exposées comme import Python, comme CLI argparse, comme jumelle CLI click,
+comme API HTTP et comme outils MCP :
 
 ```bash
 # Bibliothèque Python (par défaut)
@@ -230,6 +239,7 @@ import os_helper as osh
 
 # CLI basée sur argparse (installée automatiquement)
 os-helper os system
+os-helper hardware info
 os-helper path exists ~/.zshrc
 os-helper hash string hello --size 8
 os-helper misc format-size 12345678
@@ -237,9 +247,25 @@ os-helper misc now --fmt filename
 
 # Jumelle click (nécessite l'extra [cli])
 pip install "os-helper[cli]"
-# ou depuis les sources :
-pip install "os-helper[cli]"
 os-helper-click hash file ./pyproject.toml
+os-helper-click hardware info
+```
+
+### API HTTP + MCP
+
+Les opérations sûres et sans effet de bord de la bibliothèque (info
+matérielle, hachage, ASCII, formatage taille/temps, vérification d'URL,
+chargement de config — volontairement aucune mutation du système de
+fichiers) sont aussi accessibles en HTTP et comme outils MCP pour tout
+hôte agentique compatible :
+
+```bash
+pip install "os-helper[api]"
+os-helper-api                    # -> http://127.0.0.1:8010 (docs sur /docs)
+curl http://127.0.0.1:8010/hardware
+
+pip install "os-helper[mcp]"
+os-helper-mcp                    # même app + un endpoint /mcp (fastapi-mcp)
 ```
 
 ### IHM Tree Radar (optionnelle)

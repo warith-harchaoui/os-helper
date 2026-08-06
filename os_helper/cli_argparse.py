@@ -17,6 +17,8 @@ Subcommand groups
 - ``os``      — operating-system detection (``system`` / ``unix`` /
                 ``linux`` / ``macos`` / ``windows`` / ``pid`` /
                 ``workers`` / ``run`` / ``open``)
+- ``hardware`` — hardware inspection (``info``: CPU cores/model, RAM,
+                GPU vendor/model/VRAM, Apple Silicon chip, as JSON)
 - ``path``    — path predicates and helpers (``exists`` / ``dir-exists``
                 / ``join`` / ``abs`` / ``rel`` / ``no-home`` /
                 ``size`` / ``split`` / ``glob`` / ``mkdir`` /
@@ -73,6 +75,7 @@ from . import (
     get_nb_workers,
     get_user_ip,
     getpid,
+    hardware_info,
     hash_string,
     hashfile,
     hashfolder,
@@ -1035,6 +1038,43 @@ def _handle_gui(ns: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_hardware_info(_: argparse.Namespace) -> int:
+    """Print a JSON snapshot of this machine's hardware (CPU, RAM, GPU).
+
+    Parameters
+    ----------
+    _ : argparse.Namespace
+        Parsed CLI arguments for this subcommand (none expected).
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success).
+    """
+    # hardware_info() already returns a JSON-ready dict; route it through the
+    # shared structured-output helper so it matches every other `| jq`-able
+    # subcommand in this CLI.
+    _echo_json(hardware_info())
+    return 0
+
+
+def _add_hardware_group(sub: argparse._SubParsersAction) -> None:
+    """Attach the ``hardware`` subcommand group to the parser.
+
+    Parameters
+    ----------
+    sub : argparse._SubParsersAction
+        The top-level subparser action to register this group on.
+    """
+    g = sub.add_parser("hardware", help="Hardware inspection (CPU, RAM, GPU).")
+    s = g.add_subparsers(dest="action", metavar="ACTION")
+    s.required = True
+
+    s.add_parser(
+        "info", help="Print CPU cores/model, RAM, and GPU vendor/model/VRAM as JSON."
+    ).set_defaults(func=_handle_hardware_info)
+
+
 def _add_gui_group(sub: argparse._SubParsersAction) -> None:
     """Attach the ``gui`` subcommand to the parser.
 
@@ -1444,6 +1484,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.required = True
 
     _add_os_group(subparsers)
+    _add_hardware_group(subparsers)
     _add_path_group(subparsers)
     _add_hash_group(subparsers)
     _add_str_group(subparsers)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "os-helper"
-version = "2.0.1"
+version = "2.2.0"
 description = "Cross-platform Python utility functions for file handling, system operations, string manipulation, folder management, hashing, configuration loading, and timing/profiling primitives — exposed as library, argparse CLI and click CLI."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -32,6 +32,8 @@ dependencies = [
     "pyyaml>=6.0.2,<7",
     "validators>=0.34.0,<1",
     "tqdm>=4.66,<5",
+    # Cross-platform RAM + physical-core-count reporting (hardware_utils.py).
+    "psutil>=5.9,<8",
 ]
 
 [project.optional-dependencies]
@@ -49,16 +51,38 @@ gui = [
     "uvicorn>=0.29,<1",
     "httpx>=0.27,<1",
 ]
+# HTTP API extra (os_helper.api) — the safe, side-effect-free subset of the
+# library over FastAPI: hardware info, hashing, ASCII, size/time formatting,
+# URL check, config loading. Deliberately kept OUT of core deps, same reason
+# as `gui`: `import os_helper` must stay FastAPI-free for every downstream repo.
+api = [
+    "fastapi>=0.110,<1",
+    "uvicorn>=0.29,<1",
+    "httpx>=0.27,<1",
+]
+# MCP extra (os_helper.mcp) — exposes the SAME FastAPI app from `[api]` as MCP
+# tools via fastapi-mcp; needs the api extra's runtime deps too.
+mcp = [
+    "os-helper[api]",
+    "fastapi-mcp>=0.3,<1",
+    # Cap the MCP SDK below 2.0: fastapi-mcp 0.4.0 declares only `mcp>=1.12`
+    # (no upper bound), but mcp 2.0.0 changed the low-level `Server.__init__`
+    # signature and breaks fastapi-mcp at import. Pin to the 1.x line until
+    # fastapi-mcp ships a 2.x-compatible release (same issue hit md2star).
+    "mcp>=1.12,<2",
+]
 # `dev` keeps the bar low for CI — pytest + click (so the click CLI
-# import always resolves in tests) + the gui stack (so the GUI route test
-# runs on CI rather than being skipped). No AI inference here, so no
-# DeepEval / Giskard.
+# import always resolves in tests) + the api/gui/mcp stacks (so those
+# surfaces are actually exercised on every push, not silently skipped).
+# No AI inference here, so no DeepEval / Giskard.
 dev = [
     "pytest>=8",
     "click>=8.1,<9",
     "fastapi>=0.110,<1",
     "uvicorn>=0.29,<1",
     "httpx>=0.27,<1",
+    "fastapi-mcp>=0.3,<1",
+    "mcp>=1.12,<2",
 ]
 
 [project.scripts]
@@ -68,6 +92,10 @@ os-helper = "os_helper.cli_argparse:main"
 os-helper-click = "os_helper.cli_click:cli"
 # Optional GUI launcher — starts the local Tree Radar server (needs [gui]).
 os-helper-gui = "os_helper.gui:_cli_main"
+# Optional HTTP API server (needs [api]).
+os-helper-api = "os_helper.api:main"
+# Optional HTTP API + MCP server (needs [mcp]).
+os-helper-mcp = "os_helper.mcp:main"
 
 [project.urls]
 Homepage = "https://github.com/warith-harchaoui/os-helper"
@@ -76,6 +104,12 @@ Issues = "https://github.com/warith-harchaoui/os-helper/issues"
 [tool.setuptools.packages.find]
 include = ["os_helper*"]
 exclude = ["tests*", "assets*"]
+
+[tool.setuptools.package-data]
+# PEP 561 marker: ship this package's inline type hints to consumers, so
+# downstream repos running `mypy --strict` (e.g. best-engine-ai-helper) see
+# real return types from `import os_helper` instead of implicit `Any`.
+"os_helper" = ["py.typed"]
 
 [tool.ruff]
 line-length = 100

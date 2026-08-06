@@ -4,6 +4,7 @@ OS Helper
 A collection of cross-platform utility functions covering:
 - file and directory handling
 - system / OS detection and process helpers
+- hardware inspection (CPU cores/model, RAM, GPU vendor/model/VRAM, Apple Silicon)
 - string manipulation and ASCII normalization
 - temporary files and folders (including remote staging)
 - hashing of strings, files, and folders
@@ -34,6 +35,18 @@ __email__ = "warithmetics@deraison.ai"
 
 from .config_utils import (
     get_config,
+)
+from .hardware_utils import (
+    apple_chip_name,
+    apple_unified_memory_gb,
+    cpu_count_logical,
+    cpu_count_physical,
+    cpu_model,
+    gpu_vendor,
+    gpus,
+    hardware_info,
+    platform_name,
+    ram_gb,
 )
 from .hash_utils import (
     hash_string,
@@ -116,6 +129,17 @@ __all__ = [
     "system",
     "openfile",
     "getpid",
+    # hardware_utils
+    "platform_name",
+    "cpu_count_logical",
+    "cpu_count_physical",
+    "cpu_model",
+    "ram_gb",
+    "gpu_vendor",
+    "apple_chip_name",
+    "apple_unified_memory_gb",
+    "gpus",
+    "hardware_info",
     # logging_utils
     "init_logging",
     "debug",

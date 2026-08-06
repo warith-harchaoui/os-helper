@@ -26,6 +26,11 @@ Everything is a thin, well-typed, well-documented wrapper — no heavy system
 dependency, pure-Python across macOS / Linux / Windows.
 
 - **OS detection** — `windows()`, `linux()`, `macos()`, `unix()`.
+- **Hardware inspection** — `hardware_info()` (one-call snapshot), plus its
+  building blocks: `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
+  `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
+  (name + VRAM per discrete GPU), `apple_chip_name()` /
+  `apple_unified_memory_gb()` for Apple Silicon's shared memory pool.
 - **Process & command execution** — `system()` (shell-free `subprocess`, captured
   stdout/stderr, optional exit-code and expected-output checks), `openfile()`
   (open with the OS default app), `getpid()`, `get_nb_workers()` (scikit-learn
@@ -59,8 +64,12 @@ dependency, pure-Python across macOS / Linux / Windows.
 - **Logging surface** — `init_logging()` (colored console + file, named-logger
   and live-stream modes), `verbosity()` (integer level get/set), and
   `debug()` / `info()` / `warning()` / `error()` / `critical()` / `check()`.
-- **Three surfaces, one codebase** — importable library, an `os-helper` argparse
-  CLI (always installed), and an `os-helper-click` twin (via the `[cli]` extra).
+- **Multiple surfaces, one codebase** — importable library, an `os-helper` argparse
+  CLI (always installed), an `os-helper-click` twin (via the `[cli]` extra), an
+  HTTP API (`os-helper-api`, via `[api]`), and MCP tools (`os-helper-mcp`, via
+  `[mcp]`) — the API/MCP surfaces expose only the safe, side-effect-free
+  subset (hardware info, hashing, ASCII, formatting, URL check, config
+  loading; no filesystem mutation).
 
 ## Installation
 
@@ -216,7 +225,7 @@ osh.info(f"Folder {folder_to_zip} zipped into {zip_output}")
 ## Multi-surface exposure
 
 `os-helper` is not just a library — the same functions are exposed as a
-Python import, an argparse CLI, and a click CLI twin:
+Python import, an argparse CLI, a click CLI twin, an HTTP API, and MCP tools:
 
 ```bash
 # Python library (default)
@@ -224,6 +233,7 @@ import os_helper as osh
 
 # argparse-based CLI (installed automatically)
 os-helper os system
+os-helper hardware info
 os-helper path exists ~/.zshrc
 os-helper hash string hello --size 8
 os-helper misc format-size 12345678
@@ -231,9 +241,24 @@ os-helper misc now --fmt filename
 
 # click-based CLI twin (needs the [cli] extra)
 pip install "os-helper[cli]"
-# or from source:
-pip install "os-helper[cli]"
 os-helper-click hash file ./pyproject.toml
+os-helper-click hardware info
+```
+
+### HTTP API + MCP
+
+The library's safe, side-effect-free operations (hardware info, hashing,
+ASCII normalization, size/time formatting, URL reachability, config loading —
+deliberately no filesystem-mutation endpoint) are also reachable over HTTP,
+and as MCP tools for any MCP-aware agent host:
+
+```bash
+pip install "os-helper[api]"
+os-helper-api                    # -> http://127.0.0.1:8010 (docs at /docs)
+curl http://127.0.0.1:8010/hardware
+
+pip install "os-helper[mcp]"
+os-helper-mcp                    # same app + an /mcp endpoint (fastapi-mcp)
 ```
 
 ### Optional Tree Radar GUI

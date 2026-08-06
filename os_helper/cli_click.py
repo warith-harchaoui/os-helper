@@ -63,6 +63,7 @@ from . import (
     get_nb_workers,
     get_user_ip,
     getpid,
+    hardware_info,
     hash_string,
     hashfile,
     hashfolder,
@@ -201,6 +202,24 @@ def os_run(
 def os_open(path: str) -> None:
     """Open PATH in the platform's default application."""
     openfile(path)
+
+
+# ---------------------------------------------------------------------------
+# hardware — CPU / RAM / GPU inspection
+# ---------------------------------------------------------------------------
+
+
+@cli.group("hardware")
+def hardware_grp() -> None:
+    """Hardware inspection (CPU, RAM, GPU)."""
+
+
+@hardware_grp.command("info")
+def hardware_info_cmd() -> None:
+    """Print CPU cores/model, RAM, and GPU vendor/model/VRAM as JSON."""
+    # hardware_info() is already JSON-ready; sort_keys matches the rest of
+    # this CLI's structured-output commands so scripted diffs stay stable.
+    click.echo(json.dumps(hardware_info(), indent=2, sort_keys=True))
 
 
 # ---------------------------------------------------------------------------
