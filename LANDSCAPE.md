@@ -39,7 +39,7 @@ the score just reflects fit to *this* niche.
 
 ![Positioning map](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/landscape.png)
 
-The map is a 2-D summary of the eight criteria, so read it as a shape, not a scoreboard. `os-helper` is at the top-right corner. The axes read **Horizontal — Efficiency ↔ Versatility** and **Vertical — Utility ↔ Integration**.
+The map is a 2-D summary of the eight criteria, so read it as a shape, not a scoreboard. `os-helper` is at the top-right corner. The axes read **Horizontal — Adaptable ↔ Resourceful** and **Vertical — Practical ↔ Complete**.
 <!-- FIGURE:END -->
 
 ## Positioning
