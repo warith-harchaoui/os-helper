@@ -53,16 +53,18 @@ l'**ergonomie des pipelines d'IA** (journalisation colorée ``info`` /
 ``system()`` / ``get_config()`` / ``get_user_ip()``, ``get_nb_workers``
 suivant la convention ``n_jobs`` de scikit-learn, téléchargements intelligents
 vérifiés par hachage avec cache local, gestionnaire de contexte de mise en
-attente distante pour les backends de stockage objet). Il ne cherche
-délibérément **pas** à concurrencer `pooch` sur la récupération de données
-scientifiques, `fsspec` sur les systèmes de fichiers distants, `psutil` sur la
-télémétrie système ou `pydantic-settings` sur la configuration typée.
+attente distante pour les backends de stockage objet, un instantané matériel
+CPU/RAM/GPU en un appel). Il ne cherche délibérément **pas** à concurrencer
+`pooch` sur la récupération de données scientifiques, `fsspec` sur les
+systèmes de fichiers distants, `psutil` sur la télémétrie fine par processus
+(cartes mémoire, affinité CPU, compteurs d'E/S par processus) ou
+`pydantic-settings` sur la configuration typée.
 
 Là où `os-helper` gagne dans la famille :
 
 1. **Surfaces multiples**. Chaque utilitaire est accessible depuis Python,
-   depuis une CLI argparse et depuis une CLI click — mêmes signatures, aucune
-   dérive.
+   une CLI argparse, une CLI click, une API HTTP (FastAPI) et des outils MCP
+   (pour les agents) — mêmes signatures, aucune dérive.
 2. **Zéro dépendance lourde** pour le cœur (`requests`, `pyyaml`,
    `python-dotenv`, `validators`). La CLI click est un extra optionnel, donc
    `pip install os-helper` reste léger.
@@ -90,5 +92,6 @@ Là où `os-helper` gagne dans la famille :
   cache local.
 - **`platformdirs`** — quand on veut seulement les répertoires utilisateur
   multi-OS canoniques (cache / config / données) et rien d'autre.
-- **`psutil`** — quand on a besoin de télémétrie système fine (cartes mémoire,
-  affinité CPU, compteurs d'E/S par processus).
+- **`psutil`** — quand on a besoin de télémétrie fine par processus (cartes
+  mémoire, affinité CPU, compteurs d'E/S par processus) au-delà de
+  l'instantané matériel CPU/RAM/GPU en un appel d'`os-helper`.

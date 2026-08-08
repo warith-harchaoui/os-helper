@@ -70,9 +70,7 @@ def _probe(cmd: list[str], **kwargs: Any) -> str:
         Decoded stdout, or ``''`` on any error.
     """
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=True, **kwargs
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True, **kwargs)
         return result.stdout
     except (FileNotFoundError, subprocess.CalledProcessError, OSError) as exc:
         # FileNotFoundError: binary not on PATH.
@@ -379,9 +377,7 @@ def nvidia_gpus() -> list[dict[str, Any]]:
     True
     """
     # CSV output, one line per GPU: "NVIDIA GeForce RTX 4090, 24564".
-    out = _probe(
-        ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"]
-    )
+    out = _probe(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"])
     gpus: list[dict[str, Any]] = []
     for line in out.strip().splitlines():
         parts = [p.strip() for p in line.split(",")]
@@ -441,9 +437,7 @@ def amd_gpus() -> list[dict[str, Any]]:
             vram_gb = float(val.strip()) / (1024**3)
         except ValueError:
             continue
-        gpus.append(
-            {"vendor": "amd", "name": names.get(idx), "vram_gb": round(vram_gb, 1)}
-        )
+        gpus.append({"vendor": "amd", "name": names.get(idx), "vram_gb": round(vram_gb, 1)})
     return gpus
 
 

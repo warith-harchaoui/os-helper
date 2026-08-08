@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Hardware inspection** (`hardware_utils.py`): `hardware_info()` one-call
+  snapshot, plus `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
+  `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
+  (name + VRAM per NVIDIA/AMD GPU), `apple_chip_name()` /
+  `apple_unified_memory_gb()`, and `platform_name()`. Consumer repos (e.g.
+  `best-engine-ai-helper`) that need AI-inference-specific derivations
+  (memory-bandwidth tables, decode-throughput estimates) build those on top
+  of these raw facts rather than duplicating the subprocess probing.
+  CLI: `os-helper hardware info` (argparse) and `os-helper-click hardware
+  info` (click) print the same snapshot as JSON. `psutil>=5.9,<8` is now a
+  core runtime dependency (RAM + physical-core detection).
 - **HTTP API** (`os_helper.api`, `[api]` extra, entry point `os-helper-api`):
   the safe, side-effect-free subset of the library over FastAPI — hardware
   info, hashing, ASCII normalization, size/time formatting, URL reachability,
@@ -23,23 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `vocal-helper` / `md2star`. Closes the CLI/API/MCP surface gap for
   os-helper flagged in `ai-helpers/.private/do.md` §7 (previously the only
   member with neither a generic HTTP API nor MCP).
-
-## [2.1.0] - 2026-08-06
-
-### Added
-
-- **Hardware inspection** (`hardware_utils.py`): `hardware_info()` one-call
-  snapshot, plus `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
-  `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
-  (name + VRAM per NVIDIA/AMD GPU), `apple_chip_name()` /
-  `apple_unified_memory_gb()`, and `platform_name()`. Consumer repos (e.g.
-  `best-engine-ai-helper`) that need AI-inference-specific derivations
-  (memory-bandwidth tables, decode-throughput estimates) build those on top
-  of these raw facts rather than duplicating the subprocess probing.
-- CLI: `os-helper hardware info` (argparse) and
-  `os-helper-click hardware info` (click) print the same snapshot as JSON.
-- `psutil>=5.9,<8` is now a core runtime dependency (RAM + physical-core
-  detection).
 
 ## [2.0.1] - 2026-08-02
 

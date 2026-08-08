@@ -58,4 +58,6 @@ jobs:
         # Bump this deliberately, not by surprise.
         run: pip install "ruff==0.15.21"
       - name: Run ruff
-        run: ruff check .
+        run: |
+          ruff check .
+          ruff format --check .

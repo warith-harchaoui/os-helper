@@ -52,16 +52,17 @@ logging, ``verbosity(-2..2)`` shortcuts, ``dict`` returns from
 ``system()`` / ``get_config()`` / ``get_user_ip()``, ``get_nb_workers``
 following the sklearn ``n_jobs`` convention, hash-verified smart
 downloads with local caching, remote-staging context manager for
-object-storage backends). It intentionally does **not** try to compete
-with `pooch` on scientific-data fetching, `fsspec` on remote
-filesystems, `psutil` on system telemetry, or `pydantic-settings` on
-typed configuration.
+object-storage backends, a one-call hardware snapshot for CPU/RAM/GPU).
+It intentionally does **not** try to compete with `pooch` on
+scientific-data fetching, `fsspec` on remote filesystems, `psutil` on
+deep per-process telemetry (memory maps, CPU affinity, per-process I/O
+counters), or `pydantic-settings` on typed configuration.
 
 Where `os-helper` uniquely wins in the family:
 
 1. **Multi-surface exposure**. Every helper is reachable from Python,
-   from an argparse CLI, and from a click CLI — the same function
-   signatures, no drift.
+   an argparse CLI, a click CLI, an HTTP API (FastAPI), and MCP tools
+   (for agents) — the same function signatures, no drift.
 2. **Zero heavy runtime deps** for the core (`requests`, `pyyaml`,
    `python-dotenv`, `validators`). The click CLI is an optional extra
    so `pip install os-helper` stays lean for library users.
@@ -88,5 +89,6 @@ Where `os-helper` uniquely wins in the family:
   data files with a registry, integrity checks, and local caching.
 - **`platformdirs`** — when all you need is the canonical cross-OS
   user directories (cache / config / data) and nothing else.
-- **`psutil`** — when you need deep system telemetry (memory maps,
-  CPU affinity, per-process I/O counters).
+- **`psutil`** — when you need deep per-process system telemetry
+  (memory maps, CPU affinity, per-process I/O counters) beyond
+  `os-helper`'s one-call CPU/RAM/GPU hardware snapshot.
