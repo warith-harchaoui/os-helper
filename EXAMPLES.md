@@ -8,37 +8,47 @@ This document provides detailed examples for using the `OS Helper` module to sim
 
 1. [Setup and Configuration](#setup-and-configuration)
 2. [System Information](#system-information)
-3. [File and Directory Utilities](#file-and-directory-utilities)
+   - [Worker Count Resolution](#worker-count-resolution)
+3. [Hardware Inspection](#hardware-inspection)
+   - [One-Call Snapshot](#one-call-snapshot)
+   - [Individual Probes](#individual-probes)
+   - [Live Metrics](#live-metrics)
+4. [Configuration Loading](#configuration-loading)
+5. [File and Directory Utilities](#file-and-directory-utilities)
    - [Check File or Directory Existence](#check-file-or-directory-existence)
    - [Manage Directories](#manage-directories)
    - [File Size and Path Operations](#file-size-and-path-operations)
+   - [Copy, Remove, and Locate Files](#copy-remove-and-locate-files)
    - [Describe Folder Contents](#describe-folder-contents)
    - [Decompose File/Folder Path](#decompose-filefolder-path)
    - [Compress a Folder into a ZIP File](#compress-a-folder-into-a-zip-file)
-4. [String Utilities](#string-utilities)
+6. [String Utilities](#string-utilities)
+   - [Check for Blank Strings](#check-for-blank-strings)
    - [ASCII String Conversion](#ascii-string-conversion)
-5. [Temporary Resources](#temporary-resources)
+7. [Temporary Resources](#temporary-resources)
    - [Create a Temporary File](#create-a-temporary-file)
    - [Create a Temporary Folder](#create-a-temporary-folder)
    - [Create a Persistent Temporary Directory](#create-a-persistent-temporary-directory-caller-owned-cleanup)
    - [Stage a File on a Remote Backend](#stage-a-file-on-a-remote-backend)
-6. [System Commands](#system-commands)
+8. [System Commands](#system-commands)
    - [Run a System Command](#run-a-system-command)
-7. [Networking](#networking)
+9. [Networking](#networking)
    - [Check if a URL is Valid and Reachable](#check-if-a-url-is-valid-and-reachable)
    - [Retrieve Public IP Addresses](#retrieve-public-ip-addresses)
-8. [Hashing](#hashing)
-   - [Generate a Hash for a String](#generate-a-hash-for-a-string)
-   - [Hash a File](#hash-a-file)
-   - [Hash a Folder](#hash-a-folder)
-9. [Duration Helpers](#duration-helpers)
-   - [Format Durations into Readable Strings](#format-durations-into-readable-strings)
-   - [Parse Strings into Durations](#parse-strings-into-durations)
-10. [Miscellaneous Utilities](#miscellaneous-utilities)
+10. [Hashing](#hashing)
+    - [Generate a Hash for a String](#generate-a-hash-for-a-string)
+    - [Hash a File](#hash-a-file)
+    - [Hash a Folder](#hash-a-folder)
+11. [Duration Helpers](#duration-helpers)
+    - [Format Durations into Readable Strings](#format-durations-into-readable-strings)
+    - [Parse Strings into Durations](#parse-strings-into-durations)
+12. [Miscellaneous Utilities](#miscellaneous-utilities)
     - [Verbosity and Logging](#verbosity-and-logging)
+    - [Timestamps and Byte Sizes](#timestamps-and-byte-sizes)
     - [Download Files](#download-files)
+    - [Progress Bars for Custom Transfers](#progress-bars-for-custom-transfers)
     - [Open Files with Default Applications](#open-files-with-default-applications)
-11. [Profiling Helpers](#profiling-helpers)
+13. [Profiling Helpers](#profiling-helpers)
     - [Wall-Clock Timer](#wall-clock-timer)
     - [CPU Timer](#cpu-timer)
     - [GPU Timer](#gpu-timer)
@@ -89,6 +99,137 @@ if unix():
     print("Running on a Unix-based system!")
 ```
 
+### Worker Count Resolution
+
+`get_nb_workers` follows scikit-learn's `n_jobs` convention (`0` = whole
+pool, positive = exact count, negative = `pool_size + n + 1`), overridable
+process-wide via the `NB_WORKERS` environment variable — handy in containers
+where the visible CPU count lies about the real quota.
+
+```python
+from os_helper import get_nb_workers, getpid
+
+print(get_nb_workers())      # -1 (default): all available CPU cores
+print(get_nb_workers(-2))    # all cores but one
+print(get_nb_workers(4))     # positive: taken literally
+print(get_nb_workers(0))     # 0: the full pool size
+
+print(getpid())              # current process ID, as a string
+```
+
+## Hardware Inspection
+
+Cross-platform hardware facts and live metrics — no heavy system dependency
+beyond `psutil` (core) and the platform's own tools (`system_profiler` /
+`nvidia-smi` / `rocm-smi` / `ioreg`, shelled out to only when relevant).
+
+### One-Call Snapshot
+
+`hardware_info()` aggregates every probe below into a single JSON-ready
+dict — the same payload the `hardware info` CLI/API/MCP surfaces return.
+
+```python
+from os_helper import hardware_info
+
+info = hardware_info()
+print(info)
+# {
+#     'platform': 'darwin',
+#     'cpu': {'physical_cores': 12, 'logical_cores': 12,
+#             'model': 'Apple M2 Max', 'percent': 8.3},
+#     'ram_gb': 96.0, 'available_ram_gb': 61.2,
+#     'disk': {'free_gb': 512.3, 'used_gb': 487.7,
+#              'total_gb': 1000.0, 'percent_used': 48.8},
+#     'gpu_vendor': 'apple', 'gpus': [],
+#     'gpu_utilization_percent': 14.0,
+#     'apple_chip': 'Apple M2 Max', 'apple_unified_gb': 96.0,
+# }
+```
+
+### Individual Probes
+
+Each field of the snapshot above is also its own function, for callers who
+only need one fact (e.g. picking a batch size from `ram_gb()` without paying
+for a GPU probe).
+
+```python
+from os_helper import (
+    platform_name, cpu_count_logical, cpu_count_physical, cpu_model,
+    ram_gb, gpu_vendor, gpus, apple_chip_name, apple_unified_memory_gb,
+)
+
+print(platform_name())         # 'darwin' / 'linux' / 'windows'
+print(cpu_count_logical())     # 12 (includes hyperthreads/SMT)
+print(cpu_count_physical())    # 12, or None if psutil can't tell
+print(cpu_model())             # 'Apple M2 Max' or None
+
+print(ram_gb())                # 96.0 (total installed RAM)
+print(gpu_vendor())            # 'apple' / 'nvidia' / 'amd' / 'intel' / 'cpu'
+print(gpus())                  # [] on Apple (unified memory, no discrete VRAM
+                                #  list); [{'vendor': 'nvidia', 'name': ...,
+                                #  'vram_gb': ...}, ...] on NVIDIA/AMD boxes
+
+# Apple Silicon's memory pool is unified (shared with the GPU), so it is
+# reported separately rather than folded into `gpus()`'s VRAM list.
+if gpu_vendor() == "apple":
+    print(apple_chip_name())          # 'Apple M2 Max'
+    print(apple_unified_memory_gb())  # 96.0
+```
+
+### Live Metrics
+
+Distinct from the static facts above: these are sampled fresh on every call
+(fine for a one-shot diagnostic report or a CLI print; not for a hot loop).
+`hardware_info()` already folds them in — reach for these directly only when
+you want a single figure without paying for a whole snapshot.
+
+```python
+from os_helper import cpu_percent, available_ram_gb, disk_usage_gb, gpu_utilization_percent
+
+print(cpu_percent())            # 8.3  (instantaneous CPU load, 0-100)
+print(available_ram_gb())       # 61.2 (RAM free right now, <= ram_gb())
+
+usage = disk_usage_gb()         # defaults to the home directory's filesystem
+print(usage)                    # {'free_gb': 512.3, 'used_gb': 487.7,
+                                 #  'total_gb': 1000.0, 'percent_used': 48.8}
+print(disk_usage_gb("/tmp"))    # or check any specific path's filesystem
+
+# Apple via IOKit (no sudo/powermetrics needed), NVIDIA via nvidia-smi,
+# AMD via rocm-smi. None when unavailable (wrong vendor, tool not on PATH).
+print(gpu_utilization_percent())  # 14.0, or None
+```
+
+## Configuration Loading
+
+`get_config` resolves settings through a fixed fallback order — an explicit
+JSON/YAML file (or the first matching file in a folder), then `.env` files
+merged into `os.environ`, then the process environment — and raises a clear
+`RuntimeError` only if none of the sources satisfy every required key.
+
+```python
+from os_helper import get_config
+
+# 1) A config file (or a folder containing one) wins first, if it has every key.
+config = get_config(
+    keys=["host", "port"],
+    config_type="database",
+    path="config.yaml",  # or a folder: the first *.json/*.yaml/*.yml with
+                          # all the required keys is picked, sorted by name
+)
+print(config)  # {'host': 'localhost', 'port': 5432}
+
+# 2) No path (or the file is missing a key): falls through to .env files,
+#    merged into os.environ (default: [".env"] in the current directory).
+config = get_config(keys=["api_key"], config_type="API", env_files=[".env.local"])
+
+# 3) Then plain environment variables — tried as UPPER_CASE first
+#    (the conventional spelling), then the exact key as given.
+import os
+os.environ["API_KEY"] = "sk-example"
+config = get_config(keys=["api_key"], config_type="API", path=None, env_files=[])
+print(config)  # {'api_key': 'sk-example'}
+```
+
 ## File and Directory Utilities
 
 The following utilities help you work with files and directories efficiently, including checking their existence, managing paths, and performing operations like zipping folders or describing contents.
@@ -135,6 +276,37 @@ print(relative_path)  # Output: 'project/file.txt'
 # Convert a relative path to an absolute path
 absolute_path = relative2absolute_path("relative/path/to/file")
 print(absolute_path)  # Output: '/home/user/relative/path/to/file'
+```
+
+### Copy, Remove, and Locate Files
+
+```python
+from os_helper import checkfile, copyfile, remove_files, join, recursive_glob, path_without_home
+
+# Assert a file exists (and optionally isn't empty), raising with a clear
+# message otherwise — handy as a precondition at the top of a function.
+checkfile("example.txt", "Expected input file is missing", check_empty=True)
+
+# Copy a file, creating any missing destination directories along the way.
+copyfile("example.txt", "backups/example.txt")
+
+# Best-effort batch removal: each deletion is logged, missing files are
+# skipped rather than raising.
+remove_files(["backups/example.txt", "does-not-exist.txt"])
+
+# join() is os.path.join with normalization, so callers get a consistent
+# separator regardless of how the pieces were passed in.
+config_path = join("configs", "prod", "app.yaml")
+print(config_path)  # 'configs/prod/app.yaml'
+
+# Recursively find every match for a glob pattern under a root directory.
+python_files = recursive_glob("src", "*.py")
+print(python_files)  # ['src/main.py', 'src/utils/helpers.py', ...]
+
+# Render a path relative to the home directory, for user-facing log lines
+# that shouldn't leak the full absolute path.
+print(path_without_home("/Users/alice/projects/app/config.yaml"))
+# '~/projects/app/config.yaml'
 ```
 
 ### Describe Folder Contents
@@ -199,6 +371,20 @@ print("Folder successfully compressed into a ZIP archive!")
 String utilities simplify common string manipulation tasks, such as ensuring ASCII compatibility and cleaning up strings for safe usage in filenames or URLs.
 
 
+
+### Check for Blank Strings
+
+`emptystring` catches `None`, `""`, and whitespace-only strings in one call —
+use it instead of `not s` or `s == ""`, which both miss `"   "`.
+
+```python
+from os_helper import emptystring
+
+print(emptystring(None))     # True
+print(emptystring(""))       # True
+print(emptystring("   "))    # True  (whitespace-only)
+print(emptystring("hello"))  # False
+```
 
 ### ASCII String Conversion
 
@@ -480,15 +666,17 @@ argument it returns the current level. The mapping is symmetric around zero:
 |  ``<= -2``| CRITICAL |
 
 ```python
-from os_helper import verbosity, info, error, check
+from os_helper import verbosity, debug, info, error, critical, check
 
-verbosity(2)  # show DEBUG + INFO + WARNING + ERROR
+verbosity(2)  # show DEBUG + INFO + WARNING + ERROR + CRITICAL
 
+debug("Only visible once verbosity(2) or higher is set.")
 info("The process started successfully.")
 
-# `error(...)` logs at ERROR level but does NOT raise.
+# `error(...)` and `critical(...)` both log without raising.
 # Use `check(cond, msg)` for assert-style failure, or raise explicitly.
 error("Something went wrong, but execution continues.")
+critical("Unrecoverable state reached — logged, caller decides what's next.")
 check(1 + 1 == 2, "arithmetic is broken")
 ```
 
@@ -510,6 +698,22 @@ info("logging is configured")
 # (a repeat call adds no duplicate handler), and propagate=True keeps records
 # visible to a host's / pytest's root handlers (caplog).
 init_logging(name="mytool", propagate=True, live_stream=True)
+```
+
+### Timestamps and Byte Sizes
+
+```python
+from os_helper import now_string, format_size
+
+# Current timestamp, two flavors: human-readable "log", or filesystem-safe.
+print(now_string())              # "2026/08/09-14:32:07"
+print(now_string("filename"))    # "2026-08-09-14-32-07"
+
+# Human-readable byte counts (decimal/SI units, like disk vendors quote).
+print(format_size(512))          # "512 B"
+print(format_size(1_536))        # "1.50 KB"
+print(format_size(1_536_000))    # "1.50 MB"
+print(format_size(1_500_000_000))  # "1.50 GB"
 ```
 
 ### Download Files
@@ -562,6 +766,25 @@ else:
 ```
 
 
+
+### Progress Bars for Custom Transfers
+
+`download_file` uses `progress_bar` internally; reach for it directly when
+wrapping your own transfer (an S3/SFTP callback, a custom chunked upload) so
+every byte-moving operation in your project shows the same UI — byte-scaled
+units, and auto-suppressed when `stderr` isn't an interactive terminal (CI
+logs, piped output).
+
+```python
+from os_helper import progress_bar
+
+total_bytes = 10_485_760  # e.g. from a Content-Length header
+bar = progress_bar(total=total_bytes, desc="uploading")
+for chunk in range(0, total_bytes, 1_048_576):
+    # ... send/receive one chunk here ...
+    bar.update(min(1_048_576, total_bytes - chunk))
+bar.close()
+```
 
 ### Open Files with Default Applications
 
