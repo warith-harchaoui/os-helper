@@ -12,6 +12,29 @@
 
 OS Helper is a Python library that provides utility functions for working with different operating systems. It offers a set of tools to simplify common system operations, file handling, and OS-specific tasks.
 
+## The Promise
+
+os-helper is part of a local-first, sovereignty-minded suite. Rather than
+market that, here is the honest, case-by-case reality:
+
+1. **Guaranteed local.** os-helper is a pure local filesystem / utility
+   toolbox. Nothing is uploaded, there is no telemetry, and there is no
+   account. The optional Tree Radar GUI reads your disk and renders the
+   treemap locally in your browser (the server binds to `127.0.0.1` only)
+   — your paths, sizes, and content hashes never leave the machine.
+
+2. **Not possible to be local — the caveats.** Two helpers make outbound
+   HTTP *by design*, because fetching something is their whole purpose:
+   `download_file()` (it downloads a URL you hand it) and the URL-liveness
+   checks (`is_working_url()` / `check_url`). `get_user_ip()` also calls a
+   public echo service on purpose. These are the only network in the
+   library, and you only trigger them by explicitly calling them.
+
+3. **Your decision.** Nothing here forces the cloud. `temporary_remote_file()`
+   can stage to S3/GCS/SFTP, but only when *you* wire it to a remote. If you
+   build network behavior on top of os-helper, that is your choice — never a
+   default.
+
 ## Documentation
 
 [💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
@@ -289,29 +312,6 @@ described in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GU
 
 The competitive landscape (stdlib, pathlib, click, python-dotenv,
 with a positioning map.
-
-## The Promise
-
-os-helper is part of a local-first, sovereignty-minded suite. Rather than
-market that, here is the honest, case-by-case reality:
-
-1. **Guaranteed local.** os-helper is a pure local filesystem / utility
-   toolbox. Nothing is uploaded, there is no telemetry, and there is no
-   account. The optional Tree Radar GUI reads your disk and renders the
-   treemap locally in your browser (the server binds to `127.0.0.1` only)
-   — your paths, sizes, and content hashes never leave the machine.
-
-2. **Not possible to be local — the caveats.** Two helpers make outbound
-   HTTP *by design*, because fetching something is their whole purpose:
-   `download_file()` (it downloads a URL you hand it) and the URL-liveness
-   checks (`is_working_url()` / `check_url`). `get_user_ip()` also calls a
-   public echo service on purpose. These are the only network in the
-   library, and you only trigger them by explicitly calling them.
-
-3. **Your decision.** Nothing here forces the cloud. `temporary_remote_file()`
-   can stage to S3/GCS/SFTP, but only when *you* wire it to a remote. If you
-   build network behavior on top of os-helper, that is your choice — never a
-   default.
 
 ## Author
 

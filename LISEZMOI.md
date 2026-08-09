@@ -12,6 +12,32 @@
 
 OS Helper est une bibliothèque Python qui fournit des fonctions utilitaires pour travailler avec différents systèmes d'exploitation. Elle propose un ensemble d'outils pour simplifier les opérations système courantes, la manipulation de fichiers et les tâches spécifiques à chaque OS.
 
+## La promesse
+
+os-helper fait partie d'une suite « local-first », soucieuse de
+souveraineté. Plutôt que d'en faire un argument marketing, voici la
+réalité honnête, cas par cas :
+
+1. **Garanti local.** os-helper est une boîte à outils purement locale
+   (système de fichiers / utilitaires). Rien n'est envoyé, aucune
+   télémétrie, aucun compte. L'IHM optionnelle Tree Radar lit votre disque
+   et affiche la treemap localement dans votre navigateur (le serveur
+   n'écoute que sur `127.0.0.1`) — vos chemins, tailles et empreintes de
+   contenu ne quittent jamais la machine.
+
+2. **Impossible d'être local — les réserves.** Deux fonctions font du HTTP
+   sortant *par conception*, car récupérer quelque chose est justement leur
+   raison d'être : `download_file()` (elle télécharge l'URL que vous lui
+   donnez) et les vérifications d'URL (`is_working_url()` / `check_url`).
+   `get_user_ip()` interroge aussi, volontairement, un service public. Ce
+   sont les seuls accès réseau de la bibliothèque, et vous ne les déclenchez
+   qu'en les appelant explicitement.
+
+3. **Votre décision.** Rien ici ne force le cloud. `temporary_remote_file()`
+   peut déposer vers S3/GCS/SFTP, mais seulement si *vous* le branchez sur
+   un distant. Si vous construisez du comportement réseau au-dessus
+   d'os-helper, c'est votre choix — jamais un défaut.
+
 ## Documentation
 
 [💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
@@ -295,32 +321,6 @@ os-helper-gui --root ~/Downloads
 
 Les jalons suivants (actions de la Dedupe Lens, Config Explorer) restent
 décrits dans [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
-
-## La promesse
-
-os-helper fait partie d'une suite « local-first », soucieuse de
-souveraineté. Plutôt que d'en faire un argument marketing, voici la
-réalité honnête, cas par cas :
-
-1. **Garanti local.** os-helper est une boîte à outils purement locale
-   (système de fichiers / utilitaires). Rien n'est envoyé, aucune
-   télémétrie, aucun compte. L'IHM optionnelle Tree Radar lit votre disque
-   et affiche la treemap localement dans votre navigateur (le serveur
-   n'écoute que sur `127.0.0.1`) — vos chemins, tailles et empreintes de
-   contenu ne quittent jamais la machine.
-
-2. **Impossible d'être local — les réserves.** Deux fonctions font du HTTP
-   sortant *par conception*, car récupérer quelque chose est justement leur
-   raison d'être : `download_file()` (elle télécharge l'URL que vous lui
-   donnez) et les vérifications d'URL (`is_working_url()` / `check_url`).
-   `get_user_ip()` interroge aussi, volontairement, un service public. Ce
-   sont les seuls accès réseau de la bibliothèque, et vous ne les déclenchez
-   qu'en les appelant explicitement.
-
-3. **Votre décision.** Rien ici ne force le cloud. `temporary_remote_file()`
-   peut déposer vers S3/GCS/SFTP, mais seulement si *vous* le branchez sur
-   un distant. Si vous construisez du comportement réseau au-dessus
-   d'os-helper, c'est votre choix — jamais un défaut.
 
 ## Auteur
 
