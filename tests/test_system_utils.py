@@ -100,9 +100,15 @@ def test_system_tolerates_nonzero_exit_when_not_checked() -> None:
 
 def test_system_expected_output_check(tmp_path) -> None:
     target = tmp_path / "out.txt"
-    # The command itself creates the expected artefact.
+    # The command itself creates the expected artefact. ``repr()`` rather
+    # than raw interpolation: a Windows path is full of backslashes, and
+    # splicing it straight into a Python string literal risks forming an
+    # accidental escape sequence (e.g. ``\U`` reads as the 8-hex-digit
+    # Unicode escape, a SyntaxError in the spawned interpreter for anything
+    # but a coincidental hex run) -- ``repr()`` escapes it correctly for
+    # re-parsing regardless of the host OS's path separator.
     system_utils.system(
-        f'{sys.executable} -c "open(\'{target}\', \'w\').write(\'x\')"',
+        f"{sys.executable} -c \"open({str(target)!r}, 'w').write('x')\"",
         expected_output=str(target),
     )
     assert target.exists()
@@ -113,15 +119,10 @@ def test_system_expected_output_check(tmp_path) -> None:
         system_utils.system(f"{sys.executable} -c \"pass\"", expected_output=str(missing))
 
 
-def test_system_preserves_windows_backslash_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Regression test: plain ``shlex.split`` is POSIX-oriented and treats an
-    # unescaped backslash as an escape character, so on a real Windows box a
-    # command built from ``sys.executable`` (e.g.
-    # ``C:\hostedtoolcache\...\python.exe``) got mangled into
-    # ``C:hostedtoolcache...python.exe`` and the spawned process could never
-    # be found. Fake ``windows()`` True on this (POSIX) test runner and
-    # capture the argv ``system()`` builds, rather than requiring a real
-    # Windows machine to exercise the branch.
+def _capture_popen_args(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]:
+    """Fake ``windows()`` True and ``Popen`` to record its argv, without
+    spawning a real process -- lets these Windows-only branches run on any
+    (POSIX) test runner instead of requiring a real Windows machine."""
     captured: dict[str, list[str]] = {}
 
     class _FakeProc:
@@ -136,11 +137,43 @@ def test_system_preserves_windows_backslash_paths(monkeypatch: pytest.MonkeyPatc
 
     monkeypatch.setattr(system_utils, "windows", lambda: True)
     monkeypatch.setattr(system_utils, "Popen", _fake_popen)
+    return captured
+
+
+def test_system_preserves_windows_backslash_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Regression test: plain ``shlex.split`` is POSIX-oriented and treats an
+    # unescaped backslash as an escape character, so on a real Windows box a
+    # command built from ``sys.executable`` (e.g.
+    # ``C:\hostedtoolcache\...\python.exe``) got mangled into
+    # ``C:hostedtoolcache...python.exe`` and the spawned process could never
+    # be found.
+    captured = _capture_popen_args(monkeypatch)
 
     windows_path = r"C:\hostedtoolcache\windows\Python\3.12.10\x64\python.exe"
     system_utils.system(f'{windows_path} -c "print(1)"')
 
     assert captured["args"] == [windows_path, "-c", "print(1)"]
+
+
+def test_system_preserves_backslashes_inside_quoted_argument(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Regression test for a second, subtler bite of the same POSIX-vs-Windows
+    # mismatch: an argument that is ITSELF a Python source string embedding a
+    # Windows path, e.g. an inline ``-c "open(r'C:\...\out.txt', 'w')"`` used
+    # to create ``expected_output``. An early fix that blanket-doubled every
+    # backslash in the whole command corrupted this case even after fixing
+    # the bare-executable-path case above: doubling backslashes that were
+    # already correctly escaped for the *subprocess's own* Python parser
+    # left it with twice as many as intended.
+    captured = _capture_popen_args(monkeypatch)
+
+    exe = r"C:\hostedtoolcache\windows\Python\3.12.10\x64\python.exe"
+    target = r"C:\Users\runneradmin\AppData\Local\Temp\out.txt"
+    code = f"open({target!r}, 'w').write('x')"
+    system_utils.system(f'{exe} -c "{code}"')
+
+    assert captured["args"] == [exe, "-c", code]
 
 
 def test_openfile_dispatches_by_platform(monkeypatch: pytest.MonkeyPatch) -> None:

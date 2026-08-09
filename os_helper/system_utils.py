@@ -142,6 +142,29 @@ def getpid() -> str:
     return str(os.getpid())
 
 
+def _strip_shell_quotes(token: str) -> str:
+    """Remove one matching pair of surrounding quote characters, if present.
+
+    Companion to ``shlex.split(cmd, posix=False)`` on Windows: that mode
+    leaves the grouping quotes in the token instead of consuming them (the
+    POSIX-mode default), since disabling it is what keeps backslashes intact.
+
+    Parameters
+    ----------
+    token : str
+        One argv token as returned by ``shlex.split(..., posix=False)``.
+
+    Returns
+    -------
+    str
+        ``token`` with its wrapping ``"`` or ``'`` pair removed, unchanged
+        otherwise.
+    """
+    if len(token) >= 2 and token[0] == token[-1] and token[0] in "\"'":
+        return token[1:-1]
+    return token
+
+
 def system(
     cmd: str,
     expected_output: str = "",
@@ -182,15 +205,20 @@ def system(
 
     # ``shlex.split`` turns the string into an argv list; combined with
     # ``shell=False`` below this sidesteps shell-injection entirely.
-    # ``shlex`` is POSIX-oriented: outside quotes, backslash is an escape
-    # character that gets consumed, not a literal separator. On Windows every
-    # path (e.g. ``sys.executable``) is full of backslashes, so an unguarded
-    # split mangles them (``C:\Python\python.exe`` -> ``C:Pythonpython.exe``)
-    # and the spawned process can't be found. Doubling each backslash first
-    # makes POSIX-mode shlex resolve each escaped pair back to one literal
-    # backslash, which reproduces the original path while quoted arguments
-    # still split normally.
-    args = shlex.split(cmd.replace("\\", "\\\\") if windows() else cmd)
+    # ``shlex``'s default POSIX mode treats backslash as an escape character
+    # that gets consumed wherever it appears, including inside a quoted
+    # argument. On Windows every path (``sys.executable``, a temp file
+    # embedded in an inline ``-c`` script, ...) is full of backslashes, so a
+    # POSIX split silently corrupts them -- either mangling the executable
+    # path outright, or doubling backslashes an argument already escaped
+    # correctly for its own consumer. ``posix=False`` disables backslash
+    # processing entirely (Windows command lines have no such escape
+    # convention), at the cost of leaving the grouping quote characters in
+    # place, so we strip one matching pair off each token ourselves.
+    if windows():
+        args = [_strip_shell_quotes(tok) for tok in shlex.split(cmd, posix=False)]
+    else:
+        args = shlex.split(cmd)
     proc = Popen(args, stdout=PIPE, stderr=PIPE, shell=False)
     # ``communicate`` blocks until completion and drains both pipes, avoiding
     # the classic deadlock where a full pipe buffer stalls the child.

@@ -20,15 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`system()` mangled Windows paths.** `shlex.split()` is POSIX-oriented and
-  treats a bare backslash as an escape character; on Windows every path
-  (including `sys.executable`, exercised by the test suite added above) is
-  full of backslashes, so the executable name got mangled
-  (`C:\Python\python.exe` -> `C:Pythonpython.exe`) and the child process
-  could never be found (`FileNotFoundError: [WinError 2]`, caught by CI on
-  `windows-latest`). Backslashes are now doubled before the POSIX split when
-  `windows()` is true, which reproduces the original path while quoted
-  arguments still split normally.
+- **`system()` mangled Windows paths.** `shlex.split()`'s default POSIX mode
+  treats backslash as an escape character wherever it appears, including
+  inside a quoted argument; on Windows every path (`sys.executable`, a temp
+  file embedded in an inline `-c` script, ...) is full of backslashes, so a
+  POSIX split corrupted them (`C:\Python\python.exe` -> `C:Pythonpython.exe`,
+  `FileNotFoundError: [WinError 2]`, caught by CI on `windows-latest`). On
+  Windows, `system()` now splits with `posix=False` (no backslash processing
+  at all -- Windows command lines have no such escape convention) and strips
+  the grouping quote characters itself instead.
+- **`tests/test_system_utils.py::test_system_expected_output_check`** spliced
+  a raw `tmp_path` straight into an inline Python `-c` string; on Windows
+  that path's backslashes could form an accidental escape sequence (e.g.
+  `\U` reads as the 8-hex-digit Unicode escape) and fail with a `SyntaxError`
+  in the spawned interpreter regardless of the fix above. Now embeds the
+  path via `repr()`, which escapes it correctly for re-parsing on any OS.
 
 ## [2.2.0] - 2026-08-06
 
