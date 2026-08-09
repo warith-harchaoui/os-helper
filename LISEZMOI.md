@@ -30,7 +30,10 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   briques : `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
   `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
   (nom + VRAM par GPU discret), `apple_chip_name()` /
-  `apple_unified_memory_gb()` pour la mémoire unifiée Apple Silicon.
+  `apple_unified_memory_gb()` pour la mémoire unifiée Apple Silicon. Des
+  chiffres en direct aussi : `cpu_percent()`, `available_ram_gb()`,
+  `disk_usage_gb()`, `gpu_utilization_percent()` (Apple via IOKit, sans
+  `sudo`/`powermetrics` ; NVIDIA via `nvidia-smi` ; AMD via `rocm-smi`).
 - **Exécution de commandes & processus** — `system()` (`subprocess` sans shell,
   stdout/stderr capturés, vérifications optionnelles du code de sortie et de la
   sortie attendue), `openfile()` (ouvre avec l'application par défaut de l'OS),

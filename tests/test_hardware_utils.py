@@ -148,11 +148,15 @@ def test_probe_returns_empty_on_missing_binary() -> None:
 def test_hardware_info_public_contract_on_this_machine() -> None:
     info = hardware_utils.hardware_info()
     assert set(info) == {
-        "platform", "cpu", "ram_gb", "gpu_vendor", "gpus",
+        "platform", "cpu", "ram_gb", "available_ram_gb", "disk",
+        "gpu_vendor", "gpus", "gpu_utilization_percent",
         "apple_chip", "apple_unified_gb",
     }
     assert info["ram_gb"] > 0
     assert info["cpu"]["logical_cores"] >= 1
+    assert 0.0 <= info["cpu"]["percent"] <= 100.0
+    assert 0 <= info["available_ram_gb"] <= info["ram_gb"]
+    assert set(info["disk"]) == {"free_gb", "used_gb", "total_gb", "percent_used"}
     assert isinstance(info["gpus"], list)
 
 
@@ -163,3 +167,66 @@ def test_cpu_model_and_ram_gb_are_sane_on_this_machine() -> None:
     assert model is None or isinstance(model, str)
     assert hardware_utils.ram_gb() > 0
     assert hardware_utils.cpu_count_logical() >= 1
+
+
+def test_cpu_percent_is_a_valid_percentage() -> None:
+    assert 0.0 <= hardware_utils.cpu_percent() <= 100.0
+
+
+def test_available_ram_gb_is_bounded_by_total_ram() -> None:
+    assert 0 <= hardware_utils.available_ram_gb() <= hardware_utils.ram_gb()
+
+
+def test_disk_usage_gb_public_contract() -> None:
+    usage = hardware_utils.disk_usage_gb()
+    assert set(usage) == {"free_gb", "used_gb", "total_gb", "percent_used"}
+    assert 0.0 <= usage["percent_used"] <= 100.0
+    assert usage["free_gb"] + usage["used_gb"] == pytest.approx(usage["total_gb"], rel=0.01)
+    # An explicit path is honored (same filesystem as the default here).
+    here = hardware_utils.disk_usage_gb(".")
+    assert set(here) == {"free_gb", "used_gb", "total_gb", "percent_used"}
+
+
+def test_apple_gpu_utilization_percent_parses_ioreg_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ioreg_output = (
+        '"PerformanceStatistics" = {"Device Utilization %"=42,"In use system memory'
+        '"=1234567}\n'
+    )
+    monkeypatch.setattr(
+        hardware_utils, "_probe", _fake_probe({"ioreg": ioreg_output})
+    )
+    assert hardware_utils._apple_gpu_utilization_percent() == 42.0
+    # No ioreg output (non-macOS, or unexpected driver shape) -> None.
+    monkeypatch.setattr(hardware_utils, "_probe", _fake_probe({}))
+    assert hardware_utils._apple_gpu_utilization_percent() is None
+
+
+def test_gpu_utilization_percent_dispatches_by_vendor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        hardware_utils, "_apple_gpu_utilization_percent", lambda: 55.0
+    )
+    assert hardware_utils.gpu_utilization_percent("apple") == 55.0
+
+    monkeypatch.setattr(
+        hardware_utils, "_probe", _fake_probe({"nvidia-smi": "37\n"})
+    )
+    assert hardware_utils.gpu_utilization_percent("nvidia") == 37.0
+    monkeypatch.setattr(hardware_utils, "_probe", _fake_probe({}))
+    assert hardware_utils.gpu_utilization_percent("nvidia") is None
+
+    monkeypatch.setattr(
+        hardware_utils,
+        "_probe",
+        _fake_probe({"rocm-smi": "GPU[0]  : GPU use (%): 12\n"}),
+    )
+    assert hardware_utils.gpu_utilization_percent("amd") == 12.0
+    monkeypatch.setattr(hardware_utils, "_probe", _fake_probe({}))
+    assert hardware_utils.gpu_utilization_percent("amd") is None
+
+    # Intel / CPU have no known live-utilization source.
+    assert hardware_utils.gpu_utilization_percent("intel") is None
+    assert hardware_utils.gpu_utilization_percent("cpu") is None

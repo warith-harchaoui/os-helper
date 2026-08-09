@@ -182,6 +182,32 @@ def cpu_count_physical() -> int | None:
     return psutil.cpu_count(logical=False)
 
 
+def cpu_percent() -> float:
+    """
+    Return instantaneous CPU utilization as a percentage (0-100).
+
+    Delegates to ``psutil.cpu_percent``, sampled over a short blocking window
+    so the figure reflects genuinely current load rather than the misleading
+    ``0.0`` psutil returns on a first call with no interval. A live figure,
+    not a hardware fact — call this only where a short (0.1s) blocking
+    sample is acceptable (diagnostics, one-shot CLI reports); do not call it
+    in a hot loop.
+
+    Returns
+    -------
+    float
+        CPU utilization percent, 0-100.
+
+    Examples
+    --------
+    >>> 0.0 <= cpu_percent() <= 100.0
+    True
+    """
+    import psutil  # mandatory runtime dependency; always importable
+
+    return float(psutil.cpu_percent(interval=0.1))
+
+
 def cpu_model() -> str | None:
     """
     Return a human-readable CPU model string for the current machine.
@@ -252,6 +278,71 @@ def ram_gb() -> float:
     import psutil  # mandatory runtime dependency; always importable
 
     return float(psutil.virtual_memory().total) / (1024**3)
+
+
+def available_ram_gb() -> float:
+    """
+    Return system RAM currently free (not committed to any process), in GB.
+
+    Unlike :func:`ram_gb` (a static hardware fact: total installed memory),
+    this is a live figure that shrinks as other processes — including an
+    already-running local inference server — consume memory, and grows again
+    once they release it. Consumers that only care about total capacity
+    should keep using :func:`ram_gb`; this is for callers that need to know
+    what is realistically usable right now.
+
+    Returns
+    -------
+    float
+        Free RAM in GB, per ``psutil.virtual_memory().available`` (accounts
+        for reclaimable OS caches/buffers, so it is more representative of
+        "usable now" than the raw "free" figure some tools report).
+
+    Examples
+    --------
+    >>> 0 <= available_ram_gb() <= ram_gb()
+    True
+    """
+    import psutil  # mandatory runtime dependency; always importable
+
+    return float(psutil.virtual_memory().available) / (1024**3)
+
+
+def disk_usage_gb(path: str | None = None) -> dict[str, float]:
+    """
+    Return free space and percent used for the filesystem holding ``path``.
+
+    Parameters
+    ----------
+    path : str or None
+        Any path on the filesystem to report on. Defaults to the user's home
+        directory, since that is where most local caches (model weights,
+        package caches, build artifacts) actually live and eventually fill up.
+
+    Returns
+    -------
+    dict
+        ``{"free_gb": float, "used_gb": float, "total_gb": float,
+        "percent_used": float}``.
+
+    Examples
+    --------
+    >>> usage = disk_usage_gb()
+    >>> 0.0 <= usage["percent_used"] <= 100.0
+    True
+    """
+    import shutil
+    from pathlib import Path
+
+    target = path or str(Path.home())
+    total, used, free = shutil.disk_usage(target)
+    percent_used = round(used / total * 100, 1) if total else 0.0
+    return {
+        "free_gb": round(free / 1e9, 1),
+        "used_gb": round(used / 1e9, 1),
+        "total_gb": round(total / 1e9, 1),
+        "percent_used": percent_used,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -462,6 +553,93 @@ def gpus() -> list[dict[str, Any]]:
     return []
 
 
+def _apple_gpu_utilization_percent() -> float | None:
+    """
+    Apple Silicon GPU utilization WITHOUT ``powermetrics`` (no sudo needed).
+
+    ``powermetrics`` is the well-known source for this figure but requires
+    elevated privileges on every macOS version to date, which is a non-starter
+    for a library call. IOKit's AGX accelerator driver already publishes the
+    same figure unprivileged, in the ``PerformanceStatistics`` dictionary
+    ``ioreg`` prints for the GPU node (``"Device Utilization %"``) — the same
+    data source behind Activity Monitor's GPU History and third-party tools
+    such as asitop/Stats.app, just read directly instead of through them.
+    ``IOAccelerator`` is the generic superclass every Apple Silicon generation's
+    concrete driver (``AGXAcceleratorG13X``, ``...G14X``, ``...G15X``, ...)
+    registers under, so this one query is forward-compatible without a
+    per-chip-generation class name table.
+
+    Returns
+    -------
+    float or None
+        Utilization percent, or None when ``ioreg`` is unavailable (non-macOS)
+        or the field is absent (unexpected driver output).
+    """
+    out = _probe(["ioreg", "-r", "-d", "1", "-c", "IOAccelerator"], timeout=2.0)
+    match = re.search(r'"Device Utilization %"\s*=\s*(\d+)', out)
+    return float(match.group(1)) if match else None
+
+
+def gpu_utilization_percent(vendor: str | None = None) -> float | None:
+    """
+    Return the current (live) GPU compute utilization, 0-100.
+
+    Apple Silicon (via IOKit, see :func:`_apple_gpu_utilization_percent` — no
+    ``powermetrics``/sudo needed), NVIDIA (``nvidia-smi``), and AMD
+    (``rocm-smi``). A multi-GPU box reports the first card's utilization
+    only, matching :func:`gpus`'s single-card assumption elsewhere in this
+    module.
+
+    Parameters
+    ----------
+    vendor : str or None
+        One of :func:`gpu_vendor`'s return values. Defaults to calling
+        :func:`gpu_vendor` when omitted.
+
+    Returns
+    -------
+    float or None
+        Utilization percent, or None when unavailable (wrong vendor, tool
+        not on PATH, or unparseable output) — never a fabricated number.
+
+    Examples
+    --------
+    >>> util = gpu_utilization_percent("cpu")
+    >>> util is None
+    True
+    """
+    vendor = vendor if vendor is not None else gpu_vendor()
+
+    if vendor == "apple":
+        return _apple_gpu_utilization_percent()
+
+    if vendor == "nvidia":
+        out = _probe(
+            ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"],
+            timeout=2.0,
+        )
+        first_line = out.strip().splitlines()[0] if out.strip() else ""
+        try:
+            return float(first_line.strip())
+        except ValueError:
+            return None
+
+    if vendor == "amd":
+        # "GPU[0]  : GPU use (%): 12" — indentation/spacing varies by ROCm
+        # version, hence the loose substring match (same approach as amd_gpus).
+        out = _probe(["rocm-smi", "--showuse"], timeout=2.0)
+        for line in out.splitlines():
+            if "GPU use" in line:
+                _, _, val = line.rpartition(":")
+                try:
+                    return float(val.strip())
+                except ValueError:
+                    continue
+        return None
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Aggregate
 # ---------------------------------------------------------------------------
@@ -473,21 +651,29 @@ def hardware_info() -> dict[str, Any]:
 
     Convenience aggregate over every other function in this module, useful
     for a one-call "what is this machine" report (CLI ``detect`` commands,
-    diagnostics, bug reports).
+    diagnostics, bug reports). Mixes static facts (core counts, RAM capacity)
+    with live figures (``cpu_percent``, ``available_ram_gb``, ``disk``,
+    ``gpu_utilization_percent``) sampled at call time — fine for a one-shot
+    report, not for polling in a hot loop (see the live functions' own
+    docstrings).
 
     Returns
     -------
     dict
         ``{"platform": str, "cpu": {"physical_cores": int | None,
-        "logical_cores": int, "model": str | None}, "ram_gb": float,
-        "gpu_vendor": str, "gpus": list[dict], "apple_chip": str | None,
+        "logical_cores": int, "model": str | None, "percent": float},
+        "ram_gb": float, "available_ram_gb": float, "disk":
+        {"free_gb": float, "used_gb": float, "total_gb": float,
+        "percent_used": float}, "gpu_vendor": str, "gpus": list[dict],
+        "gpu_utilization_percent": float | None, "apple_chip": str | None,
         "apple_unified_gb": float | None}``.
 
     Examples
     --------
     >>> info = hardware_info()
     >>> set(info) == {
-    ...     "platform", "cpu", "ram_gb", "gpu_vendor", "gpus",
+    ...     "platform", "cpu", "ram_gb", "available_ram_gb", "disk",
+    ...     "gpu_vendor", "gpus", "gpu_utilization_percent",
     ...     "apple_chip", "apple_unified_gb",
     ... }
     True
@@ -499,10 +685,14 @@ def hardware_info() -> dict[str, Any]:
             "physical_cores": cpu_count_physical(),
             "logical_cores": cpu_count_logical(),
             "model": cpu_model(),
+            "percent": cpu_percent(),
         },
         "ram_gb": round(ram_gb(), 1),
+        "available_ram_gb": round(available_ram_gb(), 1),
+        "disk": disk_usage_gb(),
         "gpu_vendor": vendor,
         "gpus": gpus(),
+        "gpu_utilization_percent": gpu_utilization_percent(vendor),
         # Apple's memory pool is unified (shared with the CPU), so it is
         # reported separately rather than folded into the "gpus" VRAM list.
         "apple_chip": apple_chip_name() if vendor == "apple" else None,

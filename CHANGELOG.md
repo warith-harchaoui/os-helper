@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Live hardware metrics** (`hardware_utils.py`): `cpu_percent()`,
+  `available_ram_gb()`, `disk_usage_gb()`, `gpu_utilization_percent()`
+  (Apple Silicon via IOKit's `ioreg` — no `sudo`/`powermetrics` needed;
+  NVIDIA via `nvidia-smi`; AMD via `rocm-smi`). These are live figures
+  sampled at call time, distinct from the static facts `hardware_info()`
+  already reported; `hardware_info()` now folds them in (`cpu.percent`,
+  `available_ram_gb`, `disk`, `gpu_utilization_percent`), so the CLI/API/MCP
+  `hardware info` snapshot picks them up automatically.
+
 ## [2.2.0] - 2026-08-06
 
 ### Added

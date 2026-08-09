@@ -30,7 +30,10 @@ dependency, pure-Python across macOS / Linux / Windows.
   building blocks: `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
   `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
   (name + VRAM per discrete GPU), `apple_chip_name()` /
-  `apple_unified_memory_gb()` for Apple Silicon's shared memory pool.
+  `apple_unified_memory_gb()` for Apple Silicon's shared memory pool. Live
+  figures too: `cpu_percent()`, `available_ram_gb()`, `disk_usage_gb()`,
+  `gpu_utilization_percent()` (Apple via IOKit, no `sudo`/`powermetrics`
+  needed; NVIDIA via `nvidia-smi`; AMD via `rocm-smi`).
 - **Process & command execution** — `system()` (shell-free `subprocess`, captured
   stdout/stderr, optional exit-code and expected-output checks), `openfile()`
   (open with the OS default app), `getpid()`, `get_nb_workers()` (scikit-learn
