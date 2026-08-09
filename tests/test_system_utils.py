@@ -113,6 +113,36 @@ def test_system_expected_output_check(tmp_path) -> None:
         system_utils.system(f"{sys.executable} -c \"pass\"", expected_output=str(missing))
 
 
+def test_system_preserves_windows_backslash_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Regression test: plain ``shlex.split`` is POSIX-oriented and treats an
+    # unescaped backslash as an escape character, so on a real Windows box a
+    # command built from ``sys.executable`` (e.g.
+    # ``C:\hostedtoolcache\...\python.exe``) got mangled into
+    # ``C:hostedtoolcache...python.exe`` and the spawned process could never
+    # be found. Fake ``windows()`` True on this (POSIX) test runner and
+    # capture the argv ``system()`` builds, rather than requiring a real
+    # Windows machine to exercise the branch.
+    captured: dict[str, list[str]] = {}
+
+    class _FakeProc:
+        returncode = 0
+
+        def communicate(self):
+            return b"", b""
+
+    def _fake_popen(args, **kwargs):
+        captured["args"] = args
+        return _FakeProc()
+
+    monkeypatch.setattr(system_utils, "windows", lambda: True)
+    monkeypatch.setattr(system_utils, "Popen", _fake_popen)
+
+    windows_path = r"C:\hostedtoolcache\windows\Python\3.12.10\x64\python.exe"
+    system_utils.system(f'{windows_path} -c "print(1)"')
+
+    assert captured["args"] == [windows_path, "-c", "print(1)"]
+
+
 def test_openfile_dispatches_by_platform(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(system_utils, "system", lambda cmd, **kw: calls.append(cmd))

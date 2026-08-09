@@ -182,7 +182,15 @@ def system(
 
     # ``shlex.split`` turns the string into an argv list; combined with
     # ``shell=False`` below this sidesteps shell-injection entirely.
-    args = shlex.split(cmd)
+    # ``shlex`` is POSIX-oriented: outside quotes, backslash is an escape
+    # character that gets consumed, not a literal separator. On Windows every
+    # path (e.g. ``sys.executable``) is full of backslashes, so an unguarded
+    # split mangles them (``C:\Python\python.exe`` -> ``C:Pythonpython.exe``)
+    # and the spawned process can't be found. Doubling each backslash first
+    # makes POSIX-mode shlex resolve each escaped pair back to one literal
+    # backslash, which reproduces the original path while quoted arguments
+    # still split normally.
+    args = shlex.split(cmd.replace("\\", "\\\\") if windows() else cmd)
     proc = Popen(args, stdout=PIPE, stderr=PIPE, shell=False)
     # ``communicate`` blocks until completion and drains both pipes, avoiding
     # the classic deadlock where a full pipe buffer stalls the child.

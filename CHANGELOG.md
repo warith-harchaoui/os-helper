@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.3.0] - 2026-08-09
 
 ### Added
 
@@ -17,6 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already reported; `hardware_info()` now folds them in (`cpu.percent`,
   `available_ram_gb`, `disk`, `gpu_utilization_percent`), so the CLI/API/MCP
   `hardware info` snapshot picks them up automatically.
+
+### Fixed
+
+- **`system()` mangled Windows paths.** `shlex.split()` is POSIX-oriented and
+  treats a bare backslash as an escape character; on Windows every path
+  (including `sys.executable`, exercised by the test suite added above) is
+  full of backslashes, so the executable name got mangled
+  (`C:\Python\python.exe` -> `C:Pythonpython.exe`) and the child process
+  could never be found (`FileNotFoundError: [WinError 2]`, caught by CI on
+  `windows-latest`). Backslashes are now doubled before the POSIX split when
+  `windows()` is true, which reproduces the original path while quoted
+  arguments still split normally.
 
 ## [2.2.0] - 2026-08-06
 
