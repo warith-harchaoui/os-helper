@@ -1,4 +1,4 @@
-# Gestion des Credentials — OS Helper
+# Gestion des _Credentials_ — OS Helper
 
 [🇫🇷](https://github.com/warith-harchaoui/os-helper/blob/main/GESTION_DES_CREDENTIALS.md) · [🇬🇧](https://github.com/warith-harchaoui/os-helper/blob/main/CREDENTIALS_MANAGEMENT.md)
 
