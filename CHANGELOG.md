@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`requirements.txt` was missing `psutil`.** `pyproject.toml`'s core
+  `dependencies` gained `psutil>=5.9,<8` with the 2.2.0 hardware-inspection
+  work, but `requirements.txt` (the plain `pip install -r requirements.txt`
+  path) was never updated to match — `import os_helper` installed that way
+  would break the moment `cpu_count_physical()` / `ram_gb()` /
+  `hardware_info()` were called. Added the missing pin; the two files'
+  dependency lists are now programmatically identical.
+
 ## [2.3.0] - 2026-08-09
 
 ### Added
