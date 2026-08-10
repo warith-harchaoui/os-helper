@@ -44,7 +44,9 @@ réalité honnête, cas par cas :
 
 [🗺️ Paysage](https://github.com/warith-harchaoui/os-helper/blob/main/PAYSAGE.md)
 
-[📋 Exemples](https://github.com/warith-harchaoui/os-helper/blob/main/EXAMPLES.md)
+[📋 Exemples](https://github.com/warith-harchaoui/os-helper/blob/main/EXEMPLES.md)
+
+[🔐 Gestion des Credentials](https://github.com/warith-harchaoui/os-helper/blob/main/GESTION_DES_CREDENTIALS.md)
 
 ## Fonctionnalités
 
