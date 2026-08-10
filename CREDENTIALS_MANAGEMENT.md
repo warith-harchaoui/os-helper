@@ -139,6 +139,12 @@ The same pattern applies to any vault client — swap `hvac` for `boto3`'s
 `get_secret_value`, `google.cloud.secretmanager`, or `azure.keyvault.secrets`;
 only the fetch call changes, not the injection point.
 
+> A dependency-free, runnable version of `load_from_vault` lives at
+> [`examples/vault_config.py`](examples/vault_config.py) — run it directly
+> with `python examples/vault_config.py`. Both decisions below are exercised
+> for real (not just asserted in prose) by
+> [`tests/test_vault_config_example.py`](tests/test_vault_config_example.py).
+
 ```mermaid
 sequenceDiagram
     participant App as Your app
@@ -164,12 +170,17 @@ sequenceDiagram
   keeps them in memory only, at the cost of being visible to any subprocess
   `system()` spawns (child processes inherit the environment).
 
-- **Dev/prod parity, if you want it.** `load_dotenv()` (tier 2) does not
-  overwrite keys that already exist in `os.environ` by default. So if you
-  call `load_from_vault(...)` *before* `get_config`, vault-provided values
-  become the floor, and a developer's local `.env` file can still override
-  individual keys during local development — vault fills in whatever the
-  `.env` doesn't set, with no code branching between environments.
+- **Dev/prod parity, if you want it.** Both `load_dotenv()` (tier 2) and
+  `os.environ.setdefault` share the same non-destructive rule: whatever key
+  is already set wins, the new source only fills gaps. That means ordering
+  matters — `load_from_vault` must use `setdefault`, not a hard assignment,
+  and "a developer's `.env` overrides vault" only holds for a `.env` that is
+  already loaded into `os.environ` *before* `load_from_vault` runs (their
+  shell, IDE run config, or `direnv` — not `get_config`'s own `env_files`
+  tier, which runs *after* vault injection and would otherwise be blocked
+  by it, not the other way around). Get the ordering right and vault becomes
+  the floor with zero environment-specific branching: whatever is already
+  in the environment wins, vault fills the rest.
 
 ---
 

@@ -153,6 +153,12 @@ Le même schéma s'applique à n'importe quel client de vault : remplacez
 `azure.keyvault.secrets` — seul l'appel de récupération change, pas le
 point d'injection.
 
+> Une version exécutable et sans dépendance de `load_from_vault` se trouve
+> dans [`examples/vault_config.py`](examples/vault_config.py) — lancez-la
+> directement avec `python examples/vault_config.py`. Les deux décisions
+> ci-dessous sont vérifiées pour de vrai (pas seulement affirmées en prose)
+> par [`tests/test_vault_config_example.py`](tests/test_vault_config_example.py).
+
 ```mermaid
 sequenceDiagram
     participant App as Votre app
@@ -179,13 +185,17 @@ sequenceDiagram
   mémoire uniquement, au prix d'être visibles par tout sous-processus lancé
   par `system()` (les processus enfants héritent de l'environnement).
 
-- **Parité dev/prod, si vous la voulez.** `load_dotenv()` (niveau 2)
-  n'écrase pas par défaut les clés déjà présentes dans `os.environ`. Donc si
-  vous appelez `load_from_vault(...)` *avant* `get_config`, les valeurs
-  fournies par le vault deviennent le plancher, et un fichier `.env` local
-  d'un développeur peut toujours surcharger des clés individuelles en
-  développement local — le vault comble ce que le `.env` ne définit pas,
-  sans aucune branche de code entre les environnements.
+- **Parité dev/prod, si vous la voulez.** `load_dotenv()` (niveau 2) et
+  `os.environ.setdefault` partagent la même règle non destructive : la clé
+  déjà présente l'emporte, la nouvelle source ne comble que les trous.
+  L'ordre compte donc : `load_from_vault` doit utiliser `setdefault`, pas une
+  affectation directe, et « un `.env` de développeur surcharge le vault » ne
+  vaut que pour un `.env` déjà chargé dans `os.environ` *avant* l'exécution
+  de `load_from_vault` (son shell, sa config IDE, `direnv` — pas le niveau
+  `env_files` propre à `get_config`, qui s'exécute *après* l'injection du
+  vault et serait au contraire bloqué par elle). Avec le bon ordre, le vault
+  devient le plancher sans aucune branche de code selon l'environnement : ce
+  qui est déjà présent l'emporte, le vault comble le reste.
 
 ---
 
