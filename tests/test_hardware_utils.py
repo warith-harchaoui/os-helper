@@ -71,20 +71,16 @@ def test_parse_memory_gb_units_and_garbage() -> None:
     assert hardware_utils._parse_memory_gb("not a number") is None
 
 
-@pytest.mark.parametrize(
-    ("sys_platform", "expected"),
-    [
+def test_platform_name_maps_sys_platform(monkeypatch: pytest.MonkeyPatch) -> None:
+    cases = [
         ("darwin", "darwin"),
         ("win32", "windows"),
         ("linux", "linux"),
         ("freebsd13", "linux"),  # every other POSIX platform folds into "linux"
-    ],
-)
-def test_platform_name_maps_sys_platform(
-    monkeypatch: pytest.MonkeyPatch, sys_platform: str, expected: str
-) -> None:
-    monkeypatch.setattr(hardware_utils.sys, "platform", sys_platform)
-    assert hardware_utils.platform_name() == expected
+    ]
+    for sys_platform, expected in cases:
+        monkeypatch.setattr(hardware_utils.sys, "platform", sys_platform)
+        assert hardware_utils.platform_name() == expected, sys_platform
 
 
 def test_gpu_vendor_detects_each_backend(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -225,7 +221,7 @@ def test_gpu_utilization_percent_dispatches_by_vendor(monkeypatch: pytest.Monkey
     assert hardware_utils.gpu_utilization_percent("cpu") is None
 
 
-def test_hardware_info_public_contract_on_this_machine() -> None:
+def test_hardware_info_and_live_metrics_are_sane_on_this_machine() -> None:
     info = hardware_utils.hardware_info()
     assert set(info) == {
         "platform", "cpu", "ram_gb", "available_ram_gb", "disk",
@@ -238,9 +234,6 @@ def test_hardware_info_public_contract_on_this_machine() -> None:
     assert 0 <= info["available_ram_gb"] <= info["ram_gb"]
     assert set(info["disk"]) == {"free_gb", "used_gb", "total_gb", "percent_used"}
     assert isinstance(info["gpus"], list)
-
-
-def test_live_metrics_are_sane_on_this_machine() -> None:
     # These call the real platform probes (sysctl / /proc/cpuinfo / psutil /
     # shutil.disk_usage); only the loose public contract is asserted, not an
     # exact value, since the CI box's actual load/free-space is unknown.

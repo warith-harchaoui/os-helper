@@ -26,31 +26,24 @@ import pytest
 from os_helper import system_utils
 
 
-@pytest.mark.parametrize(
-    ("reported", "windows", "linux_", "macos_", "unix_"),
-    [
+def test_os_detection_dispatches_on_platform_system(monkeypatch: pytest.MonkeyPatch) -> None:
+    cases = [
         ("Windows", True, False, False, False),
         ("Linux", False, True, False, True),
         ("Darwin", False, False, True, True),
         ("FreeBSD", False, False, False, False),
-    ],
-)
-def test_os_detection_dispatches_on_platform_system(
+    ]
+    for reported, windows, linux_, macos_, unix_ in cases:
+        monkeypatch.setattr(system_utils.platform, "system", lambda r=reported: r)
+        assert system_utils.windows() is windows, reported
+        assert system_utils.linux() is linux_, reported
+        assert system_utils.macos() is macos_, reported
+        assert system_utils.unix() is unix_, reported
+
+
+def test_get_nb_workers_pool_size_env_override_and_no_cpu_count(
     monkeypatch: pytest.MonkeyPatch,
-    reported: str,
-    windows: bool,
-    linux_: bool,
-    macos_: bool,
-    unix_: bool,
 ) -> None:
-    monkeypatch.setattr(system_utils.platform, "system", lambda: reported)
-    assert system_utils.windows() is windows
-    assert system_utils.linux() is linux_
-    assert system_utils.macos() is macos_
-    assert system_utils.unix() is unix_
-
-
-def test_get_nb_workers_pool_size_and_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(system_utils.os, "cpu_count", lambda: 4)
     monkeypatch.delenv("NB_WORKERS", raising=False)
 
@@ -67,12 +60,9 @@ def test_get_nb_workers_pool_size_and_env_override(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("NB_WORKERS", "not-a-number")
     assert system_utils.get_nb_workers(0) == 4
 
-
-def test_get_nb_workers_falls_back_to_one_without_cpu_count(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(system_utils.os, "cpu_count", lambda: None)
+    # os.cpu_count() returning None (exotic sandbox) falls back to 1 worker.
     monkeypatch.delenv("NB_WORKERS", raising=False)
+    monkeypatch.setattr(system_utils.os, "cpu_count", lambda: None)
     assert system_utils.get_nb_workers(0) == 1
 
 
@@ -86,12 +76,10 @@ def test_system_runs_command_and_captures_output() -> None:
     assert result["err"] == ""
 
 
-def test_system_raises_on_nonzero_exit_when_checked() -> None:
+def test_system_exit_code_checked_vs_tolerated() -> None:
     with pytest.raises(AssertionError, match="failed with exit code"):
         system_utils.system(f"{sys.executable} -c \"import sys; sys.exit(1)\"")
 
-
-def test_system_tolerates_nonzero_exit_when_not_checked() -> None:
     result = system_utils.system(
         f"{sys.executable} -c \"import sys; sys.exit(1)\"", check_exitcode=False
     )
@@ -192,11 +180,12 @@ def test_openfile_dispatches_by_platform(monkeypatch: pytest.MonkeyPatch) -> Non
     with pytest.raises(OSError, match="Unsupported operating system"):
         system_utils.openfile("/tmp/report.pdf")
 
-
-def test_openfile_uses_startfile_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Windows uses os.startfile directly, not the system()/subprocess path.
     monkeypatch.setattr(system_utils.platform, "system", lambda: "Windows")
-    calls: list[str] = []
+    startfile_calls: list[str] = []
     # os.startfile only exists on Windows; inject a stand-in for this test.
-    monkeypatch.setattr(system_utils.os, "startfile", lambda path: calls.append(path), raising=False)
+    monkeypatch.setattr(
+        system_utils.os, "startfile", lambda path: startfile_calls.append(path), raising=False
+    )
     system_utils.openfile("C:\\report.pdf")
-    assert calls == ["C:\\report.pdf"]
+    assert startfile_calls == ["C:\\report.pdf"]

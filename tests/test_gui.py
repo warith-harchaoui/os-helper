@@ -83,8 +83,9 @@ def test_type_family_classification():
     assert _type_family("noext") == "other"
 
 
-def test_build_tree_payload_sizes_and_dedupe(sample_tree):
-    """The tree payload rolls sizes up and finds the duplicate cluster."""
+def test_build_tree_payload_sizes_dedupe_and_rejects_non_directory(sample_tree, tmp_path):
+    """The tree payload rolls sizes up, finds the duplicate cluster, and
+    scanning a non-directory raises ``NotADirectoryError``."""
     payload = build_tree_payload(sample_tree, dedupe=True)
 
     # Root is absolute and points at the scanned directory.
@@ -103,24 +104,21 @@ def test_build_tree_payload_sizes_and_dedupe(sample_tree):
     assert len(paths) == 2
     assert {os.path.basename(p) for p in paths} == {"a.txt", "b.txt"}
 
-
-def test_build_tree_payload_rejects_non_directory(tmp_path):
-    """Scanning a non-directory raises ``NotADirectoryError``."""
     missing = str(tmp_path / "does-not-exist")
     with pytest.raises(NotADirectoryError):
         build_tree_payload(missing)
 
 
-def test_gui_route_returns_html(sample_tree):
-    """``GET /gui`` returns a 200 HTML page containing the app markup."""
+def test_gui_and_api_tree_routes(sample_tree):
+    """``GET /gui`` returns the app page; ``GET /api/tree`` returns valid JSON
+    for a real root and a clean 400 (not a 500) for a bad one."""
     client = TestClient(create_app(default_root=sample_tree))
-    resp = client.get("/gui")
 
+    resp = client.get("/gui")
     assert resp.status_code == 200
     # FastAPI's HTMLResponse sets an HTML content type.
     assert resp.headers["content-type"].startswith("text/html")
     body = resp.text
-    # Sanity-check that it is really our page, not an error page.
     assert "<title>OS Helper — Tree Radar</title>" in body
     # The launch root must be injected so the page auto-scans it. The path is
     # embedded as a JS string literal, so backslashes are escaped (Windows
@@ -128,26 +126,14 @@ def test_gui_route_returns_html(sample_tree):
     # the server actually writes, not the raw OS path — otherwise this fails on
     # Windows even though the injection is correct.
     abs_root = os.path.abspath(sample_tree)
-    # json.dumps yields the same backslash-escaping as Python's repr for a
-    # plain path string, and is what a JS string literal expects too.
     assert json.dumps(abs_root)[1:-1] in body
 
-
-def test_api_tree_route_returns_valid_json(sample_tree):
-    """``GET /api/tree`` returns a valid, well-shaped JSON tree."""
-    client = TestClient(create_app(default_root=sample_tree))
     resp = client.get("/api/tree", params={"root": sample_tree})
-
     assert resp.status_code == 200
     data = resp.json()  # raises if the body is not valid JSON
-    # Contract keys are present and the tree root is a directory node.
     assert set(data.keys()) == {"root", "tree", "dedupe"}
     assert data["tree"]["is_dir"] is True
     assert data["tree"]["size"] > 0
 
-
-def test_api_tree_route_bad_root_is_400(sample_tree):
-    """A non-directory root yields a clean HTTP 400, not a 500."""
-    client = TestClient(create_app(default_root=sample_tree))
     resp = client.get("/api/tree", params={"root": os.path.join(sample_tree, "nope")})
     assert resp.status_code == 400

@@ -23,55 +23,37 @@ def client() -> "starlette_testclient.TestClient":
     return TestClient(app)
 
 
-def test_health(client) -> None:
+def test_get_endpoints(client) -> None:
     res = client.get("/health")
     assert res.status_code == 200 and res.json()["status"] == "ok"
 
-
-def test_os_endpoint(client) -> None:
     res = client.get("/os")
     assert res.status_code == 200
     assert res.json()["os"] in {"macos", "linux", "windows", "unknown"}
 
-
-def test_hardware_endpoint(client) -> None:
     res = client.get("/hardware")
     assert res.status_code == 200
     data = res.json()
-    assert data["ram_gb"] > 0
-    assert data["cpu"]["logical_cores"] >= 1
+    assert data["ram_gb"] > 0 and data["cpu"]["logical_cores"] >= 1
 
-
-def test_hash_string_endpoint(client) -> None:
-    res = client.post("/hash/string", json={"text": "hello", "size": 8})
-    assert res.status_code == 200
-    assert len(res.json()["hash"]) == 8
-
-
-def test_ascii_endpoint(client) -> None:
-    res = client.post("/str/ascii", json={"text": "Café-Con-Leche!"})
-    assert res.status_code == 200
-    assert res.json()["result"] == "cafe-con-leche"
-
-
-def test_format_size_endpoint(client) -> None:
     res = client.get("/misc/format-size", params={"size": 12345678})
-    assert res.status_code == 200
-    assert "MB" in res.json()["formatted"]
+    assert res.status_code == 200 and "MB" in res.json()["formatted"]
 
-
-def test_now_endpoint(client) -> None:
     res = client.get("/misc/now", params={"fmt": "filename"})
-    assert res.status_code == 200
-    assert res.json()["timestamp"]
+    assert res.status_code == 200 and res.json()["timestamp"]
 
 
-def test_config_endpoint(client, tmp_path) -> None:
+def test_post_endpoints(client, tmp_path) -> None:
+    res = client.post("/hash/string", json={"text": "hello", "size": 8})
+    assert res.status_code == 200 and len(res.json()["hash"]) == 8
+
+    res = client.post("/str/ascii", json={"text": "Café-Con-Leche!"})
+    assert res.status_code == 200 and res.json()["result"] == "cafe-con-leche"
+
     env_file = tmp_path / ".env"
     env_file.write_text("MY_KEY=my_value\n")
     res = client.post(
         "/config",
         json={"keys": ["MY_KEY"], "config_type": "test", "env_files": [str(env_file)]},
     )
-    assert res.status_code == 200
-    assert res.json()["MY_KEY"] == "my_value"
+    assert res.status_code == 200 and res.json()["MY_KEY"] == "my_value"

@@ -23,40 +23,37 @@ import pytest
 from os_helper import config_utils
 
 
-def test_get_config_loads_from_json_file(tmp_path) -> None:
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps({"host": "localhost", "port": 5432}))
-    config = config_utils.get_config(["host", "port"], "database", path=str(config_path))
-    assert config == {"host": "localhost", "port": 5432}
+def test_get_config_loads_from_json_or_yaml_file(tmp_path) -> None:
+    json_path = tmp_path / "config.json"
+    json_path.write_text(json.dumps({"host": "localhost", "port": 5432}))
+    assert config_utils.get_config(["host", "port"], "database", path=str(json_path)) == {
+        "host": "localhost",
+        "port": 5432,
+    }
+
+    yaml_path = tmp_path / "config.yaml"
+    yaml_path.write_text("host: localhost\nport: 5432\n")
+    assert config_utils.get_config(["host", "port"], "database", path=str(yaml_path)) == {
+        "host": "localhost",
+        "port": 5432,
+    }
 
 
-def test_get_config_loads_from_yaml_file(tmp_path) -> None:
-    config_path = tmp_path / "config.yaml"
-    config_path.write_text("host: localhost\nport: 5432\n")
-    config = config_utils.get_config(["host", "port"], "database", path=str(config_path))
-    assert config == {"host": "localhost", "port": 5432}
-
-
-def test_get_config_file_missing_a_key_falls_through_to_env(
+def test_get_config_falls_through_to_env_on_missing_key_or_unsupported_extension(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps({"host": "localhost"}))  # "port" missing
+    # A recognized format missing a required key falls through to env.
+    json_path = tmp_path / "config.json"
+    json_path.write_text(json.dumps({"host": "localhost"}))  # "port" missing
     monkeypatch.setenv("HOST", "envhost")
     monkeypatch.setenv("PORT", "1234")
-    config = config_utils.get_config(
-        ["host", "port"], "database", path=str(config_path), env_files=[]
-    )
+    config = config_utils.get_config(["host", "port"], "database", path=str(json_path), env_files=[])
     assert config == {"host": "envhost", "port": "1234"}
 
-
-def test_get_config_unsupported_extension_falls_through(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    config_path = tmp_path / "config.txt"
-    config_path.write_text("host=localhost")
-    monkeypatch.setenv("HOST", "envhost")
-    config = config_utils.get_config(["host"], "database", path=str(config_path), env_files=[])
+    # An unrecognized extension is a soft miss, not an error: falls through too.
+    txt_path = tmp_path / "config.txt"
+    txt_path.write_text("host=localhost")
+    config = config_utils.get_config(["host"], "database", path=str(txt_path), env_files=[])
     assert config == {"host": "envhost"}
 
 

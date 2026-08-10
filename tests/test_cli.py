@@ -6,6 +6,14 @@ that do not need the network or a real HTTP server. The goal is to
 prevent regressions in the CLI entry points — subcommand names, flag
 names, dispatch wiring — without pulling in extra runtime deps.
 
+Both surfaces are meant to be exact twins, so each test below drives BOTH
+the argparse and the click CLI for the same scenario in one function
+(a loop, not `@pytest.mark.parametrize`) rather than duplicating every
+case into a separate `test_argparse_*` / `test_click_*` pair — that
+duplication is exactly the kind of drift this suite exists to catch, so
+collapsing it into one shared assertion per scenario is *more* rigorous,
+not less: a fix applied to only one surface now fails in the same place.
+
 Usage Example
 -------------
 >>> #   pytest tests/test_cli.py
@@ -17,6 +25,8 @@ Warith Harchaoui, Ph.D. — https://linkedin.com/in/warith-harchaoui/
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 # The click CLI needs the ``click`` runtime dep, which lives in the
@@ -25,156 +35,73 @@ click = pytest.importorskip("click")
 
 from click.testing import CliRunner  # noqa: E402
 
-# ---------------------------------------------------------------------------
-# argparse CLI
-# ---------------------------------------------------------------------------
-
+from os_helper.cli_argparse import build_parser, main as argparse_main  # noqa: E402
+from os_helper.cli_click import cli as click_cli  # noqa: E402
 
 EXPECTED_GROUPS = {"os", "hardware", "path", "hash", "str", "config", "temp", "misc", "prof"}
 
 
-def test_argparse_parser_builds_without_error():
-    """Building the parser should never fail (imports, subcommand wiring)."""
-    from os_helper.cli_argparse import build_parser
+def _run_argparse(args: list[str], capsys) -> tuple[int, str]:
+    """Invoke the argparse CLI in-process, returning (exit_code, stdout)."""
+    try:
+        rc = argparse_main(args)
+    except SystemExit as exc:
+        rc = exc.code
+    return rc, capsys.readouterr().out
 
+
+def _run_click(args: list[str]) -> tuple[int, str]:
+    """Invoke the click CLI in-process, returning (exit_code, stdout)."""
+    result = CliRunner().invoke(click_cli, args)
+    return result.exit_code, result.output
+
+
+def test_both_clis_expose_the_expected_subcommand_groups() -> None:
     parser = build_parser()
     subparsers_action = next(
         a for a in parser._actions if a.__class__.__name__ == "_SubParsersAction"
     )
     assert EXPECTED_GROUPS.issubset(set(subparsers_action.choices.keys()))
+    assert EXPECTED_GROUPS.issubset(set(click_cli.commands.keys()))
 
 
-def test_argparse_help_exits_zero(capsys):
-    """``os-helper --help`` should exit with code 0 and print usage."""
-    from os_helper.cli_argparse import main
+def test_both_clis_help_exits_zero_for_root_and_every_group(capsys) -> None:
+    rc, out = _run_argparse(["--help"], capsys)
+    assert rc == 0 and "os-helper" in out.lower()
+    code, out = _run_click(["--help"])
+    assert code == 0 and "os helper" in out.lower()
 
-    with pytest.raises(SystemExit) as exc:
-        main(["--help"])
-    assert exc.value.code == 0
-    captured = capsys.readouterr()
-    assert "os-helper" in captured.out.lower()
-
-
-@pytest.mark.parametrize("group", sorted(EXPECTED_GROUPS))
-def test_argparse_group_help_exits_zero(group):
-    """Every top-level group's ``--help`` should exit 0."""
-    from os_helper.cli_argparse import main
-
-    with pytest.raises(SystemExit) as exc:
-        main([group, "--help"])
-    assert exc.value.code == 0
+    for group in sorted(EXPECTED_GROUPS):
+        rc, _ = _run_argparse([group, "--help"], capsys)
+        assert rc == 0, f"argparse group '{group}' --help"
+        code, _ = _run_click([group, "--help"])
+        assert code == 0, f"click group '{group}' --help"
 
 
-def test_argparse_os_system_runs(capsys):
-    """`os-helper os system` should print a known OS name."""
-    from os_helper.cli_argparse import main
+def test_both_clis_run_representative_subcommands(capsys) -> None:
+    # (args, assertion over stdout) — one representative leaf command per
+    # group that needs neither the network nor a real HTTP server.
+    cases: list[tuple[list[str], "callable"]] = [
+        (["os", "system"], lambda out: out.strip() in {"macos", "linux", "windows", "unknown"}),
+        (["hash", "string", "hello", "--size", "8"], lambda out: len(out.strip()) == 8),
+        (["str", "ascii", "Café-Con-Leche!"], lambda out: out.strip() == "cafe-con-leche"),
+        (["misc", "format-size", "12345678"], lambda out: "MB" in out),
+    ]
+    for args, check in cases:
+        rc, out = _run_argparse(args, capsys)
+        assert rc == 0 and check(out), f"argparse {args}"
+        code, out = _run_click(args)
+        assert code == 0 and check(out), f"click {args}"
 
-    rc = main(["os", "system"])
+
+def test_both_clis_hardware_info_prints_a_valid_snapshot(capsys) -> None:
+    rc, out = _run_argparse(["hardware", "info"], capsys)
     assert rc == 0
-    out = capsys.readouterr().out.strip()
-    assert out in {"macos", "linux", "windows", "unknown"}
-
-
-def test_argparse_hardware_info_runs(capsys):
-    """`os-helper hardware info` should print a JSON hardware snapshot."""
-    import json
-
-    from os_helper.cli_argparse import main
-
-    rc = main(["hardware", "info"])
-    assert rc == 0
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(out)
     assert payload["ram_gb"] > 0
     assert payload["cpu"]["logical_cores"] >= 1
 
-
-def test_argparse_hash_string_runs(capsys):
-    """`os-helper hash string hello --size 8` should print an 8-char hash."""
-    from os_helper.cli_argparse import main
-
-    rc = main(["hash", "string", "hello", "--size", "8"])
-    assert rc == 0
-    assert len(capsys.readouterr().out.strip()) == 8
-
-
-def test_argparse_str_ascii_runs(capsys):
-    """`os-helper str ascii 'Café'` should print a lowercased ASCII slug."""
-    from os_helper.cli_argparse import main
-
-    rc = main(["str", "ascii", "Café-Con-Leche!"])
-    assert rc == 0
-    assert capsys.readouterr().out.strip() == "cafe-con-leche"
-
-
-def test_argparse_misc_format_size_runs(capsys):
-    """`os-helper misc format-size 12345678` should print a MB string."""
-    from os_helper.cli_argparse import main
-
-    rc = main(["misc", "format-size", "12345678"])
-    assert rc == 0
-    assert "MB" in capsys.readouterr().out
-
-
-# ---------------------------------------------------------------------------
-# click CLI
-# ---------------------------------------------------------------------------
-
-
-def test_click_group_has_expected_subgroups():
-    """The click root group must expose the same top-level groups."""
-    from os_helper.cli_click import cli
-
-    assert EXPECTED_GROUPS.issubset(set(cli.commands.keys()))
-
-
-def test_click_help_exits_zero():
-    """``os-helper-click --help`` should exit 0."""
-    from os_helper.cli_click import cli
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["--help"])
-    assert result.exit_code == 0
-    assert "os helper" in result.output.lower()
-
-
-@pytest.mark.parametrize("group", sorted(EXPECTED_GROUPS))
-def test_click_group_help_exits_zero(group):
-    """Every top-level click group's ``--help`` should exit 0."""
-    from os_helper.cli_click import cli
-
-    runner = CliRunner()
-    result = runner.invoke(cli, [group, "--help"])
-    assert result.exit_code == 0
-
-
-def test_click_hardware_info_runs():
-    """`os-helper-click hardware info` should print a JSON hardware snapshot."""
-    import json
-
-    from os_helper.cli_click import cli
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["hardware", "info"])
-    assert result.exit_code == 0
-    payload = json.loads(result.output)
+    code, out = _run_click(["hardware", "info"])
+    assert code == 0
+    payload = json.loads(out)
     assert payload["ram_gb"] > 0
-
-
-def test_click_hash_string_runs():
-    """`os-helper-click hash string hello --size 8` should print an 8-char hash."""
-    from os_helper.cli_click import cli
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["hash", "string", "hello", "--size", "8"])
-    assert result.exit_code == 0
-    assert len(result.output.strip()) == 8
-
-
-def test_click_str_ascii_runs():
-    """`os-helper-click str ascii Café-Con-Leche!` should print a slug."""
-    from os_helper.cli_click import cli
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["str", "ascii", "Café-Con-Leche!"])
-    assert result.exit_code == 0
-    assert result.output.strip() == "cafe-con-leche"
