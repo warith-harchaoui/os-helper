@@ -43,6 +43,8 @@ market that, here is the honest, case-by-case reality:
 
 [📋 Examples](https://github.com/warith-harchaoui/os-helper/blob/main/EXAMPLES.md)
 
+[🔐 Credentials Management](https://github.com/warith-harchaoui/os-helper/blob/main/CREDENTIALS_MANAGEMENT.md)
+
 ## Features
 
 Everything is a thin, well-typed, well-documented wrapper — no heavy system

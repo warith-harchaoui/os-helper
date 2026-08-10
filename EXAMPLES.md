@@ -230,6 +230,11 @@ config = get_config(keys=["api_key"], config_type="API", path=None, env_files=[]
 print(config)  # {'api_key': 'sk-example'}
 ```
 
+> Loading real secrets (API keys, DB credentials) this way? See
+> [CREDENTIALS_MANAGEMENT.md](CREDENTIALS_MANAGEMENT.md) for the security
+> caveats and how to layer a vault (HashiCorp Vault, AWS/GCP/Azure secret
+> managers) on top of `get_config`.
+
 ## File and Directory Utilities
 
 The following utilities help you work with files and directories efficiently, including checking their existence, managing paths, and performing operations like zipping folders or describing contents.
