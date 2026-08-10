@@ -28,16 +28,20 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 RUN useradd --create-home --shell /bin/bash app
 WORKDIR /app
 
-# Copy the package first so pip picks up pyproject.toml before we
-# invalidate the layer with source changes.
+# requirements.txt first (core deps only) so this layer caches independently
+# of source changes; the package itself (with the [cli] extra) is installed
+# once the source is in place, right below.
+COPY --chown=app:app requirements.txt ./
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
+
 COPY --chown=app:app pyproject.toml README.md LICENSE ./
 COPY --chown=app:app os_helper ./os_helper
 
 # Install with the [cli] extra so both CLI twins are available. The
 # argparse CLI (`os-helper`) works out of the box; the click twin
 # (`os-helper-click`) needs the [cli] extra installed here.
-RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir '.[cli]'
+RUN pip install --no-cache-dir '.[cli]'
 
 USER app
 ENV PYTHONUNBUFFERED=1
