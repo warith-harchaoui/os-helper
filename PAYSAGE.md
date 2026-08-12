@@ -5,12 +5,12 @@
 Bibliothèques Python voisines et concurrentes dans l'espace « utilitaires
 multi-OS + système de fichiers + configuration », comparées à `os-helper`.
 Les notes vont de ⭐ (1) à ⭐⭐⭐⭐⭐ (5), évaluées sur la tâche visée par
-`os-helper` — la colle utilitaire des pipelines d'IA (détection de l'OS,
+`os-helper` : la colle utilitaire des pipelines d'IA (détection de l'OS,
 manipulation de chemins, hachage, chargement de configuration, dossiers
 temporaires, téléchargements intelligents, petits wrappers de sous-processus,
 journalisation colorée). Une
 bibliothèque optimisée pour un tout autre usage (par ex. un système de
-fichiers asynchrone complet, du stockage objet distant) n'est pas pénalisée —
+fichiers asynchrone complet, du stockage objet distant) n'est pas pénalisée ;
 la note reflète seulement l'adéquation à *ce* créneau.
 
 ## En un coup d'œil
@@ -64,7 +64,7 @@ Là où `os-helper` gagne dans la famille :
 
 1. **Surfaces multiples**. Chaque utilitaire est accessible depuis Python,
    une CLI argparse, une CLI click, une API HTTP (FastAPI) et des outils MCP
-   (pour les agents) — mêmes signatures, aucune dérive.
+   (pour les agents), toujours avec les mêmes signatures, aucune dérive.
 2. **Zéro dépendance lourde** pour le cœur (`requests`, `pyyaml`,
    `python-dotenv`, `validators`). La CLI click est un extra optionnel, donc
    `pip install os-helper` reste léger.
@@ -75,23 +75,23 @@ Là où `os-helper` gagne dans la famille :
 
 ## Quand choisir quoi
 
-- **`os-helper`** — scripts et bibliothèques du quotidien dans la suite AI
+- **`os-helper`** : scripts et bibliothèques du quotidien dans la suite AI
   Helpers : journalisation cohérente, chemins multi-plateformes, ergonomie
   « donne-moi juste un hash / un dossier temporaire / une valeur `.env` ».
-- **`pathlib` (stdlib)** — quand on veut zéro dépendance tierce et qu'on
+- **`pathlib` (stdlib)** : quand on veut zéro dépendance tierce et qu'on
   accepte de câbler soi-même journalisation / configuration / hachage.
-- **`click` / `typer`** — quand la CLI *est* le produit et qu'on veut des
+- **`click` / `typer`** : quand la CLI *est* le produit et qu'on veut des
   décorateurs riches / la complétion shell prête à l'emploi (nous livrons déjà
   un jumeau click, les deux mondes sont couverts).
-- **`pydantic-settings`** — quand la configuration est complexe, typée et
+- **`pydantic-settings`** : quand la configuration est complexe, typée et
   validée contre un schéma.
-- **`fsspec` / `smart_open`** — quand on a besoin d'une abstraction uniforme
+- **`fsspec` / `smart_open`** : quand on a besoin d'une abstraction uniforme
   de système de fichiers sur S3 / GCS / Azure / disque local.
-- **`pooch`** — quand on a besoin de téléchargements vérifiés par hachage de
+- **`pooch`** : quand on a besoin de téléchargements vérifiés par hachage de
   fichiers de données scientifiques, avec registre, contrôles d'intégrité et
   cache local.
-- **`platformdirs`** — quand on veut seulement les répertoires utilisateur
+- **`platformdirs`** : quand on veut seulement les répertoires utilisateur
   multi-OS canoniques (cache / config / données) et rien d'autre.
-- **`psutil`** — quand on a besoin de télémétrie fine par processus (cartes
+- **`psutil`** : quand on a besoin de télémétrie fine par processus (cartes
   mémoire, affinité CPU, compteurs d'E/S par processus) au-delà de
   l'instantané matériel CPU/RAM/GPU en un appel d'`os-helper`.

@@ -59,7 +59,7 @@ This document provides detailed examples for using the `OS Helper` module to sim
 
 ## Setup and Configuration
 
-Install the package from PyPI (or directly from GitHub — see the README):
+Install the package from PyPI (or directly from GitHub; see the README):
 
 ```bash
 # Core utilities (library + argparse CLI)
@@ -69,7 +69,7 @@ pip install os-helper
 pip install "os-helper[cli]"
 ```
 
-Then import the library — examples below use the conventional `osh` alias:
+Then import the library; examples below use the conventional `osh` alias:
 
 ```python
 import os_helper as osh
@@ -103,7 +103,7 @@ if unix():
 
 `get_nb_workers` follows scikit-learn's `n_jobs` convention (`0` = whole
 pool, positive = exact count, negative = `pool_size + n + 1`), overridable
-process-wide via the `NB_WORKERS` environment variable — handy in containers
+process-wide via the `NB_WORKERS` environment variable, handy in containers
 where the visible CPU count lies about the real quota.
 
 ```python
@@ -119,14 +119,14 @@ print(getpid())              # current process ID, as a string
 
 ## Hardware Inspection
 
-Cross-platform hardware facts and live metrics — no heavy system dependency
+Cross-platform hardware facts and live metrics: no heavy system dependency
 beyond `psutil` (core) and the platform's own tools (`system_profiler` /
 `nvidia-smi` / `rocm-smi` / `ioreg`, shelled out to only when relevant).
 
 ### One-Call Snapshot
 
 `hardware_info()` aggregates every probe below into a single JSON-ready
-dict — the same payload the `hardware info` CLI/API/MCP surfaces return.
+dict, the same payload the `hardware info` CLI/API/MCP surfaces return.
 
 ```python
 from os_helper import hardware_info
@@ -180,7 +180,7 @@ if gpu_vendor() == "apple":
 
 Distinct from the static facts above: these are sampled fresh on every call
 (fine for a one-shot diagnostic report or a CLI print; not for a hot loop).
-`hardware_info()` already folds them in — reach for these directly only when
+`hardware_info()` already folds them in; reach for these directly only when
 you want a single figure without paying for a whole snapshot.
 
 ```python
@@ -201,9 +201,9 @@ print(gpu_utilization_percent())  # 14.0, or None
 
 ## Configuration Loading
 
-`get_config` resolves settings through a fixed fallback order — an explicit
+`get_config` resolves settings through a fixed fallback order: an explicit
 JSON/YAML file (or the first matching file in a folder), then `.env` files
-merged into `os.environ`, then the process environment — and raises a clear
+merged into `os.environ`, then the process environment. It raises a clear
 `RuntimeError` only if none of the sources satisfy every required key.
 
 ```python
@@ -222,7 +222,7 @@ print(config)  # {'host': 'localhost', 'port': 5432}
 #    merged into os.environ (default: [".env"] in the current directory).
 config = get_config(keys=["api_key"], config_type="API", env_files=[".env.local"])
 
-# 3) Then plain environment variables — tried as UPPER_CASE first
+# 3) Then plain environment variables, tried as UPPER_CASE first
 #    (the conventional spelling), then the exact key as given.
 import os
 os.environ["API_KEY"] = "sk-example"
@@ -289,7 +289,7 @@ print(absolute_path)  # Output: '/home/user/relative/path/to/file'
 from os_helper import checkfile, copyfile, remove_files, join, recursive_glob, path_without_home
 
 # Assert a file exists (and optionally isn't empty), raising with a clear
-# message otherwise — handy as a precondition at the top of a function.
+# message otherwise; handy as a precondition at the top of a function.
 checkfile("example.txt", "Expected input file is missing", check_empty=True)
 
 # Copy a file, creating any missing destination directories along the way.
@@ -475,7 +475,7 @@ with temporary_filename(suffix=".wav", directory=work) as tmp:
 
 `temporary_remote_file` uploads a local file to wherever you point it (S3,
 GCS, SFTP, an HTTP endpoint, an in-memory dict…) and guarantees the remote
-artifact is deleted when the `with` block exits — even if the body raises.
+artifact is deleted when the `with` block exits, even if the body raises.
 
 Provide two callables for your backend: `upload(local_path) -> remote_id`
 and `delete(remote_id) -> None`. Optionally pass `checkfile_function` to
@@ -681,7 +681,7 @@ info("The process started successfully.")
 # `error(...)` and `critical(...)` both log without raising.
 # Use `check(cond, msg)` for assert-style failure, or raise explicitly.
 error("Something went wrong, but execution continues.")
-critical("Unrecoverable state reached — logged, caller decides what's next.")
+critical("Unrecoverable state reached, logged, caller decides what's next.")
 check(1 + 1 == 2, "arithmetic is broken")
 ```
 
@@ -776,7 +776,7 @@ else:
 
 `download_file` uses `progress_bar` internally; reach for it directly when
 wrapping your own transfer (an S3/SFTP callback, a custom chunked upload) so
-every byte-moving operation in your project shows the same UI — byte-scaled
+every byte-moving operation in your project shows the same UI: byte-scaled
 units, and auto-suppressed when `stderr` isn't an interactive terminal (CI
 logs, piped output).
 
@@ -793,13 +793,13 @@ bar.close()
 
 ### Open Files with Default Applications
 
-The openfile function opens a file using the default application for its type.
+`openfile` opens a file with the OS default application for its type.
 
 ```python
 from os_helper import openfile
 
 # Open a PDF file using the default viewer
-openfile("example.pdf") # put your own file to open by your own OS instead of this fake example one
+openfile("example.pdf")  # replace with a real file on your machine
 ```
 
 ## Profiling Helpers
@@ -830,7 +830,7 @@ print(f"Real time: {t['seconds']:.3f} s ({time2str(t['seconds'])})")
 ### CPU Timer
 
 `cpu_timer` reports CPU consumed by this process (user + system, summed
-across threads) — sleeps and I/O don't count, so it isolates "real
+across threads); sleeps and I/O don't count, so it isolates "real
 computation". Does NOT include subprocesses (use `wall_timer` for those).
 
 ```python
@@ -844,7 +844,7 @@ print(f"CPU time: {t['seconds']:.3f} s")
 
 ### GPU Timer
 
-Lazy `torch` import — `os-helper` itself does NOT depend on PyTorch.
+Lazy `torch` import: `os-helper` itself does NOT depend on PyTorch.
 If torch isn't installed or no GPU is available at call time, raises a
 clear `RuntimeError` (the helper exists; it just refuses to run).
 

@@ -20,19 +20,19 @@ market that, here is the honest, case-by-case reality:
 1. **Guaranteed local.** os-helper is a pure local filesystem / utility
    toolbox. Nothing is uploaded, there is no telemetry, and there is no
    account. The optional Tree Radar GUI reads your disk and renders the
-   treemap locally in your browser (the server binds to `127.0.0.1` only)
-   — your paths, sizes, and content hashes never leave the machine.
+   treemap locally in your browser (the server binds to `127.0.0.1` only);
+   your paths, sizes, and content hashes never leave the machine.
 
-2. **Not possible to be local — the caveats.** Two helpers make outbound
+2. **Not possible to be local: the caveats.** Two helpers make outbound
    HTTP *by design*, because fetching something is their whole purpose:
    `download_file()` (it downloads a URL you hand it) and the URL-liveness
    checks (`is_working_url()` / `check_url`). `get_user_ip()` also calls a
-   public echo service on purpose. These are the only network in the
+   public echo service on purpose. These are the only network calls in the
    library, and you only trigger them by explicitly calling them.
 
 3. **Your decision.** Nothing here forces the cloud. `temporary_remote_file()`
    can stage to S3/GCS/SFTP, but only when *you* wire it to a remote. If you
-   build network behavior on top of os-helper, that is your choice — never a
+   build network behavior on top of os-helper, that is your choice, never a
    default.
 
 ## Documentation
@@ -47,11 +47,11 @@ market that, here is the honest, case-by-case reality:
 
 ## Features
 
-Everything is a thin, well-typed, well-documented wrapper — no heavy system
+Everything is a thin, well-typed, well-documented wrapper: no heavy system
 dependency, pure-Python across macOS / Linux / Windows.
 
-- **OS detection** — `windows()`, `linux()`, `macos()`, `unix()`.
-- **Hardware inspection** — `hardware_info()` (one-call snapshot), plus its
+- **OS detection**: `windows()`, `linux()`, `macos()`, `unix()`.
+- **Hardware inspection**: `hardware_info()` (one-call snapshot), plus its
   building blocks: `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
   `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
   (name + VRAM per discrete GPU), `apple_chip_name()` /
@@ -59,49 +59,49 @@ dependency, pure-Python across macOS / Linux / Windows.
   figures too: `cpu_percent()`, `available_ram_gb()`, `disk_usage_gb()`,
   `gpu_utilization_percent()` (Apple via IOKit, no `sudo`/`powermetrics`
   needed; NVIDIA via `nvidia-smi`; AMD via `rocm-smi`).
-- **Process & command execution** — `system()` (shell-free `subprocess`, captured
+- **Process and command execution**: `system()` (shell-free `subprocess`, captured
   stdout/stderr, optional exit-code and expected-output checks), `openfile()`
   (open with the OS default app), `getpid()`, `get_nb_workers()` (scikit-learn
   `n_jobs` convention, `NB_WORKERS`-overridable).
-- **Paths** — `join()`, `folder_name_ext()` (`.tar.gz`-aware split),
+- **Paths**: `join()`, `folder_name_ext()` (`.tar.gz`-aware split),
   `absolute2relative_path()`, `relative2absolute_path()`, `path_without_home()`,
   `recursive_glob()`.
-- **Files & directories** — `file_exists()`, `dir_exists()` (with emptiness
+- **Files and directories**: `file_exists()`, `dir_exists()` (with emptiness
   checks), `size_file()`, `checkfile()`, `copyfile()`, `make_directory()`,
   `remove_directory()`, `remove_files()` (best-effort batch).
-- **Temporary resources** — `temporary_filename()` (context-managed, optional
+- **Temporary resources**: `temporary_filename()` (context-managed, optional
   target directory), `temporary_folder()`, `make_temporary_directory()`
   (persistent, caller-owned cleanup), `temporary_remote_file()` (stage to
   S3/GCS/SFTP/anywhere with guaranteed remote cleanup).
-- **Hashing** — `hash_string()`, `hashfile()`, `hashfolder()` (RIPEMD-160 when
+- **Hashing**: `hash_string()`, `hashfile()`, `hashfolder()` (RIPEMD-160 when
   available, BLAKE2b fallback; stable 40-char hex digests cross-platform).
-- **Configuration loading** — `get_config()` with a deterministic fallback order:
-  JSON/YAML file (or folder) → `.env` files → process environment.
-- **Strings** — `emptystring()` (None / empty / whitespace), `asciistring()`
+- **Configuration loading**: `get_config()` with a deterministic fallback order,
+  JSON/YAML file (or folder), then `.env` files, then process environment.
+- **Strings**: `emptystring()` (None / empty / whitespace), `asciistring()`
   (accent-folding, filesystem-safe slugs).
-- **Downloads & networking** — `download_file()` (streaming, flat memory,
+- **Downloads and networking**: `download_file()` (streaming, flat memory,
   adaptive block size, progress bar, returns `{path, content_type, bytes}`),
   `progress_bar()` (shared byte-scaled `tqdm` factory, auto-quiet off-TTY),
   `is_working_url()`, `get_user_ip()`.
-- **Folder reporting & archiving** — `folder_description()` (size map +
-  Bootstrap `index.html` + `description.json`), `zip_folder()`.
-- **Durations & timestamps** — `now_string()`, `format_size()`, `time2str()`,
+- **Folder reporting and archiving**: `folder_description()` (size map,
+  Bootstrap `index.html`, and `description.json`), `zip_folder()`.
+- **Durations and timestamps**: `now_string()`, `format_size()`, `time2str()`,
   `str2time()`.
-- **Timing & profiling** — `wall_timer()`, `cpu_timer()`, `gpu_timer()` (CUDA
+- **Timing and profiling**: `wall_timer()`, `cpu_timer()`, `gpu_timer()` (CUDA
   events / Apple-Silicon MPS, lazy `torch`), and MATLAB-style `tic()` / `toc()`.
-- **Logging surface** — `init_logging()` (colored console + file, named-logger
+- **Logging surface**: `init_logging()` (colored console + file, named-logger
   and live-stream modes), `verbosity()` (integer level get/set), and
   `debug()` / `info()` / `warning()` / `error()` / `critical()` / `check()`.
-- **Multiple surfaces, one codebase** — importable library, an `os-helper` argparse
+- **Multiple surfaces, one codebase**: importable library, an `os-helper` argparse
   CLI (always installed), an `os-helper-click` twin (via the `[cli]` extra), an
   HTTP API (`os-helper-api`, via `[api]`), and MCP tools (`os-helper-mcp`, via
-  `[mcp]`) — the API/MCP surfaces expose only the safe, side-effect-free
+  `[mcp]`). The API/MCP surfaces expose only the safe, side-effect-free
   subset (hardware info, hashing, ASCII, formatting, URL check, config
   loading; no filesystem mutation).
 
 ## Installation
 
-**Prerequisites** — **Python 3.10–3.13** and **git**, cross-platform (os-helper needs no heavy system dependency):
+**Prerequisites**: **Python 3.10–3.13** and **git**, cross-platform (os-helper needs no heavy system dependency):
 
 - 🍎 **macOS** ([Homebrew](https://brew.sh)): `brew install python git`
 - 🐧 **Ubuntu/Debian**: `sudo apt update && sudo apt install -y python3 python3-pip git`
@@ -122,11 +122,14 @@ pip install "os-helper[cli]"
 ### From source (no PyPI)
 
 ```bash
+git clone https://github.com/warith-harchaoui/os-helper.git
+cd os-helper
+
 # Core utilities (library + argparse CLI)
-pip install os-helper
+pip install -e .
 
 # Optional click-based CLI twin
-pip install "os-helper[cli]"
+pip install -e ".[cli]"
 ```
 
 ## Usage
@@ -252,7 +255,7 @@ osh.info(f"Folder {folder_to_zip} zipped into {zip_output}")
 
 ## Multi-surface exposure
 
-`os-helper` is not just a library — the same functions are exposed as a
+`os-helper` is not just a library: the same functions are exposed as a
 Python import, an argparse CLI, a click CLI twin, an HTTP API, and MCP tools:
 
 ```bash
@@ -276,7 +279,7 @@ os-helper-click hardware info
 ### HTTP API + MCP
 
 The library's safe, side-effect-free operations (hardware info, hashing,
-ASCII normalization, size/time formatting, URL reachability, config loading —
+ASCII normalization, size/time formatting, URL reachability, config loading;
 deliberately no filesystem-mutation endpoint) are also reachable over HTTP,
 and as MCP tools for any MCP-aware agent host:
 
@@ -295,7 +298,7 @@ A first, real slice of the [GUI.md](https://github.com/warith-harchaoui/os-helpe
 plan ships as an **optional** surface: **Tree Radar**, a local disk-usage
 **treemap** dashboard. Each rectangle is a file or folder (area = size),
 colored by **age**, **hash-dedupe** status, or **type family**. It reads
-your disk and renders it in your browser — nothing is uploaded.
+your disk and renders it in your browser; nothing is uploaded.
 
 The GUI's web stack lives behind the `[gui]` extra so the core
 `import os_helper` stays lean (no FastAPI in the default install):
@@ -312,9 +315,6 @@ os-helper-gui --root ~/Downloads
 The remaining GUI milestones (Dedupe Lens actions, Config Explorer) stay
 described in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 
-The competitive landscape (stdlib, pathlib, click, python-dotenv,
-with a positioning map.
-
 ## Author
 
  - [Warith HARCHAOUI](https://linkedin.com/in/warith-harchaoui)
@@ -325,4 +325,4 @@ Special thanks to [Mohamed Chelali](https://mchelali.github.io) and [Bachir Zerr
 
 ## License
 
-This project is licensed under the BSD-3-Clause License — see the [LICENSE](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) file for details.
+This project is licensed under the BSD-3-Clause License; see the [LICENSE](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) file for details.

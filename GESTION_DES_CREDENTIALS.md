@@ -2,11 +2,11 @@
 
 [🇫🇷](https://github.com/warith-harchaoui/os-helper/blob/main/GESTION_DES_CREDENTIALS.md) · [🇬🇧](https://github.com/warith-harchaoui/os-helper/blob/main/CREDENTIALS_MANAGEMENT.md)
 
-`os-helper` n'est pas un gestionnaire de secrets, et n'essaie pas de l'être.
+`os-helper` n'est pas un gestionnaire de secrets et n'essaie pas de l'être.
 Il n'a ni chiffrement, ni intégration au trousseau de l'OS, ni client de
 gestionnaire de secrets, ni application automatique d'un `.gitignore`. Ce
 document décrit honnêtement ce que la bibliothèque fait réellement avec les
-credentials, et le schéma recommandé pour superposer un vrai vault
+credentials, ainsi que le schéma recommandé pour superposer un vrai vault
 (HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager, Azure Key
 Vault, ...) par-dessus.
 
@@ -24,17 +24,17 @@ Vault, ...) par-dessus.
 ## Ce que fait os-helper aujourd'hui
 
 La seule surface en lien avec les credentials dans la bibliothèque est
-[`get_config()`](os_helper/config_utils.py) — tout le reste (hachage,
+[`get_config()`](os_helper/config_utils.py) ; tout le reste (hachage,
 téléchargements, dépôt distant) est soit sans rapport, soit documenté
 explicitement ci-dessous.
 
 ### Le repli en trois niveaux de `get_config`
 
 `get_config()` résout un ensemble de clés requises selon un ordre fixe et
-déterministe — voir [EXEMPLES.md § Chargement de configuration](EXEMPLES.md#chargement-de-configuration)
+déterministe ; voir [EXEMPLES.md § Chargement de configuration](EXEMPLES.md#chargement-de-configuration)
 pour l'API complète :
 
-1. un fichier JSON/YAML explicite, ou le premier fichier correspondant dans
+1. un fichier JSON/YAML explicite ou le premier fichier correspondant dans
    un dossier ;
 2. un ou plusieurs fichiers `.env`, fusionnés dans `os.environ` via
    `python-dotenv` ;
@@ -43,14 +43,14 @@ pour l'API complète :
 
 La fonction renvoie les valeurs résolues sous forme de simple
 `dict[str, str | int | float]`. **Rien n'est chiffré, masqué ou expurgé dans
-cette valeur de retour** — l'appelant qui détient ce dict détient le secret
+cette valeur de retour** : l'appelant qui détient ce dict détient le secret
 en clair.
 
 ### La journalisation n'expose jamais les valeurs
 
 La seule chose que `get_config` fait bien par défaut : chaque ligne de log
-qu'elle émet nomme le `config_type`, les noms de clés, ou un chemin de
-fichier — jamais une valeur résolue :
+qu'elle émet nomme le `config_type`, les noms de clés ou un chemin de
+fichier, jamais une valeur résolue :
 
 ```
 Missing keys in environment variables: db_url, api_key
@@ -81,7 +81,7 @@ flowchart TD
 
 `POST /config` (`os_helper/api.py`) expose `get_config` par HTTP. Sa
 docstring est explicite : `path`/`env_files` sont des chemins **sur le
-système de fichiers du serveur** — pensé pour un déploiement de confiance
+système de fichiers du serveur**, pensé pour un déploiement de confiance
 qui introspecte sa propre configuration locale, pas un moyen de récupérer
 les secrets de quelqu'un d'autre par le réseau. Il n'y a aucune
 authentification sur l'endpoint lui-même : si vous exposez cette API
@@ -93,7 +93,7 @@ de localhost.
 ### Le hachage n'est pas fait pour les mots de passe
 
 `hash_string` / `hashfile` / `hashfolder` utilisent RIPEMD-160 (repli sur
-BLAKE2b) pour du **hachage de contenu** — déduplication, contrôles
+BLAKE2b) pour du **hachage de contenu** : déduplication, contrôles
 d'intégrité, identifiants stables. Il n'y a ni salage ni étirement de clé
 (pas d'équivalent bcrypt/argon2/scrypt). Ne les utilisez pas pour stocker ou
 vérifier des mots de passe.
@@ -110,8 +110,8 @@ ces credentials.
 
 Conformément à la promesse local-first du README, les seuls appels réseau
 que la bibliothèque effectue jamais sont `download_file`,
-`is_working_url`/`check_url`, et `get_user_ip`. `get_config` ne contacte
-jamais de service distant — l'intégration à un vault (ci-dessous) est
+`is_working_url`/`check_url` et `get_user_ip`. `get_config` ne contacte
+jamais de service distant ; l'intégration à un vault (ci-dessous) est
 entièrement quelque chose que vous ajoutez par-dessus, jamais un
 comportement par défaut.
 
@@ -119,8 +119,8 @@ comportement par défaut.
 
 ## Combiner `get_config` avec un vault
 
-`get_config` n'a pas de niveau vault natif — elle ne connaît que fichier →
-`.env` → environnement du processus. Le point d'intégration est le
+`get_config` n'a pas de niveau vault natif : elle ne connaît que fichier,
+`.env`, puis environnement du processus. Le point d'intégration est le
 **niveau 3** : récupérez les secrets depuis le vault d'abord, déposez-les
 dans `os.environ`, puis laissez `get_config` les récupérer comme s'ils
 avaient toujours été là.
@@ -133,12 +133,15 @@ import os_helper as osh
 def load_from_vault(vault_client, mount: str, path: str) -> None:
     secret = vault_client.secrets.kv.v2.read_secret_version(mount_point=mount, path=path)
     for key, value in secret["data"]["data"].items():
-        os.environ[key.upper()] = str(value)  # get_config essaie UPPER_CASE en premier
+        # setdefault, pas `=` : une valeur déjà présente (peu importe son
+        # origine) l'emporte toujours sur le vault, si bien qu'un .env ou un
+        # export shell du développeur continue de la surcharger en local.
+        os.environ.setdefault(key.upper(), str(value))  # get_config essaie UPPER_CASE en premier
 
 client = hvac.Client(url="https://vault.internal", token=os.environ["VAULT_TOKEN"])
 load_from_vault(client, mount="secret", path="myapp/prod")
 
-# path=None, env_files=[] saute entièrement les niveaux fichier et .env —
+# path=None, env_files=[] saute entièrement les niveaux fichier et .env :
 # directement vers les variables d'environnement injectées ci-dessus.
 config = osh.get_config(
     keys=["db_url", "api_key"],
@@ -150,11 +153,11 @@ config = osh.get_config(
 
 Le même schéma s'applique à n'importe quel client de vault : remplacez
 `hvac` par `get_secret_value` de `boto3`, `google.cloud.secretmanager`, ou
-`azure.keyvault.secrets` — seul l'appel de récupération change, pas le
+`azure.keyvault.secrets` ; seul l'appel de récupération change, pas le
 point d'injection.
 
 > Une version exécutable et sans dépendance de `load_from_vault` se trouve
-> dans [`examples/vault_config.py`](examples/vault_config.py) — lancez-la
+> dans [`examples/vault_config.py`](examples/vault_config.py) ; lancez-la
 > directement avec `python examples/vault_config.py`. Les deux décisions
 > ci-dessous sont vérifiées pour de vrai (pas seulement affirmées en prose)
 > par [`tests/test_vault_config_example.py`](tests/test_vault_config_example.py).
@@ -180,7 +183,7 @@ sequenceDiagram
 
 - **Injectez dans l'environnement, jamais dans le niveau fichier.** Faire
   transiter un secret récupéré du vault par `get_config(path=...)` signifie
-  l'écrire sur disque — même dans un fichier temporaire, cela annule
+  l'écrire sur disque ; même dans un fichier temporaire, cela annule
   l'intérêt du vault. L'injection dans l'environnement garde les secrets en
   mémoire uniquement, au prix d'être visibles par tout sous-processus lancé
   par `system()` (les processus enfants héritent de l'environnement).
@@ -189,9 +192,9 @@ sequenceDiagram
   `os.environ.setdefault` partagent la même règle non destructive : la clé
   déjà présente l'emporte, la nouvelle source ne comble que les trous.
   L'ordre compte donc : `load_from_vault` doit utiliser `setdefault`, pas une
-  affectation directe, et « un `.env` de développeur surcharge le vault » ne
+  affectation directe ; « un `.env` de développeur surcharge le vault » ne
   vaut que pour un `.env` déjà chargé dans `os.environ` *avant* l'exécution
-  de `load_from_vault` (son shell, sa config IDE, `direnv` — pas le niveau
+  de `load_from_vault` (son shell, sa config IDE, `direnv`, pas le niveau
   `env_files` propre à `get_config`, qui s'exécute *après* l'injection du
   vault et serait au contraire bloqué par elle). Avec le bon ordre, le vault
   devient le plancher sans aucune branche de code selon l'environnement : ce
@@ -204,25 +207,25 @@ sequenceDiagram
 - [ ] Ne jamais logger le dict renvoyé par `get_config`, seulement le fait
       qu'elle a réussi (la bibliothèque suit déjà cette règle en interne).
 - [ ] Ne jamais faire transiter des secrets récupérés du vault par
-      `get_config(path=...)` — cela les écrit sur disque. Utilisez
+      `get_config(path=...)` ; cela les écrit sur disque. Utilisez
       l'injection dans l'environnement à la place.
 - [ ] Gardez les fichiers `.env` hors du contrôle de version (os-helper ne
-      l'impose pas — c'est une simple lecture de fichier ; ajoutez `.env` au
+      l'impose pas : c'est une simple lecture de fichier ; ajoutez `.env` au
       `.gitignore` de votre propre projet).
 - [ ] N'exposez pas `POST /config` de la surface HTTP API au-delà de
       localhost sans votre propre couche d'authentification devant.
 - [ ] Rappelez-vous que les sous-processus lancés par `system()` héritent de
-      tout l'environnement du processus — un secret injecté via le vault est
+      tout l'environnement du processus : un secret injecté via le vault est
       visible par chaque commande shellée, pas seulement votre propre code
       Python.
-- [ ] os-helper n'a aucune conscience de la rotation des credentials — si
+- [ ] os-helper n'a aucune conscience de la rotation des credentials ; si
       votre vault fait tourner un secret, votre processus a besoin de sa
-      propre stratégie de redémarrage/rafraîchissement ; `get_config` ne
+      propre stratégie de redémarrage/rafraîchissement. `get_config` ne
       résout qu'une seule fois, au moment de l'appel.
 
 ## Voir aussi
 
-- [EXEMPLES.md § Chargement de configuration](EXEMPLES.md#chargement-de-configuration) —
+- [EXEMPLES.md § Chargement de configuration](EXEMPLES.md#chargement-de-configuration) :
   l'API `get_config` nue et son ordre de repli, sans la couche vault.
-- [LISEZMOI.md § La promesse](LISEZMOI.md#la-promesse) — la posture réseau
+- [LISEZMOI.md § La promesse](LISEZMOI.md#la-promesse) : la posture réseau
   local-first de la bibliothèque.

@@ -22,21 +22,21 @@ réalité honnête, cas par cas :
    (système de fichiers / utilitaires). Rien n'est envoyé, aucune
    télémétrie, aucun compte. L'IHM optionnelle Tree Radar lit votre disque
    et affiche la treemap localement dans votre navigateur (le serveur
-   n'écoute que sur `127.0.0.1`) — vos chemins, tailles et empreintes de
+   n'écoute que sur `127.0.0.1`) : vos chemins, tailles et empreintes de
    contenu ne quittent jamais la machine.
 
-2. **Impossible d'être local — les réserves.** Deux fonctions font du HTTP
+2. **Impossible d'être local : les réserves.** Deux fonctions font du HTTP
    sortant *par conception*, car récupérer quelque chose est justement leur
    raison d'être : `download_file()` (elle télécharge l'URL que vous lui
    donnez) et les vérifications d'URL (`is_working_url()` / `check_url`).
    `get_user_ip()` interroge aussi, volontairement, un service public. Ce
-   sont les seuls accès réseau de la bibliothèque, et vous ne les déclenchez
+   sont les seuls accès réseau de la bibliothèque ; vous ne les déclenchez
    qu'en les appelant explicitement.
 
 3. **Votre décision.** Rien ici ne force le cloud. `temporary_remote_file()`
    peut déposer vers S3/GCS/SFTP, mais seulement si *vous* le branchez sur
    un distant. Si vous construisez du comportement réseau au-dessus
-   d'os-helper, c'est votre choix — jamais un défaut.
+   d'os-helper, c'est votre choix, jamais un défaut.
 
 ## Documentation
 
@@ -50,11 +50,11 @@ réalité honnête, cas par cas :
 
 ## Fonctionnalités
 
-Chaque fonction est un enrobage fin, bien typé et bien documenté — sans
+Chaque fonction est un enrobage fin, bien typé et bien documenté : sans
 dépendance système lourde, en Python pur sur macOS / Linux / Windows.
 
-- **Détection de l'OS** — `windows()`, `linux()`, `macos()`, `unix()`.
-- **Inspection matérielle** — `hardware_info()` (instantané en un appel) et ses
+- **Détection de l'OS** : `windows()`, `linux()`, `macos()`, `unix()`.
+- **Inspection matérielle** : `hardware_info()` (instantané en un appel) et ses
   briques : `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
   `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
   (nom + VRAM par GPU discret), `apple_chip_name()` /
@@ -62,56 +62,56 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   chiffres en direct aussi : `cpu_percent()`, `available_ram_gb()`,
   `disk_usage_gb()`, `gpu_utilization_percent()` (Apple via IOKit, sans
   `sudo`/`powermetrics` ; NVIDIA via `nvidia-smi` ; AMD via `rocm-smi`).
-- **Exécution de commandes & processus** — `system()` (`subprocess` sans shell,
+- **Exécution de commandes et processus** : `system()` (`subprocess` sans shell,
   stdout/stderr capturés, vérifications optionnelles du code de sortie et de la
   sortie attendue), `openfile()` (ouvre avec l'application par défaut de l'OS),
   `getpid()`, `get_nb_workers()` (convention `n_jobs` de scikit-learn,
   surchargeable via `NB_WORKERS`).
-- **Chemins** — `join()`, `folder_name_ext()` (découpe compatible `.tar.gz`),
+- **Chemins** : `join()`, `folder_name_ext()` (découpe compatible `.tar.gz`),
   `absolute2relative_path()`, `relative2absolute_path()`, `path_without_home()`,
   `recursive_glob()`.
-- **Fichiers & répertoires** — `file_exists()`, `dir_exists()` (avec contrôle de
+- **Fichiers et répertoires** : `file_exists()`, `dir_exists()` (avec contrôle de
   vacuité), `size_file()`, `checkfile()`, `copyfile()`, `make_directory()`,
   `remove_directory()`, `remove_files()` (lot best-effort).
-- **Ressources temporaires** — `temporary_filename()` (géré par contexte,
+- **Ressources temporaires** : `temporary_filename()` (géré par contexte,
   répertoire cible optionnel), `temporary_folder()`, `make_temporary_directory()`
   (persistant, nettoyage à la charge de l'appelant), `temporary_remote_file()`
   (transfert vers S3/GCS/SFTP/n'importe où avec nettoyage distant garanti).
-- **Hachage** — `hash_string()`, `hashfile()`, `hashfolder()` (RIPEMD-160 si
+- **Hachage** : `hash_string()`, `hashfile()`, `hashfolder()` (RIPEMD-160 si
   disponible, repli sur BLAKE2b ; empreintes hex stables de 40 caractères,
   multi-plateformes).
-- **Chargement de configuration** — `get_config()` avec un ordre de repli
+- **Chargement de configuration** : `get_config()` avec un ordre de repli
   déterministe : fichier JSON/YAML (ou dossier) → fichiers `.env` →
   environnement du processus.
-- **Chaînes** — `emptystring()` (None / vide / espaces), `asciistring()`
+- **Chaînes** : `emptystring()` (None / vide / espaces), `asciistring()`
   (dépliage des accents, slugs sûrs pour le système de fichiers).
-- **Téléchargements & réseau** — `download_file()` (en flux, mémoire plate,
+- **Téléchargements et réseau** : `download_file()` (en flux, mémoire plate,
   taille de bloc adaptative, barre de progression, renvoie
   `{path, content_type, bytes}`), `progress_bar()` (fabrique `tqdm` partagée
   échelonnée en octets, silencieuse hors TTY), `is_working_url()`,
   `get_user_ip()`.
-- **Rapport de dossier & archivage** — `folder_description()` (carte des tailles
+- **Rapport de dossier et archivage** : `folder_description()` (carte des tailles
   + `index.html` Bootstrap + `description.json`), `zip_folder()`.
-- **Durées & horodatages** — `now_string()`, `format_size()`, `time2str()`,
+- **Durées et horodatages** : `now_string()`, `format_size()`, `time2str()`,
   `str2time()`.
-- **Chronométrage & profilage** — `wall_timer()`, `cpu_timer()`, `gpu_timer()`
-  (événements CUDA / MPS Apple Silicon, `torch` en import paresseux), et
+- **Chronométrage et profilage** : `wall_timer()`, `cpu_timer()`, `gpu_timer()`
+  (événements CUDA / MPS Apple Silicon, `torch` en import paresseux) et
   `tic()` / `toc()` à la MATLAB.
-- **Surface de journalisation** — `init_logging()` (console colorée + fichier,
+- **Surface de journalisation** : `init_logging()` (console colorée + fichier,
   modes logger nommé et flux « live »), `verbosity()` (niveau entier en
-  lecture/écriture), et `debug()` / `info()` / `warning()` / `error()` /
+  lecture/écriture) et `debug()` / `info()` / `warning()` / `error()` /
   `critical()` / `check()`.
-- **Plusieurs surfaces, un seul code** — bibliothèque importable, une CLI argparse
+- **Plusieurs surfaces, un seul code** : bibliothèque importable, une CLI argparse
   `os-helper` (toujours installée), sa jumelle `os-helper-click` (via l'extra
   `[cli]`), une API HTTP (`os-helper-api`, via `[api]`) et des outils MCP
-  (`os-helper-mcp`, via `[mcp]`) — les surfaces API/MCP n'exposent que le
+  (`os-helper-mcp`, via `[mcp]`). Les surfaces API/MCP n'exposent que le
   sous-ensemble sûr et sans effet de bord (info matérielle, hachage, ASCII,
   formatage, vérification d'URL, chargement de config ; aucune mutation du
   système de fichiers).
 
 ## Installation
 
-**Prérequis** — **Python 3.10–3.13** et **git**, multiplateforme (os-helper ne nécessite aucune dépendance système lourde) :
+**Prérequis** : **Python 3.10–3.13** et **git**, multiplateforme (os-helper ne nécessite aucune dépendance système lourde) :
 
 - 🍎 **macOS** ([Homebrew](https://brew.sh)) : `brew install python git`
 - 🐧 **Ubuntu/Debian** : `sudo apt update && sudo apt install -y python3 python3-pip git`
@@ -132,11 +132,14 @@ pip install "os-helper[cli]"
 ### Depuis les sources (sans PyPI)
 
 ```bash
+git clone https://github.com/warith-harchaoui/os-helper.git
+cd os-helper
+
 # Utilitaires principaux (bibliothèque + CLI argparse)
-pip install os-helper
+pip install -e .
 
 # Jumelle CLI click optionnelle
-pip install "os-helper[cli]"
+pip install -e ".[cli]"
 ```
 
 ## Utilisation
@@ -260,7 +263,7 @@ osh.info(f"Dossier {folder_to_zip} zippé dans {zip_output}")
 
 ## Exposition multi-surface
 
-`os-helper` n'est pas qu'une bibliothèque — les mêmes fonctions sont
+`os-helper` n'est pas qu'une bibliothèque : les mêmes fonctions sont
 exposées comme import Python, comme CLI argparse, comme jumelle CLI click,
 comme API HTTP et comme outils MCP :
 
@@ -286,7 +289,7 @@ os-helper-click hardware info
 
 Les opérations sûres et sans effet de bord de la bibliothèque (info
 matérielle, hachage, ASCII, formatage taille/temps, vérification d'URL,
-chargement de config — volontairement aucune mutation du système de
+chargement de config ; volontairement aucune mutation du système de
 fichiers) sont aussi accessibles en HTTP et comme outils MCP pour tout
 hôte agentique compatible :
 
@@ -305,8 +308,8 @@ Une première tranche réelle du plan [GUI.md](https://github.com/warith-harchao
 surface **optionnelle** : **Tree Radar**, un tableau de bord local de type
 **treemap** d'occupation disque. Chaque rectangle est un fichier ou un
 dossier (surface = taille), coloré selon l'**âge**, le statut de
-**dédoublonnage par hash**, ou la **famille de types**. L'IHM lit votre
-disque et l'affiche dans votre navigateur — rien n'est envoyé ailleurs.
+**dédoublonnage par hash** ou la **famille de types**. L'IHM lit votre
+disque et l'affiche dans votre navigateur ; rien n'est envoyé ailleurs.
 
 Sa pile web vit derrière l'extra `[gui]` pour que l'import de base
 `import os_helper` reste léger (pas de FastAPI dans l'installation par
@@ -334,4 +337,4 @@ Remerciements chaleureux à [Mohamed Chelali](https://mchelali.github.io) et [Ba
 
 ## Licence
 
-Ce projet est distribué sous la licence BSD-3-Clause — voir le fichier [LICENSE](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) pour plus de détails.
+Ce projet est distribué sous la licence BSD-3-Clause ; voir le fichier [LICENSE](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) pour plus de détails.

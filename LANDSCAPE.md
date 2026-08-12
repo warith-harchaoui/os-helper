@@ -5,12 +5,11 @@
 Related and competing Python libraries in the "cross-platform OS +
 filesystem + config helper" space, benchmarked against `os-helper`.
 Ratings are ⭐ (1) to ⭐⭐⭐⭐⭐ (5), scored on `os-helper`'s intended
-job — utility glue for AI pipelines (OS detection, path handling,
+job: utility glue for AI pipelines (OS detection, path handling,
 hashing, config loading, temp scratch, smart downloads, small
 subprocess wrappers, colored logging). A library optimised for a very
-different job (e.g.
-full-blown async filesystem, cloud object storage) is not penalised —
-the score just reflects fit to *this* niche.
+different job (e.g. full-blown async filesystem, cloud object storage)
+is not penalised; the score just reflects fit to *this* niche.
 
 ## At a glance
 
@@ -62,7 +61,7 @@ Where `os-helper` uniquely wins in the family:
 
 1. **Multi-surface exposure**. Every helper is reachable from Python,
    an argparse CLI, a click CLI, an HTTP API (FastAPI), and MCP tools
-   (for agents) — the same function signatures, no drift.
+   (for agents), all sharing the same function signatures, no drift.
 2. **Zero heavy runtime deps** for the core (`requests`, `pyyaml`,
    `python-dotenv`, `validators`). The click CLI is an optional extra
    so `pip install os-helper` stays lean for library users.
@@ -73,22 +72,22 @@ Where `os-helper` uniquely wins in the family:
 
 ## When to pick what
 
-- **`os-helper`** — every day scripts and libraries in the AI Helpers
+- **`os-helper`**: everyday scripts and libraries in the AI Helpers
   suite: consistent logging, cross-platform paths, "just give me a
   hash / a temp folder / a `.env` value" ergonomics.
-- **stdlib `pathlib`** — when you want zero third-party deps and are
+- **stdlib `pathlib`**: when you want zero third-party deps and are
   fine wiring up your own logging / config / hashing.
-- **`click` / `typer`** — when the CLI *is* the product and you want
+- **`click` / `typer`**: when the CLI *is* the product and you want
   richer decorators / shell completion out of the box (we ship a click
   twin already, so both worlds are covered).
-- **`pydantic-settings`** — when configuration is complex, typed, and
+- **`pydantic-settings`**: when configuration is complex, typed, and
   validated against a schema.
-- **`fsspec` / `smart_open`** — when you need a uniform filesystem
+- **`fsspec` / `smart_open`**: when you need a uniform filesystem
   abstraction across S3 / GCS / Azure / local disks.
-- **`pooch`** — when you need hash-verified downloads of scientific
+- **`pooch`**: when you need hash-verified downloads of scientific
   data files with a registry, integrity checks, and local caching.
-- **`platformdirs`** — when all you need is the canonical cross-OS
+- **`platformdirs`**: when all you need is the canonical cross-OS
   user directories (cache / config / data) and nothing else.
-- **`psutil`** — when you need deep per-process system telemetry
+- **`psutil`**: when you need deep per-process system telemetry
   (memory maps, CPU affinity, per-process I/O counters) beyond
   `os-helper`'s one-call CPU/RAM/GPU hardware snapshot.
