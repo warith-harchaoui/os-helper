@@ -735,6 +735,10 @@ def _handle_temp_folder(ns: argparse.Namespace) -> int:
     int
         Process exit code (0 on success).
     """
+    # Same convention as `temp file`: without `--keep` this is proof-of-life
+    # mode — the directory is created, its path printed, then immediately
+    # deleted on the `with` block's exit. Pass `--keep` to actually reserve
+    # a directory a caller can use after this command returns.
     with temporary_folder(prefix=ns.prefix or "", delete=not ns.keep) as path:
         _emit(path)
     return 0
