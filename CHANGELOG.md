@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`get_config()` crashed on a syntactically valid but non-mapping config
+  file.** A YAML/JSON document whose top-level value is a bare scalar (e.g.
+  a lone `42`) made `all(key in config for key in keys)` raise
+  `TypeError: argument of type 'int' is not iterable` instead of being
+  treated as an invalid config file and falling through to the next source,
+  as every other malformed-input case already does.
+- **Both CLI twins printed a raw Python traceback on an ordinary library
+  error** (e.g. `get_config`'s documented `RuntimeError` when no source
+  resolves the requested keys) instead of a clean one-line message. Both
+  `os-helper` and `os-helper-click` now print `Error: ...` to stderr and
+  exit 1; `os-helper-click`'s console-script entry point now points at a new
+  `cli_click.main()` wrapper (was the bare `cli` group).
+- **The HTTP API collapsed every library exception into a generic 500.**
+  `POST /config` failing to resolve its requested keys — an ordinary
+  client-input outcome, not a server bug — now returns 400 with the
+  library's own message instead of an opaque 500.
 - **`requirements.txt` was missing `psutil`.** `pyproject.toml`'s core
   `dependencies` gained `psutil>=5.9,<8` with the 2.2.0 hardware-inspection
   work, but `requirements.txt` (the plain `pip install -r requirements.txt`
