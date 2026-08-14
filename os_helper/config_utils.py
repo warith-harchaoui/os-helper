@@ -83,6 +83,15 @@ def _valid_config_file(a_path: str, keys: list[str], config_type: str) -> dict |
         info(f"Unsupported configuration file format {ext}: {a_path}")
         return None
 
+    # A syntactically valid JSON/YAML document that isn't a mapping (a bare
+    # scalar or a list at the top level) is not a usable config: `key in
+    # config` below would either raise (a scalar isn't iterable) or silently
+    # check list membership instead of key presence. Treat it the same as an
+    # unsupported format -- a soft miss, not a crash.
+    if not isinstance(config, dict):
+        info(f"Configuration file '{a_path}' does not contain a mapping at the top level.")
+        return None
+
     # A file only counts as valid when it satisfies EVERY required key.
     if all(key in config for key in keys):
         info(f"Configuration '{config_type}' successfully loaded from '{a_path}'")

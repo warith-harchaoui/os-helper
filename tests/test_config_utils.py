@@ -57,6 +57,20 @@ def test_get_config_falls_through_to_env_on_missing_key_or_unsupported_extension
     assert config == {"host": "envhost"}
 
 
+def test_get_config_non_mapping_file_falls_through_without_raising(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A syntactically valid YAML/JSON document that isn't a mapping at the
+    # top level (a bare scalar here) used to crash `all(key in config ...)`
+    # with a TypeError ("argument of type 'int' is not iterable") instead of
+    # being treated as an invalid config file and falling through.
+    yaml_path = tmp_path / "config.yaml"
+    yaml_path.write_text("42\n")
+    monkeypatch.setenv("HOST", "envhost")
+    config = config_utils.get_config(["host"], "database", path=str(yaml_path), env_files=[])
+    assert config == {"host": "envhost"}
+
+
 def test_get_config_scans_directory_for_first_valid_file(tmp_path) -> None:
     # Alphabetically first: valid JSON but missing "port" -> skipped.
     (tmp_path / "a_incomplete.json").write_text(json.dumps({"host": "localhost"}))
