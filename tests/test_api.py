@@ -57,3 +57,15 @@ def test_post_endpoints(client, tmp_path) -> None:
         json={"keys": ["MY_KEY"], "config_type": "test", "env_files": [str(env_file)]},
     )
     assert res.status_code == 200 and res.json()["MY_KEY"] == "my_value"
+
+
+def test_config_unresolvable_keys_returns_400_not_500(client) -> None:
+    # get_config's documented failure mode (no source satisfies the request)
+    # used to fall through to FastAPI's generic 500 handler, indistinguishable
+    # from an actual server bug. It is a client-input problem: 400.
+    res = client.post(
+        "/config",
+        json={"keys": ["nonexistent_key_xyz"], "config_type": "test", "env_files": []},
+    )
+    assert res.status_code == 400
+    assert "Missing required keys" in res.json()["detail"]

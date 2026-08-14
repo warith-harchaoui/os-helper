@@ -29,7 +29,8 @@ from __future__ import annotations
 from typing import Any
 
 try:
-    from fastapi import FastAPI
+    from fastapi import FastAPI, Request
+    from fastapi.responses import JSONResponse
     from pydantic import BaseModel
 except ModuleNotFoundError as exc:  # pragma: no cover - only hit without fastapi
     raise SystemExit(
@@ -109,6 +110,19 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+
+@app.exception_handler(RuntimeError)
+async def _runtime_error_handler(request: Request, exc: RuntimeError) -> JSONResponse:
+    """Map a library ``RuntimeError`` to HTTP 400 instead of a generic 500.
+
+    ``get_config`` (behind ``POST /config``) documents "raise RuntimeError
+    when none of the sources can satisfy the request" as its normal failure
+    mode for an ordinary client mistake (keys that don't resolve from any
+    configured source) — indistinguishable from an actual server bug if left
+    to fall through to FastAPI's default 500 handler.
+    """
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
 @app.get("/health", tags=["meta"])
