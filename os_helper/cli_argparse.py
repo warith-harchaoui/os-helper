@@ -1517,9 +1517,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     parser = build_parser()
     args = parser.parse_args(argv)
-    # Every subparser sets ``func`` via ``set_defaults`` — no dispatch
-    # table needed, argparse resolved it for us.
-    return int(args.func(args))
+    try:
+        # Every subparser sets ``func`` via ``set_defaults`` — no dispatch
+        # table needed, argparse resolved it for us.
+        return int(args.func(args))
+    except Exception as err:  # noqa: BLE001 — last resort: translate a library
+        # exception (e.g. RuntimeError from get_config) into a clean one-line
+        # message instead of a raw traceback. argparse's own usage errors
+        # already raise SystemExit, a BaseException this does not catch, so
+        # they pass through untouched.
+        print(f"Error: {err}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":  # pragma: no cover

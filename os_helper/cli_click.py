@@ -15,8 +15,11 @@ Design notes
 - Flag names match the argparse names (``--path`` / ``--size`` / …)
   rather than the more idiomatic click positional style — consistency
   across the two CLIs beats micro-idiomaticity here.
-- Errors from the library propagate unchanged; click handles the
-  formatting.
+- A library exception is caught by :func:`main` (the actual
+  ``os-helper-click`` console-script target) and printed as a clean
+  ``Error: ...`` line + exit 1, instead of a raw traceback. Click's own
+  control flow (usage errors, ``--help``, an explicit ``sys.exit``) raises
+  ``SystemExit``, which this does not catch, so it passes through unchanged.
 
 Usage Example
 -------------
@@ -659,5 +662,24 @@ def prof_gpu(argv: tuple[str, ...]) -> None:
     sys.exit(rc)
 
 
+def main() -> None:
+    """Console entry point (``os-helper-click``).
+
+    Click's own error handling only special-cases ``ClickException``/
+    ``Abort`` (and a broken pipe); a plain library exception (e.g. a
+    ``RuntimeError`` from ``get_config``) would otherwise propagate as a raw
+    Python traceback instead of a clean CLI error. This wraps the whole
+    invocation and translates that last case into a one-line stderr message
+    + exit 1 — click's own control flow (usage errors, ``--help``, an
+    explicit ``sys.exit`` in a subcommand) already raises ``SystemExit``, a
+    ``BaseException`` this does not catch, so it passes through untouched.
+    """
+    try:
+        cli()
+    except Exception as err:  # noqa: BLE001 — last resort: see docstring
+        click.echo(f"Error: {err}", err=True)
+        sys.exit(1)
+
+
 if __name__ == "__main__":  # pragma: no cover
-    cli()
+    main()

@@ -89,7 +89,7 @@ dev = [
 # argparse-based CLI — no runtime dep beyond stdlib + core package.
 os-helper = "os_helper.cli_argparse:main"
 # click-based twin — install with [cli] extra.
-os-helper-click = "os_helper.cli_click:cli"
+os-helper-click = "os_helper.cli_click:main"
 # Optional GUI launcher — starts the local Tree Radar server (needs [gui]).
 os-helper-gui = "os_helper.gui:_cli_main"
 # Optional HTTP API server (needs [api]).

@@ -37,6 +37,7 @@ from click.testing import CliRunner  # noqa: E402
 
 from os_helper.cli_argparse import build_parser, main as argparse_main  # noqa: E402
 from os_helper.cli_click import cli as click_cli  # noqa: E402
+from os_helper.cli_click import main as click_main  # noqa: E402
 
 EXPECTED_GROUPS = {"os", "hardware", "path", "hash", "str", "config", "temp", "misc", "prof"}
 
@@ -92,6 +93,31 @@ def test_both_clis_run_representative_subcommands(capsys) -> None:
         assert rc == 0 and check(out), f"argparse {args}"
         code, out = _run_click(args)
         assert code == 0 and check(out), f"click {args}"
+
+
+def test_both_clis_print_clean_error_instead_of_traceback(capsys, monkeypatch) -> None:
+    # A library RuntimeError (get_config's normal failure mode for keys that
+    # resolve from no source) used to propagate as a raw Python traceback on
+    # both CLI twins. Both entry points now catch it and print one clean
+    # "Error: ..." line, exit 1.
+    args = ["config", "get", "--name", "test", "--keys", "nonexistent_key_xyz"]
+
+    try:
+        rc = argparse_main(args)
+    except SystemExit as exc:
+        rc = exc.code
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "Traceback" not in captured.err
+    assert "Error:" in captured.err
+
+    monkeypatch.setattr("sys.argv", ["os-helper-click", *args])
+    with pytest.raises(SystemExit) as exc_info:
+        click_main()
+    assert exc_info.value.code == 1
+    err = capsys.readouterr().err
+    assert "Traceback" not in err
+    assert "Error:" in err
 
 
 def test_both_clis_hardware_info_prints_a_valid_snapshot(capsys) -> None:
