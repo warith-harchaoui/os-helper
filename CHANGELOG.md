@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-08-15
+
 ### Security
 
 - **`POST /config` no longer resolves a key from the server's ambient
