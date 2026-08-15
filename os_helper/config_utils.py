@@ -24,7 +24,7 @@ import os
 # PyYAML is loaded lazily-but-eagerly here because YAML is one of the two
 # accepted on-disk config formats (the other being JSON).
 import yaml
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 from .logging_utils import error, info
 from .path_utils import checkfile, dir_exists, file_exists, folder_name_ext, join
@@ -105,6 +105,54 @@ def _valid_config_file(a_path: str, keys: list[str], config_type: str) -> dict |
     return None
 
 
+def _config_from_mapping(
+    keys: list[str], mapping: dict[str, str]
+) -> dict[str, str | int | float] | None:
+    """
+    Extract configuration from an arbitrary str-to-str mapping.
+
+    Shared lookup logic behind both :func:`_config_from_env` (mapping =
+    ``os.environ``) and the HTTP API's restricted, ambient-environment-free
+    resolution (mapping = the merged contents of the requested ``.env``
+    files only, via :func:`dotenv.dotenv_values`, never ``os.environ``
+    itself). You should not use it directly.
+
+    Parameters
+    ----------
+    keys : List[str]
+        Keys to retrieve from ``mapping``.
+    mapping : Dict[str, str]
+        The key/value source to search.
+
+    Returns
+    -------
+    Optional[Dict[str, Union[str, int, float]]]
+        A dictionary of key-value pairs if all keys are found, otherwise None.
+    """
+    config = {}
+    missing_keys = []
+    for key in keys:
+        cap_key = key.upper()
+        # Environment variables are conventionally UPPER_CASE, so try that
+        # spelling first...
+        if cap_key in mapping:
+            config[key] = mapping[cap_key]
+        # ...then fall back to the exact-case key for callers who set it verbatim.
+        elif key in mapping:
+            config[key] = mapping[key]
+        else:
+            # Track misses so we can report all of them at once below.
+            missing_keys.append(key)
+    # Only a fully-satisfied key set counts as a successful load.
+    if len(missing_keys) == 0:
+        return config
+
+    # Partial matches are treated as a miss so the caller can try another source.
+    m = ", ".join(missing_keys)
+    info(f"Missing keys: {m}")
+    return None
+
+
 def _config_from_env(keys: list[str]) -> dict[str, str | int | float] | None:
     """
     Extract configuration from system environment variables.
@@ -121,28 +169,7 @@ def _config_from_env(keys: list[str]) -> dict[str, str | int | float] | None:
     Optional[Dict[str, Union[str, int, float]]]
         A dictionary of key-value pairs if all keys are found, otherwise None.
     """
-    config = {}
-    missing_keys = []
-    for key in keys:
-        cap_key = key.upper()
-        # Environment variables are conventionally UPPER_CASE, so try that
-        # spelling first...
-        if cap_key in os.environ:
-            config[key] = os.environ[cap_key]
-        # ...then fall back to the exact-case key for callers who set it verbatim.
-        elif key in os.environ:
-            config[key] = os.environ[key]
-        else:
-            # Track misses so we can report all of them at once below.
-            missing_keys.append(key)
-    # Only a fully-satisfied key set counts as a successful environment load.
-    if len(missing_keys) == 0:
-        return config
-
-    # Partial matches are treated as a miss so the caller can try another source.
-    m = ", ".join(missing_keys)
-    info(f"Missing keys in environment variables: {m}")
-    return None
+    return _config_from_mapping(keys, os.environ)
 
 
 def get_config(
@@ -150,6 +177,8 @@ def get_config(
     config_type: str,
     path: str | None = None,
     env_files: list[str] | None = None,
+    *,
+    allow_ambient_env: bool = True,
 ) -> dict[str, str | int | float]:
     """
     Load configuration settings using a fixed fallback order.
@@ -158,7 +187,8 @@ def get_config(
     1. ``path`` pointing to a JSON/YAML file (or, if a directory, the first
        ``.json``, ``.yaml`` or ``.yml`` file in it that contains all keys);
     2. one or more ``.env`` files merged into ``os.environ``;
-    3. the current process environment.
+    3. the current process environment (skipped when ``allow_ambient_env``
+       is ``False``).
 
     Parameters
     ----------
@@ -172,6 +202,20 @@ def get_config(
     env_files : Optional[List[str]], optional
         ``.env`` files to load into ``os.environ`` before reading variables.
         Defaults to ``[".env"]``.
+    allow_ambient_env : bool, optional
+        When ``True`` (the default, and the only behavior before this
+        parameter existed), step 3 reads the live process environment —
+        which includes both the requested ``.env`` files *and* whatever the
+        process happened to inherit at start-up. When ``False``, step 3 is
+        restricted to exactly the requested ``env_files``' own contents
+        (read directly, never merged into or read back from ``os.environ``):
+        a key that resolves only because it happens to be set in the
+        ambient environment is treated as unresolved. Used by the HTTP API
+        (see :mod:`os_helper.api`), where "the caller can name any
+        environment-variable key and get its live value back" is a
+        credential-exposure shape, not a feature — a local CLI/library
+        caller already has that access by definition, so this only ever
+        needs to be ``False`` across a network boundary.
 
     Returns
     -------
@@ -215,16 +259,30 @@ def get_config(
                     return config
         info(f"No valid configuration found in path: {path}")
 
-    # Step 2: Merge all .env files into os.environ
-    info("Loading configuration from env files")
-    for env_file in env_files:
-        if file_exists(env_file):
-            load_dotenv(env_file)
-            info(f"Loaded env file: {env_file}")
+    if allow_ambient_env:
+        # Step 2: Merge all .env files into os.environ
+        info("Loading configuration from env files")
+        for env_file in env_files:
+            if file_exists(env_file):
+                load_dotenv(env_file)
+                info(f"Loaded env file: {env_file}")
 
-    # Step 3: Check os.environ for required keys
-    info("Loading configuration from environment variables (possibly merged with .env files)")
-    config = _config_from_env(keys)
+        # Step 3: Check os.environ (files + whatever the process inherited) for required keys
+        info("Loading configuration from environment variables (possibly merged with .env files)")
+        config = _config_from_env(keys)
+    else:
+        # Step 2+3, restricted: read each env_file's own contents directly
+        # (dotenv_values never touches os.environ), so a key can only
+        # resolve here because a requested file actually defines it — never
+        # because the process happened to inherit it from its own shell.
+        info("Loading configuration from env files only (ambient process environment excluded)")
+        merged: dict[str, str] = {}
+        for env_file in env_files:
+            if file_exists(env_file):
+                merged.update(dotenv_values(env_file))
+                info(f"Loaded env file: {env_file}")
+        config = _config_from_mapping(keys, merged)
+
     if config is not None:
         info(f"Configuration '{config_type}' successfully loaded from environment variables.")
         return config

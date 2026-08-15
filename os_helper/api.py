@@ -87,8 +87,9 @@ class ConfigRequest(BaseModel):
     """Body for ``POST /config``.
 
     Mirrors :func:`os_helper.get_config`'s fallback order (file/folder ->
-    ``.env`` files -> process environment). ``path``/``env_files`` are paths
-    on the SERVER's filesystem — this is a local-first tool, not a place to
+    ``.env`` files), minus the ambient-process-environment step (see
+    :func:`config_endpoint`'s notes). ``path``/``env_files`` are paths on
+    the SERVER's filesystem — this is a local-first tool, not a place to
     read someone else's config over the network.
     """
 
@@ -264,12 +265,24 @@ def config_endpoint(req: ConfigRequest) -> dict[str, Any]:
     -------
     dict[str, Any]
         Mapping with one entry per requested key.
+
+    Notes
+    -----
+    Calls :func:`os_helper.get_config` with ``allow_ambient_env=False``: a
+    key can only resolve here from ``path`` or the requested ``env_files``'
+    own contents, never by falling through to whatever the server process
+    happened to inherit from its own environment at start-up. Without this,
+    any network caller could name an arbitrary environment-variable key
+    (``AWS_SECRET_ACCESS_KEY``, ...) and get its live value back — a
+    credential-exposure shape that a local CLI/library caller doesn't have,
+    since they already have direct access to that same process environment.
     """
     return get_config(
         keys=req.keys,
         config_type=req.config_type,
         path=req.path,
         env_files=req.env_files,
+        allow_ambient_env=False,
     )
 
 

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`POST /config` no longer resolves a key from the server's ambient
+  process environment.** Previously, a network caller could name any
+  environment-variable key and get its live value back whenever no
+  `path`/`env_files` resolved it first — a credential-exposure shape
+  (mitigated only by the default loopback-only bind). `get_config()` gained
+  an `allow_ambient_env` keyword (default `True`, so CLI/library behavior is
+  unchanged); the API now calls it with `allow_ambient_env=False`, so a key
+  can only resolve from `path` or the requested `env_files`' own contents.
+
 ### Fixed
 
 - **`get_config()` crashed on a syntactically valid but non-mapping config

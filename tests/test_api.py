@@ -69,3 +69,19 @@ def test_config_unresolvable_keys_returns_400_not_500(client) -> None:
     )
     assert res.status_code == 400
     assert "Missing required keys" in res.json()["detail"]
+
+
+def test_config_does_not_leak_ambient_process_environment(
+    client, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A caller naming an arbitrary env-var key must not get its live value
+    # back just because the server process happens to have it set -- that
+    # would let any network caller probe for secrets (AWS_SECRET_ACCESS_KEY,
+    # etc.) by name. Only path/env_files may resolve a key over HTTP.
+    monkeypatch.setenv("SOME_AMBIENT_SECRET_XYZ", "leaked-if-this-test-fails")
+    res = client.post(
+        "/config",
+        json={"keys": ["some_ambient_secret_xyz"], "config_type": "test", "env_files": []},
+    )
+    assert res.status_code == 400
+    assert "leaked-if-this-test-fails" not in res.text

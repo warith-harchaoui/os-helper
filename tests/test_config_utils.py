@@ -71,6 +71,36 @@ def test_get_config_non_mapping_file_falls_through_without_raising(
     assert config == {"host": "envhost"}
 
 
+def test_get_config_allow_ambient_env_false_ignores_process_env(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A key that only resolves because it happens to be set in the process's
+    # own (ambient) environment must NOT resolve when allow_ambient_env is
+    # False -- this is the guard behind POST /config, where a caller naming
+    # an arbitrary env-var key must not get its live value back.
+    monkeypatch.setenv("HOST", "ambient-secret")
+    with pytest.raises(RuntimeError):
+        config_utils.get_config(
+            ["host"], "database", env_files=[], allow_ambient_env=False
+        )
+
+    # A key defined by an actual requested .env file DOES still resolve --
+    # only the ambient-inheritance path is cut off, not .env files themselves.
+    env_path = tmp_path / "custom.env"
+    env_path.write_text("HOST=fromfile\n")
+    config = config_utils.get_config(
+        ["host"], "database", env_files=[str(env_path)], allow_ambient_env=False
+    )
+    assert config == {"host": "fromfile"}
+
+    # And it must never fall back to the ambient value even when both are set.
+    monkeypatch.setenv("HOST", "ambient-secret")
+    config = config_utils.get_config(
+        ["host"], "database", env_files=[str(env_path)], allow_ambient_env=False
+    )
+    assert config == {"host": "fromfile"}
+
+
 def test_get_config_scans_directory_for_first_valid_file(tmp_path) -> None:
     # Alphabetically first: valid JSON but missing "port" -> skipped.
     (tmp_path / "a_incomplete.json").write_text(json.dumps({"host": "localhost"}))
