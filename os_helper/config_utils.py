@@ -184,6 +184,7 @@ def get_config(
     Load configuration settings using a fixed fallback order.
 
     Precedence (first match wins):
+
     1. ``path`` pointing to a JSON/YAML file (or, if a directory, the first
        ``.json``, ``.yaml`` or ``.yml`` file in it that contains all keys);
     2. one or more ``.env`` files merged into ``os.environ``;

@@ -10,6 +10,7 @@ legible treemap:
 
 - Each rectangle is a file or folder; its **area** is the file/subtree
   **size**, and its **color** encodes one of three modes:
+
   - **age** (recent vs. stale, from each file's mtime),
   - **hash-dedupe** (files that share a content hash form a cluster,
     colored so duplicates stand out), or

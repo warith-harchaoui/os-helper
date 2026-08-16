@@ -240,6 +240,8 @@ def test_hardware_info_and_live_metrics_are_sane_on_this_machine() -> None:
     model = hardware_utils.cpu_model()
     assert model is None or isinstance(model, str)
     assert hardware_utils.cpu_count_logical() >= 1
+    physical = hardware_utils.cpu_count_physical()
+    assert physical is None or 1 <= physical <= hardware_utils.cpu_count_logical()
     assert hardware_utils.ram_gb() > 0
     assert 0.0 <= hardware_utils.cpu_percent() <= 100.0
     assert 0 <= hardware_utils.available_ram_gb() <= hardware_utils.ram_gb()
