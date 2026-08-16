@@ -1,7 +1,12 @@
 """
 Miscellaneous Utilities
 
-Grab-bag of helpers that don't warrant a dedicated module:
+A grab-bag, on purpose: each function here answers one small, common
+question a script needs (what time is it, in a filename-safe format; how
+big is 12345678 bytes for a human; is this URL actually reachable right
+now) that is too small to earn its own module, but too common to leave to
+every caller re-deriving it. Grouped by the question each one answers:
+
 - timestamp formatting (``now_string``)
 - human-readable byte sizes (``format_size``)
 - folder content description with optional HTML / JSON dump (``folder_description``)
@@ -11,8 +16,15 @@ Grab-bag of helpers that don't warrant a dedicated module:
 - simple file downloads (``download_file``)
 - public IP lookup (``get_user_ip``)
 
-Author:
- - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
+Usage example
+-------------
+>>> import os_helper as osh
+>>> osh.format_size(12345678)
+'12.35 MB'
+
+Author
+------
+Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
 # Postpone annotation evaluation so union syntax like ``str | None`` is legal

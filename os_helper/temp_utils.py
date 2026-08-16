@@ -1,12 +1,33 @@
 """
 Temporary Utilities
 
-This module provides helper functions and context managers for creating and managing
-temporary files and directories. It ensures that temporary resources are handled safely
-and cleaned up appropriately after use.
+A scratch file that a function creates for its own bookkeeping (a
+downloaded archive before extraction, an intermediate render before the
+final one) is easy to forget to delete, and a crash mid-function skips
+whatever cleanup line was written after it. A context manager fixes that
+by tying the deletion to Python's own ``with`` block: whether the block
+finishes normally or raises, the file or folder underneath it is removed
+on the way out.
 
-Author:
- - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
+:func:`temporary_filename` and :func:`temporary_folder` are that pattern
+for local disk. :func:`temporary_remote_file` extends the same guarantee
+to a remote store (S3, GCS, SFTP, anywhere): give it an ``upload`` and a
+``delete`` callable already wired to your own credentials, and the remote
+copy is deleted on exit exactly like a local temp file would be.
+:func:`make_temporary_directory` is the one exception to the pattern,
+for when the caller genuinely needs to own cleanup itself rather than
+hand it to a ``with`` block.
+
+Usage example
+-------------
+>>> import os_helper as osh
+>>> with osh.temporary_filename(suffix=".log") as tmp:
+...     tmp.endswith(".log")
+True
+
+Author
+------
+Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
 # Defer annotation evaluation so ``str | None`` and generic ``Generator[...]``

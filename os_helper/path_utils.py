@@ -1,12 +1,29 @@
 """
 Path Utilities
 
-This module provides helper functions for handling and manipulating file and directory paths.
-Functions include checking existence, converting between absolute and relative paths, formatting paths,
-and performing file operations like copying and removing files/directories.
+Two operating systems rarely agree on how a file path is spelled: a forward
+slash on Linux and macOS, a backslash on Windows, a home directory that
+expands differently, a relative path that means something different
+depending on where the process happens to be running from. Writing a path
+by hand with string concatenation bakes in one platform's assumptions and
+breaks on another's.
 
-Author:
- - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
+This module's functions build, split, and check paths the same way
+regardless of the operating system underneath, plus the small file
+operations (copy, remove, check existence) that almost always follow right
+after a path is resolved.
+
+Usage example
+-------------
+>>> import os_helper as osh
+>>> osh.join("/tmp", "a", "b.txt")
+'/tmp/a/b.txt'
+>>> osh.file_exists("/definitely/not/a/real/path")
+False
+
+Author
+------
+Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
 # ``from __future__ import annotations`` keeps every annotation below as a

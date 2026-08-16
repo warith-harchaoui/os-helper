@@ -1,12 +1,32 @@
 """
 Hashing Utilities
 
-This module provides functions to perform hashing of strings, files,
-and entire folders. It supports optional date stamping, partial content
-hashing, and path-based hashing.
+A content hash turns any string, file, or folder into a short, fixed-length
+fingerprint: the same input always produces the same fingerprint, and two
+different inputs almost never collide. That single property answers three
+everyday questions: is this file the one I already downloaded (compare
+fingerprints instead of full bytes), have these two folders diverged
+(compare their folder hash), and can I use a file's own content as its cache
+key (a name that never needs inventing and never goes stale).
 
-Author:
- - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
+:func:`hash_string`, :func:`hashfile`, and :func:`hashfolder` compute that
+fingerprint with RIPEMD-160 (BLAKE2b as a fallback where RIPEMD-160 is
+unavailable), always as a 40-character hex string regardless of which engine
+ran. This is content hashing, not password hashing: there is no salting and
+no key-stretching, so never use these for storing or checking passwords (see
+``CREDENTIALS_MANAGEMENT.md``).
+
+Usage example
+-------------
+>>> import os_helper as osh
+>>> osh.hash_string("hello")[:8]
+'108f07b8'
+>>> len(osh.hash_string("hello"))
+40
+
+Author
+------
+Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
 # Postpone annotation evaluation for consistent modern typing on Python 3.10.

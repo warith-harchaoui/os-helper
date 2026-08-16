@@ -379,7 +379,7 @@ String utilities simplify common string manipulation tasks, such as ensuring ASC
 
 ### Check for Blank Strings
 
-`emptystring` catches `None`, `""`, and whitespace-only strings in one call —
+`emptystring` catches `None`, `""`, and whitespace-only strings in one call:
 use it instead of `not s` or `s == ""`, which both miss `"   "`.
 
 ```python

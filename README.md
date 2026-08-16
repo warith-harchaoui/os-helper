@@ -63,9 +63,10 @@ dependency, pure-Python across macOS / Linux / Windows.
   stdout/stderr, optional exit-code and expected-output checks), `openfile()`
   (open with the OS default app), `getpid()`, `get_nb_workers()` (scikit-learn
   `n_jobs` convention, `NB_WORKERS`-overridable).
-- **Paths**: `join()`, `folder_name_ext()` (`.tar.gz`-aware split),
-  `absolute2relative_path()`, `relative2absolute_path()`, `path_without_home()`,
-  `recursive_glob()`.
+- **Paths**: `join()`, `folder_name_ext()` (splits on the last dot only, so
+  `archive.tar.gz` decomposes as `archive.tar` + `gz`, never collapsed to one
+  multi-part extension), `absolute2relative_path()`, `relative2absolute_path()`,
+  `path_without_home()`, `recursive_glob()`.
 - **Files and directories**: `file_exists()`, `dir_exists()` (with emptiness
   checks), `size_file()`, `checkfile()`, `copyfile()`, `make_directory()`,
   `remove_directory()`, `remove_files()` (best-effort batch).

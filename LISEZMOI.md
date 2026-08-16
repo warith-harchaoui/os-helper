@@ -67,9 +67,10 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   sortie attendue), `openfile()` (ouvre avec l'application par défaut de l'OS),
   `getpid()`, `get_nb_workers()` (convention `n_jobs` de scikit-learn,
   surchargeable via `NB_WORKERS`).
-- **Chemins** : `join()`, `folder_name_ext()` (découpe compatible `.tar.gz`),
-  `absolute2relative_path()`, `relative2absolute_path()`, `path_without_home()`,
-  `recursive_glob()`.
+- **Chemins** : `join()`, `folder_name_ext()` (découpe sur le dernier point
+  seulement, donc `archive.tar.gz` se décompose en `archive.tar` + `gz`,
+  jamais réduit à une seule extension multi-parties), `absolute2relative_path()`,
+  `relative2absolute_path()`, `path_without_home()`, `recursive_glob()`.
 - **Fichiers et répertoires** : `file_exists()`, `dir_exists()` (avec contrôle de
   vacuité), `size_file()`, `checkfile()`, `copyfile()`, `make_directory()`,
   `remove_directory()`, `remove_files()` (lot best-effort).

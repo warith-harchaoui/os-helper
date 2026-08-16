@@ -496,7 +496,7 @@ with temporary_filename(suffix=".wav", directory=work) as tmp:
 
 `temporary_remote_file` téléverse un fichier local là où vous le pointez
 (S3, GCS, SFTP, un point de terminaison HTTP, un dict en mémoire…) et
-garantit que l'artefact distant est supprimé à la sortie du bloc `with` —
+garantit que l'artefact distant est supprimé à la sortie du bloc `with`,
 même si le corps lève une exception.
 
 Fournissez deux fonctions pour votre backend : `upload(local_path) ->

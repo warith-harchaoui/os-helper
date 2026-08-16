@@ -1,12 +1,28 @@
 """
 System Utilities
 
-Cross-platform helpers for operating-system detection, worker-count
-resolution, executing external commands, and opening files in the system
-default application.
+A script that needs to know "which operating system am I running on" or
+"run this shell command and give me its output" would otherwise reach for
+``sys.platform`` string comparisons and ``subprocess.run`` calls scattered
+across the codebase, each one slightly different. This module gives every
+helper in the suite the same answer to those two questions: a handful of
+one-line OS checks (``windows()``, ``linux()``, ``macos()``, ``unix()``),
+and :func:`system`, a ``subprocess`` wrapper that never opens a shell (so a
+filename with a stray ``;`` in it cannot be interpreted as a second
+command) and returns captured stdout/stderr as a plain dict instead of a
+``CompletedProcess`` object the caller has to know how to unpack.
 
-Author:
-- Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
+Usage example
+-------------
+>>> import os_helper as osh
+>>> osh.unix()  # doctest: +SKIP
+True
+>>> osh.system("echo hello")["out"].strip()
+'hello'
+
+Author
+------
+Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
 # Postpone annotation evaluation so ``str | None`` style unions work on every

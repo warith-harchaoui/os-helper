@@ -1,12 +1,29 @@
 """
 String Utilities
 
-This module provides helper functions for handling and manipulating strings,
-including checks for empty strings, converting strings to ASCII-safe formats,
-and converting between string representations and numerical time values.
+Two small, easy-to-get-wrong checks come up constantly: "is this string
+actually empty" (``if not s`` misses a string that is only whitespace, like
+``"   "``), and "can I safely use this string as a filename or a URL
+segment" (an accented or non-ASCII character can silently break a path on
+some filesystems or a query string on some servers).
 
-Author:
- - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
+:func:`emptystring` answers the first question in one call instead of a
+hand-rolled check every caller has to remember. :func:`asciistring`
+answers the second by folding accents to their plain-ASCII equivalent and
+replacing whatever is left over with a placeholder character, so the
+result is always safe to drop into a filename or URL.
+
+Usage example
+-------------
+>>> import os_helper as osh
+>>> osh.emptystring("   ")
+True
+>>> osh.asciistring("Café-Con-Leche!", replacement_char="_")
+'cafe_con_leche'
+
+Author
+------
+Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
 # Defer annotation evaluation so ``str | None`` parses on Python 3.10.

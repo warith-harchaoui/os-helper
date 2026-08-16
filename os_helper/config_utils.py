@@ -1,17 +1,28 @@
 """
 Configuration Utilities
 
-Load and validate configuration settings from multiple sources with a
-deterministic fallback order:
-1. an explicit JSON or YAML file (or the first valid one in a folder),
-2. one or more ``.env`` files merged into ``os.environ``,
-3. plain environment variables.
+A program often needs the same setting (a database URL, an API key) to come
+from different places depending on who is running it: a developer's laptop
+reads a config file, a CI job reads a ``.env`` file checked into a scratch
+directory, a deployed server reads plain environment variables set by its
+host. Without a single rule for "where do I look, and in what order," each
+caller ends up writing its own branching logic, and the branches drift.
 
-The helpers verify that every required key is present and raise a clear
-``RuntimeError`` when none of the sources can satisfy the request.
+:func:`get_config` fixes the order once: try a JSON/YAML file first, then
+``.env`` files, then the process environment, and stop at the first source
+that supplies every key the caller asked for. Whichever source wins, the
+caller gets back one plain dictionary and never needs to know which tier
+resolved it.
 
-Author:
- - Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
+Usage example
+-------------
+>>> import os_helper as osh
+>>> osh.get_config(["db_url"], "myapp", env_files=[])  # doctest: +SKIP
+{'db_url': 'postgres://localhost/myapp'}
+
+Author
+------
+Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 """
 
 # Defer annotation evaluation so ``dict | None`` unions parse on Python 3.10.
