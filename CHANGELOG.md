@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.2] - 2026-08-17
+
+### Added
+
+- **Usage Example sections for seven module docstrings**
+  (`config_utils`, `hash_utils`, `misc_utils`, `path_utils`, `string_utils`,
+  `system_utils`, `temp_utils`) that were bare feature lists with no
+  runnable example, unlike the rest of the package — `CONTRIBUTING.md`
+  mandates one on every module. Each now opens with an intuition-first
+  framing (why the module exists, what problem it solves) plus a verified
+  example.
+- **Test coverage for `cpu_count_physical()`**: public and documented, but
+  had zero test coverage until now.
+
+### Fixed
+
+- **Two RST list-indentation bugs** in `get_config()`'s and `gui.py`'s module
+  docstrings: a list started immediately after a paragraph with no blank
+  line, which docutils misparses as `"Unexpected indentation"` and breaks
+  the rendered Sphinx docs page.
+- **README.md/LISEZMOI.md's Features list mischaracterized
+  `folder_name_ext()`** as `".tar.gz-aware"`, which reads as "treats
+  `.tar.gz` as one unit." The function's own docstring and behavior are the
+  opposite: it splits on the last dot only, so `archive.tar.gz` decomposes
+  to `archive.tar` + `gz`, deliberately not collapsed.
+- **`string_utils.py`'s module docstring claimed it handles string↔time
+  conversion**; that functionality (`time2str`/`str2time`) actually lives
+  in `misc_utils.py`.
+
 ## [2.3.1] - 2026-08-15
 
 ### Security
