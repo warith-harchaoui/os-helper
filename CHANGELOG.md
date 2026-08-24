@@ -5,7 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.3.3] - 2026-08-24
+
+### Fixed
+
+- **`hash_utils.hashfolder` was not deterministic across directory-entry
+  order.** It hashed each file's bytes in whatever order `os.walk`/
+  `os.scandir` happened to return — filesystem directory-entry order, not
+  alphabetical order — contradicting the module's own documented promise
+  ("the same input always produces the same fingerprint", "have these two
+  folders diverged"). Now sorts `dirs` (steering `os.walk`'s traversal) and
+  iterates `sorted(files)` per directory, so two folders with identical
+  content built in a different write sequence hash the same. Regression
+  test: `test_hashfolder_is_independent_of_directory_entry_order`.
+- **`misc_utils.folder_description`'s `description.json` had the same
+  non-determinism**: written via plain `json.dump(result, ...)` with no
+  `sort_keys=True`, so re-running it on an unchanged folder could produce a
+  byte-different file (key order only) — undermining using it to diff a
+  folder snapshot over time. The HTML index right below it already sorted
+  for the same reason; the JSON output now does too.
+
+### Added
+
+- **Git pre-push hook** (`.githooks/pre-push`): blocks the push outright if
+  `ruff check`, `ruff format --check`, or the full `pytest -q -m ""` sweep
+  fails, so a red local state never even reaches CI. Documented in
+  `CONTRIBUTING.md`.
 
 ## [2.3.2] - 2026-08-17
 

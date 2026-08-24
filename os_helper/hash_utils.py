@@ -181,8 +181,19 @@ def hashfolder(
         h.update(now_string("log").encode("utf-8"))
 
     if hash_content and dir_exists(path):
-        for root, _dirs, files in os.walk(path):
-            for file in files:
+        for root, dirs, files in os.walk(path):
+            # os.walk's traversal and per-directory listing order come from
+            # os.scandir(), which reflects filesystem/directory-entry order,
+            # NOT alphabetical order -- it can differ between two folders with
+            # identical content that were populated in a different sequence
+            # (or between filesystems), which would silently break this
+            # function's own documented promise ("the same input always
+            # produces the same fingerprint", "have these two folders
+            # diverged"). Sorting `dirs` in place steers os.walk's own
+            # traversal order; sorting `files` fixes the per-directory hash
+            # order.
+            dirs.sort()
+            for file in sorted(files):
                 # Optionally skip hidden files
                 if not file.startswith("."):
                     full_path = os.path.join(root, file)

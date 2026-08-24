@@ -209,7 +209,13 @@ def folder_description(
     if description_json:
         desc_json_path = join(path, "description.json")
         with open(desc_json_path, "w", encoding="utf-8") as jfile:
-            json.dump(result, jfile, indent=2)
+            # sort_keys=True: `result`'s insertion order comes from os.walk,
+            # which reflects filesystem directory-entry order, not alphabetical
+            # order -- without sorting, re-running this on an unchanged folder
+            # can write a byte-different description.json (key order alone),
+            # which defeats using the file to diff snapshots over time. The
+            # HTML index below already sorts for the same reason.
+            json.dump(result, jfile, indent=2, sort_keys=True)
         info(f"Folder description JSON written to: {desc_json_path}")
 
     return result

@@ -96,3 +96,26 @@ def test_hashfolder_content_path_and_date_variants(tmp_path) -> None:
     (control_folder / "file1.txt").write_text("Modified File 1 content")
     (control_folder / "file2.txt").write_text("File 2 content")
     assert hu.hashfolder(str(control_folder), hash_content=True) == modified
+
+
+def test_hashfolder_is_independent_of_directory_entry_order(tmp_path) -> None:
+    # os.walk's own traversal/listing order reflects the filesystem's
+    # directory-entry order, not alphabetical order, so two folders with
+    # identical content created in the opposite sequence must still hash
+    # the same -- otherwise the function's "same input, same fingerprint"
+    # promise silently breaks depending on how a folder was populated.
+    forward = tmp_path / "forward"
+    forward.mkdir()
+    (forward / "a.txt").write_text("A")
+    (forward / "b.txt").write_text("B")
+    (forward / "c.txt").write_text("C")
+
+    reverse = tmp_path / "reverse"
+    reverse.mkdir()
+    (reverse / "c.txt").write_text("C")
+    (reverse / "b.txt").write_text("B")
+    (reverse / "a.txt").write_text("A")
+
+    assert hu.hashfolder(str(forward), hash_content=True) == hu.hashfolder(
+        str(reverse), hash_content=True
+    )
