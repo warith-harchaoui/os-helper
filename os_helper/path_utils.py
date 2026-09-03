@@ -259,10 +259,14 @@ def path_without_home(path: str) -> str:
     home_dir = os.path.expanduser("~")
     # Normalize first so ``/home/user/../user/x`` still matches the home prefix.
     norm_path = os.path.normpath(path)
-    # Only collapse the leading home segment (``count=1``) — a literal home
-    # path appearing deeper in the string must stay untouched.
-    if norm_path.startswith(home_dir):
-        return norm_path.replace(home_dir, "~", 1)
+    # Match on a full path segment, not a bare string prefix: a plain
+    # ``startswith(home_dir)`` would also fire on an unrelated sibling
+    # directory that merely shares the same prefix (e.g. home
+    # ``/home/bob`` wrongly matching ``/home/bobby/file.txt``).
+    if norm_path == home_dir:
+        return "~"
+    if norm_path.startswith(home_dir + os.sep):
+        return "~" + norm_path[len(home_dir) :]
     return norm_path
 
 

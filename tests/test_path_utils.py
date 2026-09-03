@@ -97,6 +97,14 @@ def test_path_without_home() -> None:
     outside = "/opt/somewhere/file.txt"
     assert pu.path_without_home(outside) == os.path.normpath(outside)
 
+    # A sibling directory that merely shares the home dir as a string prefix
+    # must NOT be collapsed — only a real path-segment match counts.
+    sibling = home + "_extra/file.txt"
+    assert pu.path_without_home(sibling) == os.path.normpath(sibling)
+
+    # The home directory itself collapses to a bare "~".
+    assert pu.path_without_home(home) == "~"
+
 
 def test_recursive_glob_finds_nested_matches(tmp_path) -> None:
     nested = tmp_path / "sub"

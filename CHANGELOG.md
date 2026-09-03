@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`path_utils.path_without_home` matched the home directory as a bare
+  string prefix**, so a sibling directory that merely shared the same
+  characters (e.g. home `/home/bob` against a path under `/home/bobby/`)
+  was wrongly collapsed into a bogus `~by/...` path instead of being left
+  unchanged. Now requires a real path-segment boundary (`home + os.sep`,
+  or an exact match) before collapsing to `~`. Regression tests added.
+
 ## [2.3.3] - 2026-08-24
 
 ### Fixed
