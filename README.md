@@ -6,9 +6,9 @@
 
 `OS Helper` belongs to a collection of libraries called `AI Helpers` developed for building Artificial Intelligence.
 
-[🌍 AI Helpers](https://harchaoui.org/warith/ai-helpers)
+[🌍 AI Helpers](https://deraison.ai/ai-helpers)
 
-[![logo](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/logo.png)](https://harchaoui.org/warith/ai-helpers)
+[![logo](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/logo.png)](https://deraison.ai/ai-helpers)
 
 OS Helper is a Python library that provides utility functions for working with different operating systems. It offers a set of tools to simplify common system operations, file handling, and OS-specific tasks.
 
@@ -37,7 +37,7 @@ market that, here is the honest, case-by-case reality:
 
 ## Documentation
 
-[💻 Documentation](https://harchaoui.org/warith/ai-helpers/docs/os-helper-doc/)
+[💻 Documentation](https://deraison.ai/ai-helpers/docs/os-helper-doc/)
 
 [🗺️ Landscape](https://github.com/warith-harchaoui/os-helper/blob/main/LANDSCAPE.md)
 
@@ -108,7 +108,7 @@ dependency, pure-Python across macOS / Linux / Windows.
 - 🐧 **Ubuntu/Debian**: `sudo apt update && sudo apt install -y python3 python3-pip git`
 - 🪟 **Windows** (PowerShell): `winget install Python.Python.3.12 Git.Git`
 
-We recommend using Python environments. Check this link if you're unfamiliar with setting one up: [🥸 Tech tips](https://harchaoui.org/warith/4ml/#install).
+We recommend using Python environments. Check this link if you're unfamiliar with setting one up: [🥸 Tech tips](https://deraison.ai/4ml/#install).
 
 ### From PyPI (recommended)
 
