@@ -109,12 +109,12 @@ where the visible CPU count lies about the real quota.
 ```python
 from os_helper import get_nb_workers, getpid
 
-print(get_nb_workers())      # -1 (default): all available CPU cores
-print(get_nb_workers(-2))    # all cores but one
-print(get_nb_workers(4))     # positive: taken literally
-print(get_nb_workers(0))     # 0: the full pool size
+print(get_nb_workers())  # -1 (default): all available CPU cores
+print(get_nb_workers(-2))  # all cores but one
+print(get_nb_workers(4))  # positive: taken literally
+print(get_nb_workers(0))  # 0: the full pool size
 
-print(getpid())              # current process ID, as a string
+print(getpid())  # current process ID, as a string
 ```
 
 ## Hardware Inspection
@@ -154,25 +154,32 @@ for a GPU probe).
 
 ```python
 from os_helper import (
-    platform_name, cpu_count_logical, cpu_count_physical, cpu_model,
-    ram_gb, gpu_vendor, gpus, apple_chip_name, apple_unified_memory_gb,
+    platform_name,
+    cpu_count_logical,
+    cpu_count_physical,
+    cpu_model,
+    ram_gb,
+    gpu_vendor,
+    gpus,
+    apple_chip_name,
+    apple_unified_memory_gb,
 )
 
-print(platform_name())         # 'darwin' / 'linux' / 'windows'
-print(cpu_count_logical())     # 12 (includes hyperthreads/SMT)
-print(cpu_count_physical())    # 12, or None if psutil can't tell
-print(cpu_model())             # 'Apple M2 Max' or None
+print(platform_name())  # 'darwin' / 'linux' / 'windows'
+print(cpu_count_logical())  # 12 (includes hyperthreads/SMT)
+print(cpu_count_physical())  # 12, or None if psutil can't tell
+print(cpu_model())  # 'Apple M2 Max' or None
 
-print(ram_gb())                # 96.0 (total installed RAM)
-print(gpu_vendor())            # 'apple' / 'nvidia' / 'amd' / 'intel' / 'cpu'
-print(gpus())                  # [] on Apple (unified memory, no discrete VRAM
-                                #  list); [{'vendor': 'nvidia', 'name': ...,
-                                #  'vram_gb': ...}, ...] on NVIDIA/AMD boxes
+print(ram_gb())  # 96.0 (total installed RAM)
+print(gpu_vendor())  # 'apple' / 'nvidia' / 'amd' / 'intel' / 'cpu'
+print(gpus())  # [] on Apple (unified memory, no discrete VRAM
+#  list); [{'vendor': 'nvidia', 'name': ...,
+#  'vram_gb': ...}, ...] on NVIDIA/AMD boxes
 
 # Apple Silicon's memory pool is unified (shared with the GPU), so it is
 # reported separately rather than folded into `gpus()`'s VRAM list.
 if gpu_vendor() == "apple":
-    print(apple_chip_name())          # 'Apple M2 Max'
+    print(apple_chip_name())  # 'Apple M2 Max'
     print(apple_unified_memory_gb())  # 96.0
 ```
 
@@ -186,13 +193,13 @@ you want a single figure without paying for a whole snapshot.
 ```python
 from os_helper import cpu_percent, available_ram_gb, disk_usage_gb, gpu_utilization_percent
 
-print(cpu_percent())            # 8.3  (instantaneous CPU load, 0-100)
-print(available_ram_gb())       # 61.2 (RAM free right now, <= ram_gb())
+print(cpu_percent())  # 8.3  (instantaneous CPU load, 0-100)
+print(available_ram_gb())  # 61.2 (RAM free right now, <= ram_gb())
 
-usage = disk_usage_gb()         # defaults to the home directory's filesystem
-print(usage)                    # {'free_gb': 512.3, 'used_gb': 487.7,
-                                 #  'total_gb': 1000.0, 'percent_used': 48.8}
-print(disk_usage_gb("/tmp"))    # or check any specific path's filesystem
+usage = disk_usage_gb()  # defaults to the home directory's filesystem
+print(usage)  # {'free_gb': 512.3, 'used_gb': 487.7,
+#  'total_gb': 1000.0, 'percent_used': 48.8}
+print(disk_usage_gb("/tmp"))  # or check any specific path's filesystem
 
 # Apple via IOKit (no sudo/powermetrics needed), NVIDIA via nvidia-smi,
 # AMD via rocm-smi. None when unavailable (wrong vendor, tool not on PATH).
@@ -214,7 +221,7 @@ config = get_config(
     keys=["host", "port"],
     config_type="database",
     path="config.yaml",  # or a folder: the first *.json/*.yaml/*.yml with
-                          # all the required keys is picked, sorted by name
+    # all the required keys is picked, sorted by name
 )
 print(config)  # {'host': 'localhost', 'port': 5432}
 
@@ -225,6 +232,7 @@ config = get_config(keys=["api_key"], config_type="API", env_files=[".env.local"
 # 3) Then plain environment variables, tried as UPPER_CASE first
 #    (the conventional spelling), then the exact key as given.
 import os
+
 os.environ["API_KEY"] = "sk-example"
 config = get_config(keys=["api_key"], config_type="API", path=None, env_files=[])
 print(config)  # {'api_key': 'sk-example'}
@@ -325,9 +333,9 @@ from os_helper import folder_description
 
 description = folder_description(
     "/path/to/folder",
-    recursive=True,         # descend into subdirectories
-    index_html=True,        # write /path/to/folder/index.html
-    with_size=True,         # include a size column in the HTML index
+    recursive=True,  # descend into subdirectories
+    index_html=True,  # write /path/to/folder/index.html
+    with_size=True,  # include a size column in the HTML index
     description_json=True,  # write /path/to/folder/description.json
 )
 
@@ -358,7 +366,6 @@ print(folder, name, ext)  # Output: '/path/to', 'folder', ''
 # Handle files without extensions
 folder, name, ext = folder_name_ext("/path/to/file")
 print(folder, name, ext)  # Output: '/path/to', 'file', ''
-
 ```
 
 ### Compress a Folder into a ZIP File
@@ -385,9 +392,9 @@ use it instead of `not s` or `s == ""`, which both miss `"   "`.
 ```python
 from os_helper import emptystring
 
-print(emptystring(None))     # True
-print(emptystring(""))       # True
-print(emptystring("   "))    # True  (whitespace-only)
+print(emptystring(None))  # True
+print(emptystring(""))  # True
+print(emptystring("   "))  # True  (whitespace-only)
 print(emptystring("hello"))  # False
 ```
 
@@ -487,17 +494,22 @@ from os_helper import temporary_remote_file
 
 storage = {}
 
+
 def upload(local_path):
     with open(local_path, "rb") as f:
         storage[local_path] = f.read()
     return local_path  # use the local path as the "remote" handle
 
+
 def delete(remote_path):
     storage.pop(remote_path, None)
 
+
 with temporary_remote_file(
-    upload, delete,
-    prefix="run", suffix=".bin",
+    upload,
+    delete,
+    prefix="run",
+    suffix=".bin",
     initial_content=b"hello world",
 ) as remote:
     assert storage[remote] == b"hello world"
@@ -598,6 +610,7 @@ from os_helper import hashfolder
 
 # Create a test folder and files
 import os
+
 os.makedirs("test_folder", exist_ok=True)
 with open("test_folder/file1.txt", "w") as f:
     f.write("File 1 content")
@@ -633,10 +646,10 @@ from os_helper import time2str
 duration = 3661  # 1 hour, 1 minute, and 1 second
 
 formatted_time = time2str(duration)
-print(f"Formatted time: {formatted_time}")          # "1 hr 1 min 1 sec"
+print(f"Formatted time: {formatted_time}")  # "1 hr 1 min 1 sec"
 
 compact_time = time2str(duration, no_space=True)
-print(f"Compact time: {compact_time}")              # "1hr 1min 1sec"
+print(f"Compact time: {compact_time}")  # "1hr 1min 1sec"
 ```
 
 ### Parse Strings into Durations
@@ -646,10 +659,10 @@ print(f"Compact time: {compact_time}")              # "1hr 1min 1sec"
 ```python
 from os_helper import str2time
 
-print(str2time("1:30:00"))      # 5400.0  (HH:MM:SS)
+print(str2time("1:30:00"))  # 5400.0  (HH:MM:SS)
 print(str2time("1 hr 30 min"))  # 5400.0
-print(str2time("90 minutes"))   # 5400.0
-print(str2time("1.5 days"))     # 129600.0
+print(str2time("90 minutes"))  # 5400.0
+print(str2time("1.5 days"))  # 129600.0
 ```
 
 ## Miscellaneous Utilities
@@ -711,13 +724,13 @@ init_logging(name="mytool", propagate=True, live_stream=True)
 from os_helper import now_string, format_size
 
 # Current timestamp, two flavors: human-readable "log", or filesystem-safe.
-print(now_string())              # "2026/08/09-14:32:07"
-print(now_string("filename"))    # "2026-08-09-14-32-07"
+print(now_string())  # "2026/08/09-14:32:07"
+print(now_string("filename"))  # "2026-08-09-14-32-07"
 
 # Human-readable byte counts (decimal/SI units, like disk vendors quote).
-print(format_size(512))          # "512 B"
-print(format_size(1_536))        # "1.50 KB"
-print(format_size(1_536_000))    # "1.50 MB"
+print(format_size(512))  # "512 B"
+print(format_size(1_536))  # "1.50 KB"
+print(format_size(1_536_000))  # "1.50 MB"
 print(format_size(1_500_000_000))  # "1.50 GB"
 ```
 
@@ -854,7 +867,7 @@ import torch
 
 if torch.cuda.is_available():
     x = torch.randn(2048, 2048, device="cuda")
-    with gpu_timer() as t:           # backend="auto" picks cuda/mps/raise
+    with gpu_timer() as t:  # backend="auto" picks cuda/mps/raise
         y = x @ x
     print(f"GPU time: {t['milliseconds']:.2f} ms")
 ```
@@ -874,7 +887,7 @@ from os_helper import tic, toc
 
 tic()
 # ... work ...
-elapsed = toc()                  # seconds, does NOT reset
+elapsed = toc()  # seconds, does NOT reset
 print(f"Took {elapsed:.3f}s")
 
 # Nested timings via explicit handles:
@@ -882,8 +895,8 @@ t_outer = tic()
 # ...
 t_inner = tic()
 # ...
-print(toc(t_inner))              # inner block
-print(toc(t_outer))              # outer block
+print(toc(t_inner))  # inner block
+print(toc(t_outer))  # outer block
 ```
 
 Call `toc(log=True)` to also emit an INFO log line.

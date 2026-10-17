@@ -203,7 +203,6 @@ with osh.temporary_filename(suffix=".log") as temp_log:
     osh.info(f"Temporary file created at: {temp_log}")
     with open(temp_log, "w") as log_file:
         log_file.write("This is a temporary log entry.")
-
 ```
 
 6. Running System Commands
@@ -211,7 +210,6 @@ with osh.temporary_filename(suffix=".log") as temp_log:
 # Execute a system command and capture its output
 cmd_output = osh.system("echo 'Hello, World!'")
 osh.info(f"Command output: {cmd_output['out']}")
-
 ```
 
 7. Hashing Files and Strings

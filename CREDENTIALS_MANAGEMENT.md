@@ -117,6 +117,7 @@ import os
 import hvac  # or boto3 (Secrets Manager), google-cloud-secret-manager, ...
 import os_helper as osh
 
+
 def load_from_vault(vault_client, mount: str, path: str) -> None:
     secret = vault_client.secrets.kv.v2.read_secret_version(mount_point=mount, path=path)
     for key, value in secret["data"]["data"].items():
@@ -124,6 +125,7 @@ def load_from_vault(vault_client, mount: str, path: str) -> None:
         # always wins over the vault, so a developer's .env or shell export
         # keeps overriding it during local work.
         os.environ.setdefault(key.upper(), str(value))  # get_config tries UPPER_CASE first
+
 
 client = hvac.Client(url="https://vault.internal", token=os.environ["VAULT_TOKEN"])
 load_from_vault(client, mount="secret", path="myapp/prod")
