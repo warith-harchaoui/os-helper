@@ -1,0 +1,30 @@
+# os-helper — Compose entry point for the container image next to this file.
+#
+# Unlike the rest of the suite this service has no port: the image installs
+# the [cli] extra only, so it carries the two CLI twins and nothing that
+# listens. The library's FastAPI and MCP doors live in the [api] / [mcp]
+# extras and are not in the image, which is deliberate — os-helper is the
+# suite's foundation (logging, paths, hashing, config) and its image is kept
+# slim on purpose.
+#
+# So this file standardises the *one-shot* shape rather than a long-running
+# one: the working directory is mounted at /data once, here, instead of being
+# retyped on every `docker run -v`.
+#
+#   docker compose run --rm os-helper os-helper hash file /data/pyproject.toml
+#   docker compose run --rm os-helper os-helper-click --help
+#
+# `docker compose up` prints the CLI help and exits 0. That is the image's
+# own default command, and it is the honest behaviour for a library container.
+
+services:
+  os-helper:
+    build: .
+    image: os-helper:local
+    # The host directory you ran Compose from, readable and writable at /data.
+    volumes:
+      - ./:/data
+    working_dir: /data
+    environment:
+      PYTHONUNBUFFERED: "1"
+    # No `restart:` — a one-shot command that exits 0 must not be revived.

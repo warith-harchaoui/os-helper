@@ -198,3 +198,7 @@ nomoreclaude.sh
 .secrets/
 .pypirc
 
+
+# Runtime working directory bind-mounted by docker-compose.yml. Whatever the
+# container writes lands here on the host; none of it belongs in the repo.
+data/
