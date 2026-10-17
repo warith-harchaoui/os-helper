@@ -328,6 +328,17 @@ os-helper-gui --root ~/Downloads
 Les jalons suivants (actions de la Dedupe Lens, Config Explorer) restent
 décrits dans [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 
+### En tant que skill d'agent
+
+`skills/os-helper/` empaquette os-helper comme **skill Claude** *et* skill
+**OpenCode**, pour qu'un agent puisse s'en saisir à votre place. Voir
+[`skills/README.md`](https://github.com/warith-harchaoui/os-helper/blob/main/skills/README.md) pour l'installer (liens
+symboliques vers `~/.claude/skills/` et `~/.opencode/skills/`) et
+[`TRIGGERS.md`](https://github.com/warith-harchaoui/os-helper/blob/main/TRIGGERS.md) pour le catalogue exhaustif des
+déclencheurs — `scripts/check_triggers.py` maintient la description du skill
+alignée dessus ; la suite de tests échoue si une capacité cesse d'être
+nommée.
+
 ## Auteur
 
  - [Warith HARCHAOUI](https://linkedin.com/in/warith-harchaoui)

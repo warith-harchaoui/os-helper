@@ -316,6 +316,16 @@ os-helper-gui --root ~/Downloads
 The remaining GUI milestones (Dedupe Lens actions, Config Explorer) stay
 described in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 
+### Use it as an agent skill
+
+`skills/os-helper/` packages os-helper as a **Claude Skill** *and* an **OpenCode
+skill**, so an agent can reach for it on your behalf. See
+[`skills/README.md`](https://github.com/warith-harchaoui/os-helper/blob/main/skills/README.md) to install it (symlink into
+`~/.claude/skills/` and `~/.opencode/skills/`), and
+[`TRIGGERS.md`](https://github.com/warith-harchaoui/os-helper/blob/main/TRIGGERS.md) for the exhaustive trigger catalogue —
+`scripts/check_triggers.py` keeps the skill's description in sync with it, and
+the test suite fails if a capability stops being named.
+
 ## Author
 
  - [Warith HARCHAOUI](https://linkedin.com/in/warith-harchaoui)
