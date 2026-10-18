@@ -76,7 +76,7 @@ mcp = [
 # surfaces are actually exercised on every push, not silently skipped).
 # No AI inference here, so no DeepEval / Giskard.
 dev = [
-    "pytest>=8",
+    "pytest>=8", "pytest-timeout>=2.3",
     "click>=8.1,<9",
     "fastapi>=0.110,<1",
     "uvicorn>=0.29,<1",
