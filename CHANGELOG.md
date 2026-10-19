@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.5] - 2026-10-19
+
+### Fixed
+
+- **`string_utils.asciistring(s, replacement_char="")` raised
+  `re.PatternError`.** The run-collapsing step builds
+  `f"{re.escape(replacement_char)}+"`; with an empty replacement that is the
+  pattern `"+"`, which `re` rejects outright as "nothing to repeat".
+
+  Asking for unwanted characters to be *dropped* rather than substituted is the
+  obvious second thing to want from this function, the signature advertises a
+  plain `str` with no stated constraint, and no docstring forbade it. The caller
+  got a regex error, raised from inside `re`, for a call containing no regex and
+  naming neither `asciistring` nor the argument responsible.
+
+  Both the collapse and the trim are now skipped when there is no replacement
+  character — with none, there are no runs to collapse and no edges to strip, so
+  the joined result is already the answer. `lower` and `allow_digits` still
+  apply on that path.
+
+### Changed
+
+- **The three `*_gb` functions in `hardware_utils` now name their unit.**
+  `ram_gb` and `available_ram_gb` divide by `1024**3` (GiB); `disk_usage_gb`
+  divides by `1e9` (decimal GB). All three docstrings previously said only
+  "in GB", so anyone comparing free RAM against free disk — or summing them —
+  was off by 7 % with nothing to warn them.
+
+  **No number changed.** The units are each conventionally correct: RAM is sold
+  and reported binary, drives are sold decimal. Moving either would be the wrong
+  fix, and moving `ram_gb` would silently shift every downstream memory
+  comparison, including `best-engine-ai-helper`'s model-fits-in-RAM decision.
+  What was missing was only that nothing said so; each docstring now states its
+  unit and points at the others.
+
 ## [2.3.4] - 2026-09-03
 
 ### Fixed
