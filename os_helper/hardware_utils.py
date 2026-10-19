@@ -262,7 +262,12 @@ def cpu_model() -> str | None:
 
 def ram_gb() -> float:
     """
-    Return total system RAM in GB.
+    Return total system RAM in GiB (binary, 1024**3 bytes).
+
+    The unit is binary because that is how RAM is sold and reported: a
+    "16 GB" module is 16 GiB. Note that :func:`disk_usage_gb` is decimal
+    (1e9) for the same reason in reverse -- drives are sold decimal -- so
+    the two are not directly comparable, despite both saying "gb".
 
     Returns
     -------
@@ -282,7 +287,10 @@ def ram_gb() -> float:
 
 def available_ram_gb() -> float:
     """
-    Return system RAM currently free (not committed to any process), in GB.
+    Return system RAM currently free (not committed to any process), in GiB.
+
+    Binary units, matching :func:`ram_gb`; see its note on why this differs
+    from :func:`disk_usage_gb`.
 
     Unlike :func:`ram_gb` (a static hardware fact: total installed memory),
     this is a live figure that shrinks as other processes — including an
@@ -311,6 +319,11 @@ def available_ram_gb() -> float:
 def disk_usage_gb(path: str | None = None) -> dict[str, float]:
     """
     Return free space and percent used for the filesystem holding ``path``.
+
+    Decimal units (1e9), not binary: drives are sold and labelled decimal, so
+    a 500 GB disk reads as ~500 here. This deliberately differs from
+    :func:`ram_gb`, which is binary -- the two figures are each in their own
+    conventional unit and must not be compared directly or summed.
 
     Parameters
     ----------

@@ -122,8 +122,15 @@ def asciistring(
         c if c in allowed_chars and ord(c) < 128 else replacement_char for c in normalized_string
     )
 
-    # Use regex to replace multiple consecutive replacement characters with a single one
-    result = re.sub(f"{re.escape(replacement_char)}+", replacement_char, result)
+    # Collapse runs of the replacement character, then trim it from the ends.
+    #
+    # Both steps are skipped when replacement_char is "" -- a legitimate way to
+    # ask for the unwanted characters to be dropped rather than substituted.
+    # Without the guard, re.escape("") + "+" builds the pattern "+", which is not
+    # a valid regex ("nothing to repeat"), so the call died with a PatternError
+    # raised from inside re, naming neither this function nor its argument.
+    if replacement_char:
+        result = re.sub(f"{re.escape(replacement_char)}+", replacement_char, result)
+        result = result.strip(replacement_char)
 
-    # Strip any leading or trailing replacement characters
-    return result.strip(replacement_char)
+    return result
