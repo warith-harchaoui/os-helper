@@ -78,6 +78,13 @@ dependency, pure-Python across macOS / Linux / Windows.
   available, BLAKE2b fallback; stable 40-char hex digests cross-platform).
 - **Configuration loading**: `get_config()` with a deterministic fallback order,
   JSON/YAML file (or folder), then `.env` files, then process environment.
+- **Localization**: `Locales.from_path()` reads a `locales/i18n.yaml` holding
+  every human-readable string in one place, resolves a key for a locale with a
+  deterministic fallback to the declared default, fills `{placeholder}` fields
+  safely with `render()`, and reports every missing translation or mismatched
+  placeholder at once with `problems()` — the check a CI job asserts on.
+  Sections are named by the caller and mean nothing here, so one loader serves
+  whatever each package keeps in its file.
 - **Strings**: `emptystring()` (None / empty / whitespace), `asciistring()`
   (accent-folding, filesystem-safe slugs).
 - **Downloads and networking**: `download_file()` (streaming, flat memory,

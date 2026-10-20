@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-10-20
+
+### Added
+
+- **`Locales`: the suite's shared loader for `locales/i18n.yaml`.** Two
+  members had already adopted the file described in `CODING.md` section 21.3
+  and each had answered it alone — one with a 133-line private module, one
+  with ad-hoc reads — while nine others ship a GUI with its strings written
+  into the source. The loader belongs here, in the package all of them
+  already depend on.
+
+  It resolves deterministically (section 21.3.4): a key missing in the asked
+  locale falls back to the declared default and says so in a warning, and a
+  key missing there too raises rather than handing a developer's identifier
+  to a user. `render()` fills `{placeholder}` fields by formatting and never
+  by evaluating (section 21.3.5), and checks the field names first, so a
+  caller learns what it forgot instead of shipping a sentence with a hole in
+  it. `problems()` returns every fault at once rather than raising on the
+  first — a translator fixing a file wants the whole list in one pass — and
+  is what a CI job asserts on (section 21.3.7).
+
+  **Sections are named by the caller and carry no meaning here.** The loader
+  parses, resolves and validates; it never knows what any one section is for.
+  That is what lets a single implementation serve packages whose files hold
+  very different things, and it is why this module can live in os-helper at
+  all.
+
+  `meta.unlocalized_sections` declares the sections that are deliberately
+  single-language, whose sub-keys are therefore not locale codes but roles or
+  variants. Without it, validating such a section reports a wall of missing
+  translations that were never meant to exist — observed against a real file
+  in the suite, which went from 38 findings to none once declared. `raw()`
+  reaches those entries, since no locale can resolve them.
+
 ## [2.3.5] - 2026-10-19
 
 ### Fixed

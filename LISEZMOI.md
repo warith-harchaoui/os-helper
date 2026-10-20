@@ -84,6 +84,14 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
 - **Chargement de configuration** : `get_config()` avec un ordre de repli
   déterministe : fichier JSON/YAML (ou dossier) → fichiers `.env` →
   environnement du processus.
+- **Localisation** : `Locales.from_path()` lit un `locales/i18n.yaml` qui tient
+  en un seul endroit toutes les chaînes lisibles par un humain, résout une clé
+  pour une locale avec repli déterministe sur la langue par défaut déclarée,
+  remplit les champs `{placeholder}` sans jamais évaluer de code avec
+  `render()`, et signale d'un coup chaque traduction manquante ou placeholder
+  divergent avec `problems()` — le contrôle sur lequel une CI s'appuie. Les
+  sections sont nommées par l'appelant et n'ont aucun sens ici : un seul
+  chargeur sert donc ce que chaque paquet range dans son fichier.
 - **Chaînes** : `emptystring()` (None / vide / espaces), `asciistring()`
   (dépliage des accents, slugs sûrs pour le système de fichiers).
 - **Téléchargements et réseau** : `download_file()` (en flux, mémoire plate,

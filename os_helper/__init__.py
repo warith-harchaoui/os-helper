@@ -57,6 +57,10 @@ from .hash_utils import (
     hashfile,
     hashfolder,
 )
+from .i18n_utils import (
+    META_SECTION,
+    Locales,
+)
 from .logging_utils import (
     check,
     critical,
@@ -181,6 +185,9 @@ __all__ = [
     "hash_string",
     "hashfile",
     "hashfolder",
+    # i18n_utils
+    "Locales",
+    "META_SECTION",
     # config_utils
     "get_config",
     # string_utils
