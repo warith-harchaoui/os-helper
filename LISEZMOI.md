@@ -84,7 +84,14 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
 - **Chargement de configuration** : `get_config()` avec un ordre de repli
   déterministe : fichier JSON/YAML (ou dossier) → fichiers `.env` →
   environnement du processus.
-- **Localisation** : `Locales.from_path()` lit un `locales/i18n.yaml` qui tient
+- **Localisation** : deux mécanismes, un par forme de problème.
+  `Catalog.from_package()` lit des catalogues `gettext` `.po`/`.mo` indexés sur
+  la chaîne source anglaise — ce qu'utilisent les GUI de la suite — et
+  `Catalog.problems(used=...)` signale une source que le code demande et
+  qu'aucun catalogue ne porte, ce qui empêche une phrase reformulée de se
+  dé-traduire en silence. `compile_catalogs()` écrit le `.mo` lui-même, si bien
+  que `msgfmt` de GNU n'est jamais une dépendance de construction. À côté,
+  `Locales.from_path()` lit un `locales/i18n.yaml` qui tient
   en un seul endroit toutes les chaînes lisibles par un humain, résout une clé
   pour une locale avec repli déterministe sur la langue par défaut déclarée,
   remplit les champs `{placeholder}` sans jamais évaluer de code avec
@@ -337,7 +344,7 @@ La page parle **français et anglais**. `?lang=fr` / `?lang=en` choisit la
 langue, un drapeau dans l'en-tête bascule de l'une à l'autre, et un code que
 le fichier de locales ne porte pas retombe sur la langue par défaut au lieu
 d'échouer. Toutes les chaînes vivent dans
-[`os_helper/locales/i18n.yaml`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/locales/i18n.yaml),
+[`os_helper/locales/fr/LC_MESSAGES/os_helper.po`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/locales/fr/LC_MESSAGES/os_helper.po),
 lu par `os_helper.Locales` — le chargeur que le reste de la suite utilise déjà,
 si bien que traduire la page n'oblige jamais à ouvrir un fichier Python :
 

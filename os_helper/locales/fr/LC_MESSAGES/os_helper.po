@@ -1,0 +1,69 @@
+# fr catalogue for os-helper.
+#
+# msgid is the English source string as it appears in the code, so a
+# reworded source needs its entry reworded too — os_helper.Catalog.problems
+# reports the mismatch rather than letting the page half-revert to English.
+msgid ""
+msgstr ""
+"Project-Id-Version: os-helper\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "/absolute/path/to/folder"
+msgstr "/chemin/absolu/vers/le/dossier"
+
+msgid "Color:"
+msgstr "Couleur :"
+
+msgid "Enter a folder path first."
+msgstr "Indiquez d'abord un chemin de dossier."
+
+msgid "Folder to scan"
+msgstr "Dossier à analyser"
+
+msgid "Scan"
+msgstr "Analyser"
+
+msgid "age"
+msgstr "âge"
+
+msgid "archive"
+msgstr "archive"
+
+msgid "code"
+msgstr "code"
+
+msgid "data"
+msgstr "données"
+
+msgid "dir"
+msgstr "dossier"
+
+msgid "error: "
+msgstr "erreur : "
+
+msgid "hash-dedupe"
+msgstr "doublons (empreinte)"
+
+msgid "idle"
+msgstr "en attente"
+
+msgid "media"
+msgstr "médias"
+
+msgid "modified {when}"
+msgstr "modifié le {when}"
+
+msgid "other"
+msgstr "autre"
+
+msgid "root: {root} ({count} files shown)"
+msgstr "racine : {root} ({count} fichiers affichés)"
+
+msgid "scanning…"
+msgstr "analyse en cours…"
+
+msgid "type family"
+msgstr "famille de fichiers"

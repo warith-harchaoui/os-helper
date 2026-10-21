@@ -78,7 +78,14 @@ dependency, pure-Python across macOS / Linux / Windows.
   available, BLAKE2b fallback; stable 40-char hex digests cross-platform).
 - **Configuration loading**: `get_config()` with a deterministic fallback order,
   JSON/YAML file (or folder), then `.env` files, then process environment.
-- **Localization**: `Locales.from_path()` reads a `locales/i18n.yaml` holding
+- **Localization**: two mechanisms, one per shape of problem.
+  `Catalog.from_package()` reads `gettext` `.po`/`.mo` catalogues keyed on the
+  English source string — what the suite's GUIs use — and
+  `Catalog.problems(used=...)` reports a source the code asks for that no
+  catalogue carries, which is what keeps a reworded sentence from silently
+  half-reverting to English. `compile_catalogs()` writes the `.mo` itself, so
+  GNU `msgfmt` is never a build dependency. Alongside it,
+  `Locales.from_path()` reads a `locales/i18n.yaml` holding
   every human-readable string in one place, resolves a key for a locale with a
   deterministic fallback to the declared default, fills `{placeholder}` fields
   safely with `render()`, and reports every missing translation or mismatched
@@ -319,11 +326,13 @@ os-helper-gui --root ~/Downloads
 ```
 
 The page speaks **French and English**. `?lang=fr` / `?lang=en` picks one, a
-flag in the header toggles between them, and a code the locale file does not
-carry falls back to the default rather than failing. Every string lives in
-[`os_helper/locales/i18n.yaml`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/locales/i18n.yaml),
-read through `os_helper.Locales` — the same loader the rest of the suite uses,
-so translating the page never means opening a Python file:
+flag in the header toggles between them, and a code no catalogue carries falls
+back to the default rather than failing. The English is the source, written in
+the markup itself; the French lives in
+[`os_helper/locales/fr/LC_MESSAGES/os_helper.po`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/locales/fr/LC_MESSAGES/os_helper.po),
+a standard `gettext` catalogue read through `os_helper.Catalog` — the same
+loader the rest of the suite uses, so a translator works in the format every
+translation tool already speaks:
 
 ```bash
 open http://127.0.0.1:8017/gui?lang=en

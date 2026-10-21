@@ -36,12 +36,19 @@ What it consumes / produces
 
 Where the words live
 --------------------
-Not here. Every human-readable string comes from ``locales/i18n.yaml``
-through :class:`os_helper.Locales` — the loader this very package provides
-(``CODING.md`` 21.3), so the foundation reads its own strings through the
-same door it offers the rest of the suite. The markup below is tokenised
-(``{{TOKEN}}`` in HTML, a ``T`` object injected for the script), so one
-template serves every language and a translator never opens a ``.py`` file.
+In the markup, in English. Each one is wrapped as ``{{_("…")}}`` in the HTML,
+or listed in :data:`_JS_NAME_TO_SOURCE` for the script, and :class:`Catalog`
+translates it through the compiled ``gettext`` catalogues under ``locales/`` —
+the loader this very package provides (``CODING.md`` 21.3), so the foundation
+reads its own strings through the same door it offers the rest of the suite.
+
+English is the msgid, so it needs no catalogue and cannot fall out of sync with
+one; a string the French catalogue has not caught up with renders as readable
+English instead of as a key. The cost is the mirror image: rewording the
+English here orphans its French entry, and gettext would quietly serve the
+English. ``tests/test_gui_i18n.py`` exists to catch that — it hands every
+source string to :meth:`Catalog.problems`, so an orphaned translation is a red
+build rather than a half-reverted page.
 
 :func:`render_gui` resolves a language and returns the finished page.
 
@@ -72,6 +79,7 @@ import functools
 import html
 import json
 import os
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -79,7 +87,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 # These are all pure-Python and dependency-light, so importing them keeps the
 # GUI module cheap to import (the FastAPI cost is deferred to create_app/run).
 from . import error, format_size, hashfile, info, warning
-from .i18n_utils import Locales
+from .gettext_utils import Catalog
 
 # FastAPI is an *optional* dependency (the ``gui`` extra). We only import it
 # for type-checkers here; the runtime import happens lazily in create_app().
@@ -94,59 +102,62 @@ if TYPE_CHECKING:  # pragma: no cover — typing only, never runs
 # Inside the package, not beside it: a file one level up is not package data
 # and does not travel in the wheel. best-engine shipped exactly that bug —
 # `pip install` gave a package whose every GUI string raised FileNotFoundError.
-_LOCALES_PATH = Path(__file__).resolve().parent / "locales" / "i18n.yaml"
+_LOCALES_DIR = Path(__file__).resolve().parent / "locales"
 
-#: The section of the locale file this module reads.
-_GUI_SECTION = "gui"
+#: The gettext domain, and therefore each ``.mo`` file's stem.
+_DOMAIN = "os_helper"
+
+#: The language served when the request names one we cannot render.
+_DEFAULT_LANGUAGE = "fr"
 
 
 @functools.lru_cache(maxsize=1)
-def _locales() -> Locales:
-    """Parse ``locales/i18n.yaml`` once, through the suite's shared loader."""
-    return Locales.from_path(_LOCALES_PATH)
+def _catalog() -> Catalog:
+    """Resolve the catalogue directory once, through this package's own loader."""
+    return Catalog.from_package(_LOCALES_DIR, _DOMAIN, default_language=_DEFAULT_LANGUAGE)
 
 
 def supported_languages() -> tuple[str, ...]:
-    """Language codes the GUI can render, as declared by the locale file."""
-    return tuple(_locales().supported_locales)
+    """Language codes the GUI can render: English plus every compiled catalogue."""
+    return _catalog().languages
 
 
 def default_language() -> str:
     """The language an unknown or absent ``?lang=`` falls back to."""
-    return _locales().default_locale
+    return _catalog().default_language
 
 
-# Two vocabularies meet here: the template's tokens and the locale file's
-# semantic keys. These maps bridge them. `_HTML_TOKEN_TO_KEY` fills {{TOKEN}}
-# placeholders; `_JS_NAME_TO_KEY` builds the `const T = {...}` the script reads.
-_HTML_TOKEN_TO_KEY: dict[str, str] = {
-    "PAGE_TITLE": "page_title",
-    "HERO_TITLE": "hero_title",
-    "ROOT_PLACEHOLDER": "root_placeholder",
-    "ROOT_ARIA": "root_aria",
-    "SCAN_BUTTON": "scan_button",
-    "COLOR_LABEL": "color_label",
-    "MODE_AGE": "mode_age",
-    "MODE_DEDUPE": "mode_dedupe",
-    "MODE_TYPE": "mode_type",
-    "STATUS_IDLE": "status_idle",
-    "LANG_HREF": "lang_toggle_href",
-    "LANG_FLAG": "lang_toggle_flag",
-    "LANG_ARIA": "lang_toggle_aria",
-}
+# The language toggle is computed, not translated. Its three parts all mean
+# "the other language", which is data rather than copy: a msgid of
+# ``/gui?lang=fr`` whose translation is ``/gui?lang=en`` would be nonsense, and
+# `Catalog.problems` would rightly treat it as prose that had drifted.
+#
+#: Flag shown for a language — the flag of that language, not of the page.
+_FLAGS: dict[str, str] = {"fr": "🇫🇷", "en": "🇬🇧"}
 
-_JS_NAME_TO_KEY: dict[str, str] = {
-    "scanning": "js_scanning",
-    "errorPrefix": "js_error_prefix",
-    "needRoot": "js_need_root",
-    "statusScanned": "js_status_scanned",
-    "tooltipModified": "js_tooltip_modified",
-    "familyCode": "family_code",
-    "familyData": "family_data",
-    "familyMedia": "family_media",
-    "familyArchive": "family_archive",
-    "familyOther": "family_other",
-    "familyDir": "family_dir",
+#: How each language names itself. Deliberately NOT translated: a French page
+#: offering English says "English version" in English, which is what a reader
+#: scanning for their own language actually looks for.
+_ENDONYMS: dict[str, str] = {"fr": "Version française", "en": "English version"}
+
+
+# The inline script's strings. The JS names are the contract between this
+# module and the script below; the English beside each one is the msgid, so
+# the script's copy lives in the same place as the markup's and is checked
+# by the same test. Injected as JSON, which is the one encoding an
+# apostrophe cannot break out of — and French copy is full of them.
+_JS_NAME_TO_SOURCE: dict[str, str] = {
+    "scanning": "scanning…",
+    "errorPrefix": "error: ",
+    "needRoot": "Enter a folder path first.",
+    "statusScanned": "root: {root} ({count} files shown)",
+    "tooltipModified": "modified {when}",
+    "familyCode": "code",
+    "familyData": "data",
+    "familyMedia": "media",
+    "familyArchive": "archive",
+    "familyOther": "other",
+    "familyDir": "dir",
 }
 
 
@@ -521,12 +532,18 @@ def build_tree_payload(
 # both. The page renders a squarified treemap via d3.treemap, wires the three
 # color modes (age / dedupe / type), and shows a hover tooltip. All data comes
 # from GET /api/tree; nothing here phones home.
+#: One ``{{_("…")}}`` site in the template. Non-greedy and newline-free, so a
+#: run of them on one line stays separate and an unterminated one is left
+#: alone rather than swallowing the rest of the page.
+_SOURCE_RE = re.compile(r'\{\{_\("(.*?)"\)\}\}')
+
+
 _GUI_TEMPLATE: str = r"""<!DOCTYPE html>
 <html lang="{{LANG}}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>{{PAGE_TITLE}}</title>
+<title>OS Helper — Tree Radar</title>
 <!-- D3 is the only client dependency, loaded from a CDN (no build step). -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
@@ -550,22 +567,22 @@ _GUI_TEMPLATE: str = r"""<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <h1>{{HERO_TITLE}}</h1>
+  <h1>Tree Radar</h1>
   <!-- Root folder to scan. Defaults to whatever the server was launched with. -->
-  <input type="text" id="root" aria-label="{{ROOT_ARIA}}"
-         placeholder="{{ROOT_PLACEHOLDER}}" />
-  <button id="scan">{{SCAN_BUTTON}}</button>
+  <input type="text" id="root" aria-label="{{_("Folder to scan")}}"
+         placeholder="{{_("/absolute/path/to/folder")}}" />
+  <button id="scan">{{_("Scan")}}</button>
   <!-- Color mode: which signal the rectangle color encodes. -->
-  <label>{{COLOR_LABEL}}
+  <label>{{_("Color:")}}
     <select id="mode">
-      <option value="age">{{MODE_AGE}}</option>
-      <option value="dedupe">{{MODE_DEDUPE}}</option>
-      <option value="type">{{MODE_TYPE}}</option>
+      <option value="age">{{_("age")}}</option>
+      <option value="dedupe">{{_("hash-dedupe")}}</option>
+      <option value="type">{{_("type family")}}</option>
     </select>
   </label>
   <!-- Language toggle: a flag that links to the other locale of this page. -->
   <a id="lang" href="{{LANG_HREF}}" aria-label="{{LANG_ARIA}}">{{LANG_FLAG}}</a>
-  <span id="status">{{STATUS_IDLE}}</span>
+  <span id="status">{{_("idle")}}</span>
 </header>
 <div id="chart"></div>
 <div id="tip"></div>
@@ -750,7 +767,7 @@ def render_gui(lang: str = "", root: str = "") -> str:
     ----------
     lang : str
         Two-letter language code. Anything outside the locale file's
-        ``meta.supported_locales`` — including the empty string — falls back
+        a compiled catalogue — including the empty string — falls back
         to ``meta.default_locale``, so an unknown ``?lang=`` never 500s.
     root : str
         Folder to pre-fill in the input and auto-scan on load. Embedded as a
@@ -768,21 +785,35 @@ def render_gui(lang: str = "", root: str = "") -> str:
     >>> render_gui("tlh") == render_gui(default_language())
     True
     """
-    resolved = lang if lang in supported_languages() else default_language()
-    loc = _locales()
+    cat = _catalog()
+    resolved = cat.resolve(lang)
+    translate = cat.translator_for(resolved).gettext
 
-    page = _GUI_TEMPLATE.replace("{{LANG}}", html.escape(resolved, quote=True))
-    for token, key in _HTML_TOKEN_TO_KEY.items():
-        # Escape every value: these land in attributes (placeholder, aria,
-        # href) as readily as in text nodes, and a stray quote would break out
-        # of the attribute it sits in.
-        value = html.escape(loc.text(_GUI_SECTION, key, resolved), quote=True)
-        page = page.replace("{{" + token + "}}", value)
+    # The other language, for the toggle. With two languages this is "the one
+    # that is not current"; with more it is the next one round, which keeps the
+    # flag a cycle rather than a dead end.
+    languages = cat.languages
+    other = languages[(languages.index(resolved) + 1) % len(languages)]
+
+    def _render_source(match: re.Match[str]) -> str:
+        """Translate one ``{{_("…")}}`` site and escape it for HTML.
+
+        Escaping is not optional: these land in attributes (placeholder, aria,
+        href) as readily as in text nodes, and a French apostrophe in an
+        attribute would close it early.
+        """
+        return html.escape(translate(match.group(1)), quote=True)
+
+    page = _SOURCE_RE.sub(_render_source, _GUI_TEMPLATE)
+    page = page.replace("{{LANG}}", html.escape(resolved, quote=True))
+    page = page.replace("{{LANG_HREF}}", html.escape(f"/gui?lang={other}", quote=True))
+    page = page.replace("{{LANG_FLAG}}", _FLAGS.get(other, other.upper()))
+    page = page.replace("{{LANG_ARIA}}", html.escape(_ENDONYMS.get(other, other), quote=True))
 
     # The script's strings go in as JSON rather than as substituted text: it is
     # the encoding that cannot be broken out of by an apostrophe, and French
     # copy is full of them.
-    table = {name: loc.text(_GUI_SECTION, key, resolved) for name, key in _JS_NAME_TO_KEY.items()}
+    table = {name: translate(source) for name, source in _JS_NAME_TO_SOURCE.items()}
     page = page.replace("{{T_JSON}}", json.dumps(table, ensure_ascii=False))
     return page.replace("{{ROOT_JSON}}", json.dumps(root))
 

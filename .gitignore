@@ -77,6 +77,14 @@ cover/
 # Translations
 *.mo
 *.pot
+# ...except this package's own compiled catalogues, which ARE shipped data.
+# The blanket `*.mo` above comes from the stock Python .gitignore, where a
+# `.mo` is a build artifact. Here it is the file the GUI reads at run time: if
+# it stays ignored it is absent from the repository, therefore from the sdist,
+# therefore from the wheel, and every string renders as English on an
+# installed copy — while looking perfect locally, where the file is on disk
+# either way. `tests/test_gui_i18n.py` holds this with a "tracked by git" test.
+!os_helper/locales/*/LC_MESSAGES/*.mo
 
 # Django stuff:
 *.log

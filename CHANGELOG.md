@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-10-21
+
+### Changed
+
+- **Tree Radar's own GUI now uses `Catalog`**, the mechanism 2.6.0 introduced.
+  The foundation reads its own strings through the same door it offers the
+  rest of the suite — all eight GUIs are now on one mechanism, which is what
+  the migration was for.
+
+  The English is the source, written in the markup as `{{_("…")}}`; the French
+  lives in `os_helper/locales/fr/LC_MESSAGES/os_helper.po`. `locales/i18n.yaml`
+  is gone from this package, and `Locales` itself stays — it remains the right
+  loader for text keyed on meaning, and is still exported and documented.
+
+  `OS Helper — Tree Radar` and `Tree Radar` are written in the markup
+  directly: a product name reads the same in every language, so making it a
+  msgid would invite a translation it should never have.
+
+### Fixed
+
+- **The compiled catalogue would never have shipped.** The stock Python
+  `.gitignore` carries a blanket `*.mo`, where a `.mo` is a build artifact;
+  here it is the file the GUI reads at run time. Left ignored it would have
+  been absent from the repository, therefore from the wheel, and every string
+  would have rendered as English on an installed copy while looking perfect
+  locally, where the file is on disk either way. Negated for this package's own
+  catalogues and held by a "tracked by git" test.
+
 ## [2.6.0] - 2026-10-21
 
 ### Added
