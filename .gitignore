@@ -22,6 +22,12 @@ logs/
 *.json
 *.yaml
 !environment.yaml
+# The GUI's localization catalogue is source, not a config file. The
+# blanket rule above would keep it out of git, therefore out of the
+# sdist, therefore out of the wheel — a package whose every GUI string
+# raises FileNotFoundError, and invisible locally where the file is on
+# disk either way.
+!os_helper/locales/i18n.yaml
 
 # Distribution / packaging
 .Python

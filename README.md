@@ -318,6 +318,17 @@ os-helper gui --root ~/Downloads
 os-helper-gui --root ~/Downloads
 ```
 
+The page speaks **French and English**. `?lang=fr` / `?lang=en` picks one, a
+flag in the header toggles between them, and a code the locale file does not
+carry falls back to the default rather than failing. Every string lives in
+[`os_helper/locales/i18n.yaml`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/locales/i18n.yaml),
+read through `os_helper.Locales` — the same loader the rest of the suite uses,
+so translating the page never means opening a Python file:
+
+```bash
+open http://127.0.0.1:8017/gui?lang=en
+```
+
 The remaining GUI milestones (Dedupe Lens actions, Config Explorer) stay
 described in [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 

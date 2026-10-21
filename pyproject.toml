@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "os-helper"
-version = "2.4.0"
+version = "2.5.0"
 description = "Cross-platform Python utility functions for file handling, system operations, string manipulation, folder management, hashing, configuration loading, and timing/profiling primitives — exposed as library, argparse CLI and click CLI."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -109,7 +109,9 @@ exclude = ["tests*", "assets*"]
 # PEP 561 marker: ship this package's inline type hints to consumers, so
 # downstream repos running `mypy --strict` (e.g. best-engine-ai-helper) see
 # real return types from `import os_helper` instead of implicit `Any`.
-"os_helper" = ["py.typed"]
+# The GUI's localization catalogue travels with the package: living
+# inside os_helper/ is necessary, declaring it here is what ships it.
+"os_helper" = ["py.typed", "locales/*.yaml"]
 
 [tool.ruff]
 line-length = 100

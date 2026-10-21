@@ -333,6 +333,18 @@ os-helper gui --root ~/Downloads
 os-helper-gui --root ~/Downloads
 ```
 
+La page parle **français et anglais**. `?lang=fr` / `?lang=en` choisit la
+langue, un drapeau dans l'en-tête bascule de l'une à l'autre, et un code que
+le fichier de locales ne porte pas retombe sur la langue par défaut au lieu
+d'échouer. Toutes les chaînes vivent dans
+[`os_helper/locales/i18n.yaml`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/locales/i18n.yaml),
+lu par `os_helper.Locales` — le chargeur que le reste de la suite utilise déjà,
+si bien que traduire la page n'oblige jamais à ouvrir un fichier Python :
+
+```bash
+open http://127.0.0.1:8017/gui?lang=en
+```
+
 Les jalons suivants (actions de la Dedupe Lens, Config Explorer) restent
 décrits dans [GUI.md](https://github.com/warith-harchaoui/os-helper/blob/main/GUI.md).
 

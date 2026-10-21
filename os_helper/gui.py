@@ -34,6 +34,17 @@ What it consumes / produces
 - Produces: a locally-served HTML page (``GET /gui``) and a JSON tree
   (``GET /api/tree``). Nothing is uploaded; no telemetry; no account.
 
+Where the words live
+--------------------
+Not here. Every human-readable string comes from ``locales/i18n.yaml``
+through :class:`os_helper.Locales` — the loader this very package provides
+(``CODING.md`` 21.3), so the foundation reads its own strings through the
+same door it offers the rest of the suite. The markup below is tokenised
+(``{{TOKEN}}`` in HTML, a ``T`` object injected for the script), so one
+template serves every language and a translator never opens a ``.py`` file.
+
+:func:`render_gui` resolves a language and returns the finished page.
+
 Lean-import contract
 --------------------
 ``import os_helper as osh`` must stay free of FastAPI/uvicorn. FastAPI is
@@ -57,19 +68,86 @@ Warith Harchaoui, Ph.D. — https://linkedin.com/in/warith-harchaoui/
 # signatures without importing FastAPI at module import time.
 from __future__ import annotations
 
+import functools
+import html
 import json
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
 # Reuse the library's own helpers — do NOT reinvent size/hash/format logic.
 # These are all pure-Python and dependency-light, so importing them keeps the
 # GUI module cheap to import (the FastAPI cost is deferred to create_app/run).
 from . import error, format_size, hashfile, info, warning
+from .i18n_utils import Locales
 
 # FastAPI is an *optional* dependency (the ``gui`` extra). We only import it
 # for type-checkers here; the runtime import happens lazily in create_app().
 if TYPE_CHECKING:  # pragma: no cover — typing only, never runs
     from fastapi import FastAPI
+
+
+# ---------------------------------------------------------------------------
+# Localization — the page's words, and the language they come out in.
+# ---------------------------------------------------------------------------
+
+# Inside the package, not beside it: a file one level up is not package data
+# and does not travel in the wheel. best-engine shipped exactly that bug —
+# `pip install` gave a package whose every GUI string raised FileNotFoundError.
+_LOCALES_PATH = Path(__file__).resolve().parent / "locales" / "i18n.yaml"
+
+#: The section of the locale file this module reads.
+_GUI_SECTION = "gui"
+
+
+@functools.lru_cache(maxsize=1)
+def _locales() -> Locales:
+    """Parse ``locales/i18n.yaml`` once, through the suite's shared loader."""
+    return Locales.from_path(_LOCALES_PATH)
+
+
+def supported_languages() -> tuple[str, ...]:
+    """Language codes the GUI can render, as declared by the locale file."""
+    return tuple(_locales().supported_locales)
+
+
+def default_language() -> str:
+    """The language an unknown or absent ``?lang=`` falls back to."""
+    return _locales().default_locale
+
+
+# Two vocabularies meet here: the template's tokens and the locale file's
+# semantic keys. These maps bridge them. `_HTML_TOKEN_TO_KEY` fills {{TOKEN}}
+# placeholders; `_JS_NAME_TO_KEY` builds the `const T = {...}` the script reads.
+_HTML_TOKEN_TO_KEY: dict[str, str] = {
+    "PAGE_TITLE": "page_title",
+    "HERO_TITLE": "hero_title",
+    "ROOT_PLACEHOLDER": "root_placeholder",
+    "ROOT_ARIA": "root_aria",
+    "SCAN_BUTTON": "scan_button",
+    "COLOR_LABEL": "color_label",
+    "MODE_AGE": "mode_age",
+    "MODE_DEDUPE": "mode_dedupe",
+    "MODE_TYPE": "mode_type",
+    "STATUS_IDLE": "status_idle",
+    "LANG_HREF": "lang_toggle_href",
+    "LANG_FLAG": "lang_toggle_flag",
+    "LANG_ARIA": "lang_toggle_aria",
+}
+
+_JS_NAME_TO_KEY: dict[str, str] = {
+    "scanning": "js_scanning",
+    "errorPrefix": "js_error_prefix",
+    "needRoot": "js_need_root",
+    "statusScanned": "js_status_scanned",
+    "tooltipModified": "js_tooltip_modified",
+    "familyCode": "family_code",
+    "familyData": "family_data",
+    "familyMedia": "family_media",
+    "familyArchive": "family_archive",
+    "familyOther": "family_other",
+    "familyDir": "family_dir",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -438,16 +516,17 @@ def build_tree_payload(
 # client dependency is D3 loaded from a CDN (no build step, per GUI.md).
 # ---------------------------------------------------------------------------
 
-# The page is a plain module-level constant so serving it is a zero-cost
-# string response. It renders a squarified treemap via d3.treemap, wires the
-# three color modes (age / dedupe / type), and shows a hover tooltip. All
-# data comes from GET /api/tree; nothing here phones home.
-_INDEX_HTML: str = r"""<!DOCTYPE html>
-<html lang="en">
+# One template, every language. Human-facing text is tokenised as {{TOKEN}}
+# (HTML) or read from the injected `T` object (JavaScript); `render_gui` fills
+# both. The page renders a squarified treemap via d3.treemap, wires the three
+# color modes (age / dedupe / type), and shows a hover tooltip. All data comes
+# from GET /api/tree; nothing here phones home.
+_GUI_TEMPLATE: str = r"""<!DOCTYPE html>
+<html lang="{{LANG}}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>OS Helper — Tree Radar</title>
+<title>{{PAGE_TITLE}}</title>
 <!-- D3 is the only client dependency, loaded from a CDN (no build step). -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
@@ -459,6 +538,8 @@ _INDEX_HTML: str = r"""<!DOCTYPE html>
   input[type=text] { padding: 6px 8px; min-width: 320px; }
   button, select { padding: 6px 10px; }
   #status { font-size: 12px; opacity: 0.7; margin-left: auto; }
+  #lang { font-size: 18px; text-decoration: none; line-height: 1; }
+  #lang:hover { opacity: 0.7; }
   #chart { width: 100vw; height: calc(100vh - 52px); }
   .node rect { stroke: #0004; stroke-width: 0.5px; cursor: pointer; }
   .node text { font-size: 10px; pointer-events: none; fill: #000; }
@@ -469,19 +550,22 @@ _INDEX_HTML: str = r"""<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <h1>Tree Radar</h1>
+  <h1>{{HERO_TITLE}}</h1>
   <!-- Root folder to scan. Defaults to whatever the server was launched with. -->
-  <input type="text" id="root" placeholder="/absolute/path/to/folder" />
-  <button id="scan">Scan</button>
+  <input type="text" id="root" aria-label="{{ROOT_ARIA}}"
+         placeholder="{{ROOT_PLACEHOLDER}}" />
+  <button id="scan">{{SCAN_BUTTON}}</button>
   <!-- Color mode: which signal the rectangle color encodes. -->
-  <label>Color:
+  <label>{{COLOR_LABEL}}
     <select id="mode">
-      <option value="age">age</option>
-      <option value="dedupe">hash-dedupe</option>
-      <option value="type">type family</option>
+      <option value="age">{{MODE_AGE}}</option>
+      <option value="dedupe">{{MODE_DEDUPE}}</option>
+      <option value="type">{{MODE_TYPE}}</option>
     </select>
   </label>
-  <span id="status">idle</span>
+  <!-- Language toggle: a flag that links to the other locale of this page. -->
+  <a id="lang" href="{{LANG_HREF}}" aria-label="{{LANG_ARIA}}">{{LANG_FLAG}}</a>
+  <span id="status">{{STATUS_IDLE}}</span>
 </header>
 <div id="chart"></div>
 <div id="tip"></div>
@@ -491,6 +575,11 @@ _INDEX_HTML: str = r"""<!DOCTYPE html>
 // out as a squarified treemap; color encodes age / dedupe / type per the
 // selected mode. Your paths and hashes never leave this machine.
 
+// Every human-readable string the script writes comes from the locale file,
+// injected as JSON — the one encoding an apostrophe cannot break out of, and
+// French copy is full of them.
+const T = {{T_JSON}};
+
 const statusEl = document.getElementById("status");   // small status line
 const rootEl = document.getElementById("root");       // root-path input
 const modeEl = document.getElementById("mode");       // color-mode selector
@@ -498,8 +587,9 @@ const tip = document.getElementById("tip");           // hover tooltip
 
 let lastData = null;   // last payload from /api/tree, cached for re-color
 
-// Pre-fill the root input with the server's launch root (injected below).
-rootEl.value = window.__OSH_ROOT__ || "";
+// Pre-fill the root input with the server's launch root, injected as a JSON
+// string literal so a Windows path's backslashes cannot break the script.
+rootEl.value = {{ROOT_JSON}} || "";
 
 // Coarse type-family palette. Colorblind-ish distinct hues; shapes are all
 // rectangles so this is the one place color carries meaning (see GUI.md note
@@ -509,16 +599,22 @@ const FAMILY_COLORS = {
   archive: "#f28e2b", other: "#9c9c9c",
 };
 
+// The server sends the family as a machine name; the tooltip shows a word.
+const FAMILY_LABELS = {
+  code: T.familyCode, data: T.familyData, media: T.familyMedia,
+  archive: T.familyArchive, other: T.familyOther,
+};
+
 // Fetch the tree JSON for a root path. `dedupe` triggers server-side hashing.
 async function fetchTree(root, dedupe) {
-  statusEl.textContent = "scanning...";
+  statusEl.textContent = T.scanning;
   const url = "/api/tree?root=" + encodeURIComponent(root) +
               (dedupe ? "&dedupe=1" : "");
   const resp = await fetch(url);
   if (!resp.ok) {
     // Surface backend errors (e.g. "not a directory") in the status line.
     const msg = await resp.text();
-    statusEl.textContent = "error: " + msg;
+    statusEl.textContent = T.errorPrefix + msg;
     throw new Error(msg);
   }
   return await resp.json();
@@ -595,10 +691,13 @@ function render() {
       tip.style.display = "block";
       tip.style.left = (event.clientX + 12) + "px";
       tip.style.top = (event.clientY + 12) + "px";
+      // Dates follow the page's language too, not the browser's default.
+      const when = dt.toLocaleString(document.documentElement.lang || undefined);
       tip.innerHTML =
         "<b>" + d.data.path + "</b><br>" +
-        d.data.size_h + " &middot; " + (d.data.family || "dir") + "<br>" +
-        "modified " + dt.toLocaleString();
+        d.data.size_h + " &middot; " +
+        (FAMILY_LABELS[d.data.family] || T.familyDir) + "<br>" +
+        T.tooltipModified.replace("{when}", when);
     })
     .on("mouseout", () => { tip.style.display = "none"; });
 
@@ -607,14 +706,17 @@ function render() {
     .append("text").attr("x", 3).attr("y", 12)
     .text((d) => d.data.name);
 
-  statusEl.textContent =
-    "root: " + lastData.root + "  (" + leaves.length + " files shown)";
+  // A template with named fields, so a translator can reorder the sentence
+  // rather than being stuck with the order JavaScript glued it in.
+  statusEl.textContent = T.statusScanned
+    .replace("{root}", lastData.root)
+    .replace("{count}", leaves.length);
 }
 
 // Kick off a scan for the current root + mode, then render.
 async function scan() {
   const root = rootEl.value.trim();
-  if (!root) { statusEl.textContent = "enter a folder path"; return; }
+  if (!root) { statusEl.textContent = T.needRoot; return; }
   // Dedupe coloring needs the (expensive) server-side hash pass.
   const wantDedupe = modeEl.value === "dedupe";
   try {
@@ -639,6 +741,50 @@ if (rootEl.value) scan();
 </body>
 </html>
 """
+
+
+def render_gui(lang: str = "", root: str = "") -> str:
+    """Render the Tree Radar page in the requested language.
+
+    Parameters
+    ----------
+    lang : str
+        Two-letter language code. Anything outside the locale file's
+        ``meta.supported_locales`` — including the empty string — falls back
+        to ``meta.default_locale``, so an unknown ``?lang=`` never 500s.
+    root : str
+        Folder to pre-fill in the input and auto-scan on load. Embedded as a
+        JSON string literal, so a Windows path keeps its backslashes.
+
+    Returns
+    -------
+    str
+        The complete HTML document for that language.
+
+    Examples
+    --------
+    >>> "<!DOCTYPE html>" in render_gui("en")
+    True
+    >>> render_gui("tlh") == render_gui(default_language())
+    True
+    """
+    resolved = lang if lang in supported_languages() else default_language()
+    loc = _locales()
+
+    page = _GUI_TEMPLATE.replace("{{LANG}}", html.escape(resolved, quote=True))
+    for token, key in _HTML_TOKEN_TO_KEY.items():
+        # Escape every value: these land in attributes (placeholder, aria,
+        # href) as readily as in text nodes, and a stray quote would break out
+        # of the attribute it sits in.
+        value = html.escape(loc.text(_GUI_SECTION, key, resolved), quote=True)
+        page = page.replace("{{" + token + "}}", value)
+
+    # The script's strings go in as JSON rather than as substituted text: it is
+    # the encoding that cannot be broken out of by an apostrophe, and French
+    # copy is full of them.
+    table = {name: loc.text(_GUI_SECTION, key, resolved) for name, key in _JS_NAME_TO_KEY.items()}
+    page = page.replace("{{T_JSON}}", json.dumps(table, ensure_ascii=False))
+    return page.replace("{{ROOT_JSON}}", json.dumps(root))
 
 
 def create_app(default_root: str | None = None) -> FastAPI:
@@ -687,27 +833,24 @@ def create_app(default_root: str | None = None) -> FastAPI:
     )
 
     @app.get("/gui", response_class=HTMLResponse)
-    def gui_page() -> HTMLResponse:
+    def gui_page(
+        lang: str = Query(default="", description="Page language, e.g. fr or en."),
+    ) -> HTMLResponse:
         """Serve the self-contained Tree Radar HTML page.
+
+        Parameters
+        ----------
+        lang : str, optional
+            Wanted language. An unknown or absent value falls back to the
+            locale file's default rather than failing.
 
         Returns
         -------
         fastapi.responses.HTMLResponse
-            The single-page app, with the launch root injected so the page
-            auto-scans a sensible folder on first load.
+            The single-page app in that language, with the launch root
+            injected so it auto-scans a sensible folder on first load.
         """
-        # Inject the server's launch root into the page as a JS global so the
-        # input is pre-filled and the first auto-scan targets a real folder.
-        # Use json.dumps to produce a *valid JS string literal*: it escapes
-        # backslashes and quotes correctly, so Windows paths like
-        # ``C:\Users\...`` embed safely (``C:\\Users\\...``) rather than
-        # breaking the script.
-        root_literal = json.dumps(launch_root)
-        page = _INDEX_HTML.replace(
-            'window.__OSH_ROOT__ || ""',
-            f'{root_literal} || ""',
-        )
-        return HTMLResponse(content=page)
+        return HTMLResponse(content=render_gui(lang=lang, root=launch_root))
 
     @app.get("/api/tree", response_class=JSONResponse)
     def api_tree(

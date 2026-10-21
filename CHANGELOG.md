@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-10-21
+
+### Added
+
+- **The Tree Radar GUI speaks French and English.** Every string it shows now
+  comes from `os_helper/locales/i18n.yaml` through `Locales` — the loader this
+  package itself provides (`CODING.md` 21.3) — instead of being written into
+  the markup. `GET /gui?lang=fr|en` picks the language; anything the file does
+  not carry, including a mistyped code and the empty default, falls back to the
+  declared default locale, so a bad `?lang=` returns a page rather than a 500.
+  A flag in the header toggles between the two.
+
+  The foundation now eats its own cooking: os-helper offers the suite a locale
+  loader and reads its own strings through the same door, which is the only
+  honest way to find out what the loader is missing.
+
+  The template is tokenised (`{{TOKEN}}` in HTML, a `T` object for the
+  script), so one piece of markup serves both languages and a translator never
+  opens a Python file. The script's strings are injected as JSON rather than
+  substituted as text: it is the encoding an apostrophe cannot break out of,
+  and French copy is full of them. Two strings carry named fields
+  (`{root}`, `{count}`, `{when}`) rather than being glued together in
+  JavaScript, so a translator can reorder the sentence.
+
+  The hover tooltip's type family is translated too — the server keeps sending
+  the machine name (`code`, `data`, …) and the page maps it through the locale
+  file, so the tooltip reads as a word rather than as an enum. Dates in it now
+  follow the page's language instead of the browser's default.
+
+### Changed
+
+- **The launch root is injected through a template token.** It was patched in
+  by replacing the literal `window.__OSH_ROOT__ || ""` inside the page — a
+  string match against markup, which breaks the day the markup is reformatted.
+  It is now a `{{ROOT_JSON}}` token, still a `json.dumps` literal so a Windows
+  path's backslashes cannot break the script, with a test that holds it.
+
+### Notes
+
+- The locale file lives **inside** the package, is declared in `package-data`,
+  and is carved out of this repository's blanket `*.yaml` ignore rule. Three
+  tests hold those three properties, because the suite has now shipped this
+  bug twice by two different routes: best-engine-ai-helper published wheels
+  with no data at all until 1.6.1 (data beside the package, patterns matching
+  nothing), and youtube-helper's `.gitignore` would have kept its catalogue
+  out of git — therefore out of the sdist, therefore out of the wheel. Both
+  are invisible locally, where the file sits on disk either way. Verified the
+  way the defect was: the built wheel and sdist were opened and the file
+  found in both.
+
 ## [2.4.0] - 2026-10-20
 
 ### Added
