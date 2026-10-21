@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-10-21
+
+### Added
+
+- **`os_helper.Catalog` — gettext message catalogues, as the suite's second
+  localization mechanism.** The companion to `Locales`, for packages whose
+  human-facing text lives in the source rather than behind a semantic key.
+  `Locales` keys on meaning (`submit_button`), which survives a rewrite of the
+  copy; `Catalog` keys on the English source string, which is what gettext was
+  built for and what the suite's GUIs now use.
+
+  The trade is deliberate and documented in the module. Keying on English buys
+  a readable fallback — an untranslated string degrades to English rather than
+  to its own key — and costs a failure mode: reword the English and its
+  translation is orphaned, gettext serves the English, and the page
+  half-reverts with nothing raised. `Catalog.problems(used=...)` is what makes
+  that survivable: hand it the set of source strings the code actually asks
+  for and it names both halves of the fault, so a test turns the silent
+  half-revert into a red build.
+
+  Also reports a catalogue that was never compiled, one that is stale against
+  its `.po`, and an entry left untranslated.
+
+- **`compile_catalogs`, `parse_po`, `write_po`, `build_mo`, `untranslated`.**
+  GNU gettext's `msgfmt` would compile the catalogues, and requiring it would
+  mean a translated interface could only be built on a machine where somebody
+  had installed the gettext tools. The `.mo` format is a header, two offset
+  tables and a blob of strings, so `build_mo` writes it here instead — the
+  thing is small, the dependency is not. `compile_catalogs(..., check=True)`
+  is the CI form: it recompiles in memory and compares, so a translation
+  edited without recompiling cannot reach a release looking live.
+
+  The format is verified against **stdlib** `gettext`, not against this
+  package's own reader: a hand-rolled binary writer that round-tripped only
+  through its own parser would prove nothing. French punctuation is covered
+  explicitly, since the length fields count bytes while Python counts
+  characters.
+
 ## [2.5.0] - 2026-10-21
 
 ### Added

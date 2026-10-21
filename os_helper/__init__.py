@@ -36,6 +36,14 @@ __email__ = "warithmetics@deraison.ai"
 from .config_utils import (
     get_config,
 )
+from .gettext_utils import (
+    Catalog,
+    build_mo,
+    compile_catalogs,
+    parse_po,
+    untranslated,
+    write_po,
+)
 from .hardware_utils import (
     apple_chip_name,
     apple_unified_memory_gb,
@@ -185,6 +193,13 @@ __all__ = [
     "hash_string",
     "hashfile",
     "hashfolder",
+    # gettext_utils
+    "Catalog",
+    "build_mo",
+    "compile_catalogs",
+    "parse_po",
+    "untranslated",
+    "write_po",
     # i18n_utils
     "Locales",
     "META_SECTION",
