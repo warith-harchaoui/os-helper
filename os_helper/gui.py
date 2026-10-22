@@ -86,7 +86,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 # Reuse the library's own helpers — do NOT reinvent size/hash/format logic.
 # These are all pure-Python and dependency-light, so importing them keeps the
 # GUI module cheap to import (the FastAPI cost is deferred to create_app/run).
-from . import error, format_size, hashfile, info, warning
+from . import format_size, hashfile, info, warning
 from .gettext_utils import Catalog
 
 # FastAPI is an *optional* dependency (the ``gui`` extra). We only import it
@@ -849,7 +849,8 @@ def create_app(default_root: str | None = None) -> FastAPI:
         from fastapi import FastAPI, HTTPException, Query
         from fastapi.responses import HTMLResponse, JSONResponse
     except ImportError as exc:  # pragma: no cover — exercised only without extra
-        error("Tree Radar GUI requires the optional 'gui' extra (FastAPI/uvicorn).")
+        # Not logged: the ImportError below says strictly more than the log
+        # line did, including the exact pip command.
         raise ImportError(
             "The Tree Radar GUI needs FastAPI/uvicorn. Install the extra:\n"
             '    pip install "os-helper[gui]"'
@@ -955,7 +956,7 @@ def run(
     try:
         import uvicorn
     except ImportError as exc:  # pragma: no cover — exercised only without extra
-        error("Tree Radar GUI requires uvicorn (install the 'gui' extra).")
+        # Not logged: the ImportError below says strictly more.
         raise ImportError(
             'The Tree Radar GUI needs uvicorn. Install the extra:\n    pip install "os-helper[gui]"'
         ) from exc

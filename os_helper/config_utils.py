@@ -37,7 +37,7 @@ import os
 import yaml
 from dotenv import dotenv_values, load_dotenv
 
-from .logging_utils import error, info
+from .logging_utils import info
 from .path_utils import checkfile, dir_exists, file_exists, folder_name_ext, join
 from .string_utils import emptystring
 
@@ -304,5 +304,10 @@ def get_config(
         f"Missing required keys for '{config_type}' configuration "
         f"in files, .env files, or environment variables."
     )
-    error(msg)
+    # Raised, not logged: the exception carries this exact string, so logging
+    # it too reports the same fault twice and — worse — reports it for a caller
+    # that *handles* the absence. sftp-helper does exactly that (it tolerates
+    # missing credentials and answers 503 lazily), and the ERROR line still
+    # reached its users' stderr through an MCP host. Whoever does not catch
+    # gets the traceback, which carries the same message.
     raise RuntimeError(msg)

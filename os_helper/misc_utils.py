@@ -781,7 +781,7 @@ def download_file(
         if digest != sha256.lower():
             os.remove(part_path)
             msg = f"sha256 mismatch for '{url}': expected {sha256.lower()}, got {digest}"
-            error(msg)
+            # Raised, not logged: `ValueError(msg)` already says this.
             raise ValueError(msg)
 
     # Atomic finalize: one rename, so ``file_path`` appears complete or not at all.

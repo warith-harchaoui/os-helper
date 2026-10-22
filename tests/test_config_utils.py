@@ -151,3 +151,28 @@ def test_get_config_missing_raises() -> None:
         config_utils.get_config(
             keys=["never_set_anywhere_xyz_123"], config_type="bogus", path=None, env_files=[]
         )
+
+
+def test_a_raised_configuration_failure_is_not_also_logged(caplog) -> None:
+    """A function that raises must not also log the same fault.
+
+    `get_config` carries its message in the `RuntimeError` it raises. Logging
+    it at ERROR too reported the fault twice — and reported it for callers
+    that *handle* the absence, who then had no way to silence it.
+
+    sftp-helper is exactly such a caller: it tolerates missing credentials by
+    design, returns `{}` and answers 503 lazily. The ERROR line still reached
+    its users through an MCP host's stderr, where an SFTP error appears for no
+    reason the user can see. Whoever does not catch still gets the traceback,
+    which carries the identical message.
+    """
+    import logging
+
+    with (
+        caplog.at_level(logging.DEBUG, logger="os_helper"),
+        pytest.raises(RuntimeError, match="Missing required keys"),
+    ):
+        config_utils.get_config(["definitely_absent_key"], "NoSuchConfigTypeHere")
+
+    shouted = [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert not shouted, f"the raise was also logged: {[r.message for r in shouted]}"

@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.1] - 2026-10-22
+
+### Fixed
+
+- **Five places logged at ERROR and then raised the same fault.** `error()` is
+  explicitly non-raising, so these reported one problem twice — and reported
+  it on behalf of callers that *handle* the exception, who then had no way to
+  silence it.
+
+  sftp-helper is exactly such a caller: it tolerates absent SFTP credentials
+  by design, returns `{}` and answers 503 lazily. The ERROR line still reached
+  its users through an MCP host's stderr, where an SFTP error appears for no
+  reason the user can see. It had to silence this package's logger around the
+  call to get a quiet import.
+
+  The five removed are the ones where the log said nothing the exception did
+  not: `get_config`'s missing-keys failure and `checkfile`'s missing path
+  (both logged the *identical* string they raise), the sha256 mismatch in
+  `download_file`, and the GUI's two missing-extra guards (whose `ImportError`
+  says strictly more, including the exact `pip install` command). Whoever does
+  not catch still gets a traceback carrying the same message.
+
+### Unchanged, deliberately
+
+Seven sites keep their `error()` beside a bare `raise`, and that is not an
+oversight: each adds context the re-raised exception does not carry — which
+file was being copied, which URL ran out of retries, which directory could not
+be removed. A bare `OSError` says "No such file"; the log says which operation
+asked for it. Losing that to remove a duplicate line would be a bad trade.
+
+The eight sites that log *instead* of raising are untouched for the obvious
+reason: there, the log is the only report there is.
+
 ## [2.9.0] - 2026-10-22
 
 ### Added

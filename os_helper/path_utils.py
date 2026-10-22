@@ -232,7 +232,7 @@ def relative2absolute_path(path: str, checkpath: bool = False) -> str:
     # swallows the exception.
     if checkpath and not (file_exists(abs_path) or dir_exists(abs_path)):
         msg = f"File or directory does not exist: {abs_path}"
-        error(msg)
+        # Raised, not logged: `FileNotFoundError(msg)` already says this.
         raise FileNotFoundError(msg)
     return abs_path
 
