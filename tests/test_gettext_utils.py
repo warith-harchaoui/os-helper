@@ -279,3 +279,108 @@ def test_negotiate_on_an_empty_or_absent_header_is_none(catalogue: Path) -> None
     cat = osh.Catalog.from_package(catalogue, "demo")
     assert cat.negotiate(None) is None
     assert cat.negotiate("") is None
+
+
+# --------------------------------------------------------------------------- #
+# Extraction and context — the two steps the guide names that were missing
+# --------------------------------------------------------------------------- #
+
+
+def test_extract_sources_finds_every_marked_string() -> None:
+    """The step a gettext workflow normally gets from `pybabel`.
+
+    Eight members each kept their own copy of this regex before it moved
+    here, which is the duplication a shared loader exists to end.
+    """
+    template = '<h1>{{_("Run")}}</h1><p>{{_("Done.")}}</p><em>{{_("Run")}}</em>'
+    assert osh.extract_sources(template) == {"Run", "Done."}
+
+
+def test_extract_sources_unions_several_texts() -> None:
+    """A member's strings live in the markup and in its script table."""
+    assert osh.extract_sources('{{_("A")}}', '{{_("B")}}') == {"A", "B"}
+
+
+def test_extract_sources_keeps_two_markers_on_one_line_apart() -> None:
+    """Non-greedy, or the first marker would swallow through to the last."""
+    assert osh.extract_sources('{{_("one")}} and {{_("two")}}') == {"one", "two"}
+
+
+def test_extract_sources_ignores_an_unterminated_marker() -> None:
+    """A broken marker must not eat the rest of the page."""
+    assert osh.extract_sources('{{_("fine")}} {{_("oops) <p>text</p>') == {"fine"}
+
+
+def test_a_context_separates_two_identical_source_strings(tmp_path: Path) -> None:
+    """One English word, two French words — the case `msgctxt` exists for.
+
+    Without context both uses share a msgid, so a translator has to pick one
+    French word for both and one of the two screens is wrong.
+    """
+    messages = tmp_path / "locales" / "fr" / "LC_MESSAGES"
+    messages.mkdir(parents=True)
+    (messages / "demo.po").write_text(
+        '''msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgctxt "month name"
+msgid "May"
+msgstr "mai"
+
+msgctxt "verb"
+msgid "May"
+msgstr "pouvoir"
+''',
+        encoding="utf-8",
+    )
+    osh.compile_catalogs(tmp_path / "locales")
+    cat = osh.Catalog.from_package(tmp_path / "locales", "demo")
+    assert cat.pgettext("fr", "month name", "May") == "mai"
+    assert cat.pgettext("fr", "verb", "May") == "pouvoir"
+
+
+def test_an_unknown_context_falls_back_to_the_source_not_to_the_key(
+    catalogue: Path,
+) -> None:
+    """The fallback must never leak the `context\\x04message` key.
+
+    gettext returns the key it looked up when it finds nothing, and that key
+    carries a control character — putting it in front of a reader would be
+    worse than showing untranslated English.
+    """
+    cat = osh.Catalog.from_package(catalogue, "demo")
+    assert cat.pgettext("fr", "no such context", "Convert a document") == "Convert a document"
+
+
+def test_a_context_entry_does_not_disturb_the_plain_one(tmp_path: Path) -> None:
+    """Parsing `msgctxt` must not break the ordinary entries beside it.
+
+    Provoked because it did: adding context support first dropped the commit
+    between entries, so every msgid overwrote the previous one and the header
+    itself vanished.
+    """
+    messages = tmp_path / "locales" / "fr" / "LC_MESSAGES"
+    messages.mkdir(parents=True)
+    (messages / "demo.po").write_text(
+        '''msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Plain"
+msgstr "Simple"
+
+msgctxt "ctx"
+msgid "Plain"
+msgstr "Avec contexte"
+
+msgid "After"
+msgstr "Après"
+''',
+        encoding="utf-8",
+    )
+    osh.compile_catalogs(tmp_path / "locales")
+    cat = osh.Catalog.from_package(tmp_path / "locales", "demo")
+    assert cat.gettext("fr", "Plain") == "Simple"
+    assert cat.pgettext("fr", "ctx", "Plain") == "Avec contexte"
+    assert cat.gettext("fr", "After") == "Après"

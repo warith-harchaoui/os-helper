@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-10-22
+
+### Added
+
+- **`os_helper.Prompts` — model-facing templates, in several languages.** The
+  third localization shape the suite needs, and the one that is not
+  translation. Three members were each solving it privately: standpoint with
+  its own cache, its own transposition and its own `detect_language`;
+  best-engine with its own `PROMPTS_SECTION` and accessor; discussion-helper
+  with the prompt hardcoded inline.
+
+  **Prompts are deliberately not gettext**, and the measurement says why: one
+  standpoint prompt runs 1345 characters in English, 1532 in French and 1479
+  in Spanish. Nobody translated that — somebody wrote the instruction three
+  times, because what makes a model behave in French is not the French words
+  of the English sentence. Key on the English text and every tweak to the
+  English orphans the other languages; key on `axis_prompt` and the wording
+  is free to move, which is what prompt engineering does all day.
+
+  Over `Locales`, which already parses and validates, it adds the four things
+  callers were writing by hand: the whole-language `bundle()` view (cached),
+  the `key.system` / `key.user` field shape, language resolution so `fr-CA`
+  finds `fr`, and **a placeholder check across languages** — the failure
+  specific to this shape, where a translated prompt drops a `{field}` the
+  code fills and `format()` raises in production for whoever first asks for
+  that language.
+
+- **`extract_sources()`** — the extraction step a gettext workflow normally
+  gets from `pybabel`, scoped to this suite's `{{_("…")}}` marker. Eight
+  members each kept a copy of the same regex so their tests could hand
+  `Catalog.problems` the strings the code really asks for; now they ask
+  os-helper.
+
+- **`Catalog.pgettext()` and `msgctxt` in the `.po` parser.** The case a
+  context exists for: one English word that is two French words
+  (`pgettext("month name", "May")` vs `pgettext("verb", "May")`). A missing
+  context falls back to the source string, never to the `context\x04message`
+  key, which carries a control character.
+
+### Fixed
+
+- **The `.po` parser silently mangled any `msgctxt` it met.** The line matched
+  no rule, so it was skipped and the entry filed as if context-free — two
+  entries differing only by context collided and one was lost. It is now
+  parsed; two bugs found while making it so (entries overwriting each other
+  when the commit was dropped, and a context leaking onto the following
+  entry) are each covered by a test.
+
 ## [2.8.0] - 2026-10-22
 
 ### Added

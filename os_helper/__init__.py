@@ -40,6 +40,7 @@ from .gettext_utils import (
     Catalog,
     build_mo,
     compile_catalogs,
+    extract_sources,
     language_candidates,
     parse_po,
     untranslated,
@@ -115,6 +116,7 @@ from .profile_utils import (
     toc,
     wall_timer,
 )
+from .prompts_utils import Prompts
 from .string_utils import (
     asciistring,
     emptystring,
@@ -198,10 +200,13 @@ __all__ = [
     "Catalog",
     "build_mo",
     "compile_catalogs",
+    "extract_sources",
     "language_candidates",
     "parse_po",
     "untranslated",
     "write_po",
+    # prompts_utils
+    "Prompts",
     # i18n_utils
     "Locales",
     "META_SECTION",

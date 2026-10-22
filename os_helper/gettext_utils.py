@@ -64,6 +64,7 @@ __all__ = [
     "Catalog",
     "build_mo",
     "compile_catalogs",
+    "extract_sources",
     "language_candidates",
     "parse_po",
     "untranslated",
@@ -74,6 +75,11 @@ __all__ = [
 #: so writing little-endian everywhere is portable, not host-dependent.
 _MAGIC = 0x950412DE
 
+#: What gettext puts between a context and its message inside one key. The
+#: format has no separate field for context: ``pgettext`` looks up the two
+#: joined by this byte, which is why it needs no change to the file layout.
+_CONTEXT_GLUE = "\x04"
+
 #: The language every msgid is already written in, so it never gets a
 #: catalogue directory and can never fall out of sync with one.
 SOURCE_LANGUAGE = "en"
@@ -81,7 +87,7 @@ SOURCE_LANGUAGE = "en"
 #: One entry line, with the string in C-escaped quotes. ``msgstr[0]`` and
 #: ``msgstr[1]`` are the plural forms, which French needs and English mostly
 #: does not — hence the optional index.
-_ENTRY_RE = re.compile(r'^(msgid|msgid_plural|msgstr)(?:\[(\d+)\])?\s+"(.*)"\s*$')
+_ENTRY_RE = re.compile(r'^(msgctxt|msgid|msgid_plural|msgstr)(?:\[(\d+)\])?\s+"(.*)"\s*$')
 #: One ``q``-weighted entry of an ``Accept-Language`` header. The weight is
 #: captured loosely (``[^;,\s]+``) rather than as a number on purpose: a
 #: browser that sends ``q=high`` should still get its language, and the
@@ -131,8 +137,9 @@ def parse_po(path: str | Path) -> dict[str, str]:
     Plural entries are kept: gettext stores them by NUL-joining the two
     ``msgid`` forms into one key and the ``msgstr[n]`` forms into one value,
     which is exactly what :func:`build_mo` then writes. Contexts (``msgctxt``)
-    are not handled — no member of the suite uses them, and a parser that
-    half-read them would be worse than one that says it does not.
+    are kept the same way, joined to their message by ``\x04`` — the format
+    has no separate field for them, which is why :meth:`Catalog.pgettext`
+    needs no change to the layout.
 
     An entry with an empty translation is **dropped**, which is what makes an
     unfinished catalogue fall back to its English source rather than serve
@@ -149,6 +156,12 @@ def parse_po(path: str | Path) -> dict[str, str]:
         Every translated entry, ready for :func:`build_mo`.
     """
     entries: dict[str, str] = {}
+    context: str | None = None
+    # True between reading a `msgctxt` and the `msgid` it qualifies. Without
+    # it, a context stays set after its own entry is filed and the NEXT plain
+    # msgid both skips its commit and inherits the context — which silently
+    # loses one entry and misfiles another.
+    context_pending = False
     singular: str | None = None
     plural: str | None = None
     translations: dict[int, str] = {}
@@ -157,28 +170,40 @@ def parse_po(path: str | Path) -> dict[str, str]:
 
     def commit() -> None:
         """Close the entry being read and file it."""
-        nonlocal singular, plural, translations
+        nonlocal context, context_pending, singular, plural, translations
         if singular is None:
             return
+        # A context is stored by joining it to the msgid, which is how
+        # gettext finds a `pgettext` lookup: same file, same table, one key.
+        prefix = f"{context}{_CONTEXT_GLUE}" if context else ""
         if plural is None:
             value = translations.get(0, "")
             if value or singular == "":
-                entries[singular] = value
+                entries[prefix + singular] = value
         else:
             forms = [translations.get(i, "") for i in range(max(translations) + 1)]
             if any(forms):
-                entries[f"{singular}\x00{plural}"] = "\x00".join(forms)
+                entries[f"{prefix}{singular}\x00{plural}"] = "\x00".join(forms)
+        context, context_pending = None, False
         singular, plural, translations = None, None, {}
 
     def flush() -> None:
         """Attach the lines gathered so far to the field they belong to."""
-        nonlocal singular, plural
+        nonlocal context, context_pending, singular, plural
         if current is None:
             return
         field, index = current
         text = "".join(buffer)
-        if field == "msgid":
+        if field == "msgctxt":
             commit()
+            context, context_pending = text, True
+        elif field == "msgid":
+            # Close the previous entry — unless a `msgctxt` line just did it
+            # and left the context standing for this very msgid. Committing
+            # again here would clear that context before it is ever used.
+            if not context_pending:
+                commit()
+            context_pending = False
             singular = text
         elif field == "msgid_plural":
             plural = text
@@ -201,6 +226,47 @@ def parse_po(path: str | Path) -> dict[str, str]:
     flush()
     commit()
     return entries
+
+
+#: One ``{{_("…")}}`` translation site. The suite's GUIs are one HTML string
+#: per module, so the marker lives in the markup rather than in a function
+#: call, and this is the form `render_gui` substitutes.
+SOURCE_MARKER_RE = re.compile(r'\{\{_\("(.*?)"\)\}\}')
+
+
+def extract_sources(*texts: str) -> set[str]:
+    """Every English source string marked for translation in *texts*.
+
+    The extraction step a gettext workflow normally gets from ``pybabel``,
+    scoped to the one marker this suite uses. It exists so that a member's
+    test can hand :meth:`Catalog.problems` the strings the code *actually*
+    asks for, rather than a hand-maintained list that drifts from the markup
+    — which is the only way the reworded-source fault gets caught.
+
+    Before this, eight members each kept their own copy of the same four-line
+    regex, which is exactly the duplication a shared loader is for.
+
+    Parameters
+    ----------
+    *texts : str
+        Anything carrying markers — typically a module's HTML template. Pass
+        several and the results are unioned.
+
+    Returns
+    -------
+    set of str
+        The msgids found. Empty when nothing is marked, which a caller should
+        treat as suspicious rather than as "nothing to translate".
+
+    Examples
+    --------
+    >>> sorted(extract_sources('<h1>{{_("Run")}}</h1><p>{{_("Done.")}}</p>'))
+    ['Done.', 'Run']
+    """
+    found: set[str] = set()
+    for text in texts:
+        found |= set(SOURCE_MARKER_RE.findall(text))
+    return found
 
 
 def untranslated(path: str | Path) -> list[str]:
@@ -572,6 +638,35 @@ class Catalog:
             entry for it.
         """
         return self._translator(self.resolve(language)).gettext(message)
+
+    def pgettext(self, language: str | None, context: str, message: str) -> str:
+        """Translate one source string **in a given context**.
+
+        The answer to a word that is one word in English and two in French:
+        ``pgettext("month name", "May")`` and ``pgettext("verb", "May")`` are
+        separate entries, because a translator cannot disambiguate them from
+        the msgid alone.
+
+        Parameters
+        ----------
+        language : str or None
+            Requested language, resolved through :meth:`resolve` first.
+        context : str
+            The disambiguating label, as written in the catalogue's
+            ``msgctxt``.
+        message : str
+            The English source string.
+
+        Returns
+        -------
+        str
+            The translation, or *message* itself when this context has no
+            entry — never the ``context\x04message`` key, which would put a
+            control character in front of a reader.
+        """
+        key = f"{context}{_CONTEXT_GLUE}{message}"
+        found = self._translator(self.resolve(language)).gettext(key)
+        return message if found == key else found
 
     def ngettext(self, language: str | None, singular: str, plural: str, n: int) -> str:
         """Translate a message whose wording depends on a count.
