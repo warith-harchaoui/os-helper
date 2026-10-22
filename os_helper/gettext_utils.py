@@ -368,7 +368,12 @@ def build_mo(entries: dict[str, str]) -> bytes:
         count,
         key_table,
         value_table,
-        0,  # hash table size: unused, gettext falls back to binary search
+        # No hash table. gettext binary-searches the sorted msgid table when
+        # the size is zero, which is why the entries must be sorted above. The
+        # offset is zero to match: a table that does not exist starts nowhere,
+        # and writing the end-of-file offset instead (as md2star's own writer
+        # did) is a value no reader uses and no writer should invent.
+        0,  # hash table size
         0,  # hash table offset
     )
     tables = struct.pack(f"<{len(key_offsets)}I", *key_offsets) + struct.pack(
