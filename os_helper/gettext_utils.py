@@ -64,6 +64,7 @@ __all__ = [
     "Catalog",
     "build_mo",
     "compile_catalogs",
+    "language_candidates",
     "parse_po",
     "untranslated",
     "write_po",
@@ -81,6 +82,13 @@ SOURCE_LANGUAGE = "en"
 #: ``msgstr[1]`` are the plural forms, which French needs and English mostly
 #: does not — hence the optional index.
 _ENTRY_RE = re.compile(r'^(msgid|msgid_plural|msgstr)(?:\[(\d+)\])?\s+"(.*)"\s*$')
+#: One ``q``-weighted entry of an ``Accept-Language`` header. The weight is
+#: captured loosely (``[^;,\s]+``) rather than as a number on purpose: a
+#: browser that sends ``q=high`` should still get its language, and the
+#: ``float()`` below is what decides that. Matching digits here instead would
+#: discard the whole entry and make that fallback unreachable.
+_ACCEPT_RE = re.compile(r"\s*([A-Za-z-]+|\*)\s*(?:;\s*q\s*=\s*([^;,\s]+))?\s*")
+
 #: A continuation line: a bare quoted string under the entry it extends.
 _CONT_RE = re.compile(r'^\s*"(.*)"\s*$')
 
@@ -402,6 +410,35 @@ def compile_catalogs(locales_dir: str | Path, *, check: bool = False) -> list[Pa
     return touched
 
 
+def language_candidates(tag: str | None) -> list[str]:
+    """A language tag plus its base, so ``fr-CA`` can find the ``fr`` catalogue.
+
+    Normalised the way gettext names its directories (``fr_CA``, not
+    ``fr-CA``) and stripped of any ``.UTF-8`` / ``@euro`` suffix a POSIX locale
+    string carries. One normalisation here means an HTTP header and an
+    environment variable can both be passed in.
+
+    Parameters
+    ----------
+    tag : str or None
+        A BCP 47 tag (``fr-CA``), a POSIX locale (``fr_CA.UTF-8``), or None.
+
+    Returns
+    -------
+    list of str
+        Most specific first, then the bare language: a Québécois browser gets
+        the French catalogue rather than nothing when ``fr_CA`` does not exist.
+        Empty when *tag* is empty.
+    """
+    if not tag:
+        return []
+    cleaned = tag.strip().replace("-", "_").split(".")[0].split("@")[0]
+    if not cleaned:
+        return []
+    base = cleaned.split("_")[0]
+    return [cleaned, base] if base != cleaned else [cleaned]
+
+
 @dataclass(frozen=True)
 class Catalog:
     """Compiled message catalogues for one package, read through gettext.
@@ -485,9 +522,14 @@ class Catalog:
         -------
         str
             *language* when it has a catalogue (or is the source language),
+            its base language when only that has one (``fr-CA`` → ``fr``),
             otherwise :attr:`default_language`.
         """
-        return language if language in self.languages else self.default_language
+        available = self.languages
+        for candidate in language_candidates(language):
+            if candidate in available:
+                return candidate
+        return self.default_language
 
     # -- lookup ----------------------------------------------------------
 
@@ -525,6 +567,88 @@ class Catalog:
             entry for it.
         """
         return self._translator(self.resolve(language)).gettext(message)
+
+    def ngettext(self, language: str | None, singular: str, plural: str, n: int) -> str:
+        """Translate a message whose wording depends on a count.
+
+        Parameters
+        ----------
+        language : str or None
+            Requested language, resolved through :meth:`resolve` first.
+        singular, plural : str
+            The two English source forms. The pair is the msgid: gettext
+            stores it NUL-joined, which is what :func:`build_mo` writes.
+        n : int
+            The count that picks the form. Which form that is comes from the
+            catalogue's own plural rule, not from ``n == 1`` — the point of
+            asking gettext rather than branching at the call site.
+
+        Returns
+        -------
+        str
+            The translated form, or the matching English source when the
+            catalogue has no entry.
+        """
+        return self._translator(self.resolve(language)).ngettext(singular, plural, n)
+
+    def negotiate(self, header: str | None) -> str | None:
+        """Best language from an HTTP ``Accept-Language`` header, or ``None``.
+
+        Honours ``q`` weights and falls back to a base language, so a browser
+        asking for ``fr-CA;q=0.9, en;q=0.8`` gets the ``fr`` catalogue.
+
+        Parsed here rather than with a header library: this is one header, the
+        grammar is a list of tags with optional weights, and the suite does not
+        take a dependency for forty lines of standard parsing.
+
+        Parameters
+        ----------
+        header : str or None
+            The raw header value.
+
+        Returns
+        -------
+        str or None
+            The language to serve, or ``None`` when the best match is the
+            source language or when nothing offered has a catalogue — both of
+            which mean "leave the source text alone". Returning ``None`` rather
+            than ``"en"`` lets a caller distinguish "the visitor asked for
+            English" from "the visitor asked for nothing we have".
+
+        Notes
+        -----
+        The source language counts as **offered** even though it has no
+        catalogue, and that is not a technicality: without it, a visitor who
+        asked for English first and French second would be served French,
+        because the language they actually wanted was the one the loop could
+        not see.
+        """
+        if not header:
+            return None
+        offered = set(self.languages)
+        if offered <= {SOURCE_LANGUAGE}:
+            return None
+
+        ranked: list[tuple[float, int, str]] = []
+        for order, part in enumerate(header.split(",")):
+            match = _ACCEPT_RE.fullmatch(part)
+            if not match or match.group(1) == "*":
+                continue
+            try:
+                quality = float(match.group(2)) if match.group(2) else 1.0
+            except ValueError:
+                # A malformed q value is the browser's problem, not a reason to
+                # refuse the language: treat it as the default weight.
+                quality = 1.0
+            # `order` breaks ties the way the header's own sequence intends, and
+            # negating quality sorts strongest-first with a plain ascending sort.
+            ranked.append((-quality, order, match.group(1)))
+
+        for _quality, _order, tag in sorted(ranked):
+            for candidate in language_candidates(tag):
+                if candidate in offered:
+                    return None if candidate.split("_")[0] == SOURCE_LANGUAGE else candidate
+        return None
 
     def translator_for(self, language: str | None) -> _gettext.NullTranslations:
         """The raw translator, for a caller that wants to bind its own ``_``.

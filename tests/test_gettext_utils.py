@@ -199,3 +199,83 @@ def test_parse_po_drops_empty_translations_and_keeps_real_ones(catalogue: Path) 
     entries = osh.parse_po(catalogue / "fr" / "LC_MESSAGES" / "demo.po")
     assert entries["Convert a document"] == "Convertir un document"
     assert "Still in English" not in entries
+
+
+# --------------------------------------------------------------------------- #
+# Language negotiation: region fallback, plurals, Accept-Language
+# --------------------------------------------------------------------------- #
+
+
+def test_a_regional_tag_falls_back_to_its_base_language(catalogue: Path) -> None:
+    """`fr-CA` has no catalogue, but `fr` does, and that is what it wants.
+
+    A Québécois browser asking for `fr-CA` should get French, not the default
+    served as if it had asked for nothing.
+    """
+    cat = osh.Catalog.from_package(catalogue, "demo")
+    assert cat.resolve("fr-CA") == "fr"
+    assert cat.resolve("fr_CA.UTF-8@euro") == "fr"
+    assert cat.gettext("fr-CA", "Convert a document") == "Convertir un document"
+
+
+def test_language_candidates_normalises_both_spellings() -> None:
+    """BCP 47 writes `fr-CA`; POSIX writes `fr_CA.UTF-8`; gettext wants `fr_CA`."""
+    assert osh.language_candidates("fr-CA") == ["fr_CA", "fr"]
+    assert osh.language_candidates("fr_CA.UTF-8@euro") == ["fr_CA", "fr"]
+    assert osh.language_candidates("fr") == ["fr"]
+    assert osh.language_candidates("") == []
+    assert osh.language_candidates(None) == []
+
+
+def test_ngettext_asks_the_catalogue_which_form_to_use(catalogue: Path) -> None:
+    """Plural choice belongs to the language, not to an `n == 1` at the call site.
+
+    With no plural entry the English source is returned, picked by gettext's
+    own default rule — which is still the right answer, and still not a
+    branch the caller had to write.
+    """
+    cat = osh.Catalog.from_package(catalogue, "demo")
+    assert cat.ngettext("fr", "one file", "many files", 1) == "one file"
+    assert cat.ngettext("fr", "one file", "many files", 3) == "many files"
+
+
+def test_negotiate_honours_q_weights(catalogue: Path) -> None:
+    """The strongest weight wins, not the first tag listed."""
+    cat = osh.Catalog.from_package(catalogue, "demo")
+    assert cat.negotiate("en;q=0.2, fr;q=0.9") == "fr"
+
+
+def test_negotiate_returns_none_when_the_visitor_wants_the_source_language(
+    catalogue: Path,
+) -> None:
+    """English is *offered* even though it has no catalogue, and that matters.
+
+    Without counting it, a visitor who asked for English first and French
+    second would be served French — the language they actually wanted being
+    the one the loop could not see. `None` means "leave the source alone",
+    which a caller can tell apart from "nothing we have was asked for".
+    """
+    cat = osh.Catalog.from_package(catalogue, "demo")
+    assert cat.negotiate("en;q=0.9, fr;q=0.8") is None
+
+
+def test_negotiate_falls_back_from_a_region_and_ignores_wildcards(
+    catalogue: Path,
+) -> None:
+    """`fr-CA` should reach the `fr` catalogue; `*` is not a language."""
+    cat = osh.Catalog.from_package(catalogue, "demo")
+    assert cat.negotiate("fr-CA;q=0.9, de;q=0.8") == "fr"
+    assert cat.negotiate("*") is None
+
+
+def test_negotiate_survives_a_malformed_q_value(catalogue: Path) -> None:
+    """A browser's broken header is not a reason to refuse it a language."""
+    cat = osh.Catalog.from_package(catalogue, "demo")
+    assert cat.negotiate("fr;q=notanumber") == "fr"
+
+
+def test_negotiate_on_an_empty_or_absent_header_is_none(catalogue: Path) -> None:
+    """No header is not a preference, so there is nothing to honour."""
+    cat = osh.Catalog.from_package(catalogue, "demo")
+    assert cat.negotiate(None) is None
+    assert cat.negotiate("") is None

@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-10-22
+
+### Added
+
+- **`Catalog` learns the three things md2star's private loader knew**, so that
+  package can delegate instead of keeping its own — which is what finally
+  leaves the suite with one gettext implementation rather than two.
+
+  - **Region fallback.** `resolve("fr-CA")` now answers `"fr"` when only the
+    base language has a catalogue. A Québécois browser was previously served
+    the default, as if it had expressed no preference at all. `Catalog.gettext`
+    and `translator_for` inherit this, since both resolve first.
+  - **`ngettext(language, singular, plural, n)`.** Which form a count takes is
+    the catalogue's rule, not an `n == 1` at the call site — that branch is
+    wrong in most languages and the reason gettext stores plurals as a pair.
+  - **`negotiate(header)`.** Best language from an HTTP `Accept-Language`
+    header, honouring `q` weights and falling back from a region. Returns
+    `None` when the best match is the source language, which a caller can tell
+    apart from "nothing we have was asked for". The source language counts as
+    *offered* even with no catalogue: without that, a visitor asking for
+    English first and French second gets French, because the language they
+    actually wanted is the one the loop cannot see.
+
+- `language_candidates(tag)` is exported: BCP 47 (`fr-CA`), POSIX
+  (`fr_CA.UTF-8@euro`) and gettext's own directory spelling (`fr_CA`)
+  normalised in one place, so a header and an environment variable can both be
+  passed in.
+
+### Fixed
+
+- **A malformed `q` value discarded the language instead of defaulting it.**
+  The header pattern captured the weight as `[0-9.]+`, so `fr;q=high` failed
+  to match the entry at all and the `float()` guard that exists to treat a
+  broken weight as the default was unreachable. Inherited from md2star's
+  loader, where it had the same effect. The weight is now captured loosely and
+  the guard decides, which is what the comment beside it always claimed.
+
 ## [2.7.0] - 2026-10-21
 
 ### Changed
