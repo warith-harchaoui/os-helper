@@ -50,11 +50,13 @@ _DOMAIN = "os_helper"
 def _sources_used() -> set[str]:
     """Every English source string the module asks the catalogue for.
 
-    Two places hold them: the ``{{_("…")}}`` sites in the HTML template, and
-    the values of :data:`gui._JS_NAME_TO_SOURCE` for the inline script.
+    Two places hold them: the ``{{_("…")}}`` sites in the HTML template,
+    which :func:`os_helper.extract_sources` finds, and the values of
+    :data:`gui._JS_NAME_TO_SOURCE` for the inline script. The extraction used
+    to be a regex copied into all eight members' tests; it lives in os-helper
+    now, so a change to the marker is made once.
     """
-    in_template = set(re.findall(r'\{\{_\("(.*?)"\)\}\}', gui._GUI_TEMPLATE))
-    return in_template | set(gui._JS_NAME_TO_SOURCE.values())
+    return osh.extract_sources(gui._GUI_TEMPLATE) | set(gui._JS_NAME_TO_SOURCE.values())
 
 
 def test_the_catalogues_are_sound() -> None:
