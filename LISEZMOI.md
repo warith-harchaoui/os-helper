@@ -95,7 +95,7 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   en un seul endroit toutes les chaînes lisibles par un humain, résout une clé
   pour une locale avec repli déterministe sur la langue par défaut déclarée,
   remplit les champs `{placeholder}` sans jamais évaluer de code avec
-  `render()`, et signale d'un coup chaque traduction manquante ou placeholder
+  `render()` et signale d'un coup chaque traduction manquante ou placeholder
   divergent avec `problems()` — le contrôle sur lequel une CI s'appuie. Les
   sections sont nommées par l'appelant et n'ont aucun sens ici : un seul
   chargeur sert donc ce que chaque paquet range dans son fichier.
@@ -341,7 +341,7 @@ os-helper-gui --root ~/Downloads
 ```
 
 La page parle **français et anglais**. `?lang=fr` / `?lang=en` choisit la
-langue, un drapeau dans l'en-tête bascule de l'une à l'autre, et un code que
+langue, un drapeau dans l'en-tête bascule de l'une à l'autre et un code que
 le fichier de locales ne porte pas retombe sur la langue par défaut au lieu
 d'échouer. Toutes les chaînes vivent dans
 [`os_helper/locales/fr/LC_MESSAGES/os_helper.po`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/locales/fr/LC_MESSAGES/os_helper.po),
