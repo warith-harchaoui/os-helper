@@ -12,6 +12,7 @@ Warith Harchaoui, Ph.D. — https://linkedin.com/in/warith-harchaoui/
 
 from __future__ import annotations
 
+import logging
 import os
 
 import pytest
@@ -162,6 +163,7 @@ def test_temporary_remote_file_error_paths() -> None:
 
 def test_temporary_remote_file_delete_failure_is_logged_not_raised(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     def upload(p: str) -> str:
         return "remote://" + os.path.basename(p)
@@ -169,5 +171,22 @@ def test_temporary_remote_file_delete_failure_is_logged_not_raised(
     def failing_delete(r: str) -> None:
         raise OSError("remote unreachable")
 
-    with tu.temporary_remote_file(upload, failing_delete, initial_content=b"x"):
+    with (
+        caplog.at_level(logging.ERROR, logger="os_helper"),
+        tu.temporary_remote_file(upload, failing_delete, initial_content=b"x"),
+    ):
         pass  # the delete failure inside `finally` must not escape as an exception
+
+    # The name of this test promises two things and only one of them was
+    # checked. "not raised" is proved by reaching this line at all — pytest
+    # fails if an exception escapes the `with`. "is logged" was not proved by
+    # anything, so a silent swallow would have passed: the teardown failure
+    # would vanish and the caller would never learn the remote file is still
+    # there. Here the log really is the only report, since nothing raises.
+    logged = [r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR]
+    assert any("Failed to delete remote file" in m for m in logged), (
+        f"the teardown failure was swallowed without a trace: {logged}"
+    )
+    assert any("remote unreachable" in m for m in logged), (
+        "the log names the operation but not the underlying cause"
+    )
