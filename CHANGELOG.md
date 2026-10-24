@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2026-10-24
+
+### Added
+- **`extract_call_sites(*paths)`** — every msgid a Python source asks for, read
+  from the syntax tree. The companion to `extract_sources`, which scans
+  template markup: members whose human-facing strings sit in `_()` calls spread
+  across modules get nothing from the template scanner, and each was writing
+  its own AST walk or going without.
+
+  It matters beyond convenience. `Catalog.problems` can only report a
+  **catalogue entry nothing uses** — the orphan a reworded source string leaves
+  behind — when handed the *complete* set of strings the code asks for. An
+  incomplete set turns that half of the check into noise: on md2star a
+  literals-only collector reported sixty-nine dead entries of which none was
+  dead, and the check had to be left unasserted.
+
+  The three shapes are collected as the catalogue keys them — plain,
+  `singular\x00plural`, `context\x04text` — so the two sides compare directly.
+  **Aliases are read from each file's own imports** rather than a fixed list:
+  md2star writes `from .i18n import ngettext as _n`, and a hard-coded marker
+  set missed every plural it asked for.
+
+### Note on this release
+- 2.9.1 was published before this function existed, and the working tree then
+  carried it under that same number for a few hours: md2star adopted it, its CI
+  installed os-helper from PyPI, and the suite went red while passing locally
+  against an editable install. The version is bumped here so the repository and
+  the wheel stop disagreeing. A member wanting `extract_call_sites` should
+  declare `os-helper>=2.10.0`.
+
 ## [2.9.1] - 2026-10-22
 
 ### Fixed
