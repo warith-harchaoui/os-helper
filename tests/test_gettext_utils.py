@@ -320,7 +320,7 @@ def test_a_context_separates_two_identical_source_strings(tmp_path: Path) -> Non
     messages = tmp_path / "locales" / "fr" / "LC_MESSAGES"
     messages.mkdir(parents=True)
     (messages / "demo.po").write_text(
-        '''msgid ""
+        """msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\\n"
 
@@ -331,7 +331,7 @@ msgstr "mai"
 msgctxt "verb"
 msgid "May"
 msgstr "pouvoir"
-''',
+""",
         encoding="utf-8",
     )
     osh.compile_catalogs(tmp_path / "locales")
@@ -363,7 +363,7 @@ def test_a_context_entry_does_not_disturb_the_plain_one(tmp_path: Path) -> None:
     messages = tmp_path / "locales" / "fr" / "LC_MESSAGES"
     messages.mkdir(parents=True)
     (messages / "demo.po").write_text(
-        '''msgid ""
+        """msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\\n"
 
@@ -376,7 +376,7 @@ msgstr "Avec contexte"
 
 msgid "After"
 msgstr "Après"
-''',
+""",
         encoding="utf-8",
     )
     osh.compile_catalogs(tmp_path / "locales")
@@ -384,3 +384,82 @@ msgstr "Après"
     assert cat.gettext("fr", "Plain") == "Simple"
     assert cat.pgettext("fr", "ctx", "Plain") == "Avec contexte"
     assert cat.gettext("fr", "After") == "Après"
+
+
+# ── collecting msgids from Python call sites ──────────────────────────────
+
+
+def test_call_sites_are_read_from_the_syntax_tree(tmp_path: Path) -> None:
+    """The companion to `extract_sources`, for members whose strings are in code.
+
+    `extract_sources` scans template markup. Several members keep their
+    human-facing strings in `_()` calls spread across modules instead, and for
+    those the template scanner finds nothing — so `Catalog.problems(used=...)`
+    could not be given a complete set, and the orphan half of that check had to
+    be left unasserted.
+    """
+    (tmp_path / "m.py").write_text(
+        "from .i18n import gettext as _\n"
+        '_("Save")\n'
+        'gettext("Open")\n'
+        "x = _(variable)          # not a literal: unknowable without running\n",
+        encoding="utf-8",
+    )
+    assert osh.extract_call_sites(tmp_path) == {"Save", "Open"}
+
+
+def test_plurals_and_contexts_are_keyed_as_the_catalogue_keys_them(tmp_path: Path) -> None:
+    """`\\x00` for plurals and `\\x04` for contexts, so the two sides compare.
+
+    Collect a plural's singular alone and the catalogue's combined entry looks
+    like an orphan: the separator is not cosmetic, it is what makes the
+    comparison meaningful.
+    """
+    (tmp_path / "m.py").write_text(
+        'ngettext("%d file", "%d files", n)\npgettext("menu", "Open")\n',
+        encoding="utf-8",
+    )
+    assert osh.extract_call_sites(tmp_path) == {"%d file\x00%d files", "menu\x04Open"}
+
+
+def test_the_aliases_a_file_chooses_are_followed(tmp_path: Path) -> None:
+    """Read from the file's own imports rather than a hard-coded marker list.
+
+    md2star writes `from .i18n import ngettext as _n`. A hard-coded set missed
+    every plural it asked for, and each plural catalogue entry was then reported
+    as a dead orphan — noise, from the very check meant to remove it. Verified
+    on the real package: with the aliases followed, both of md2star's plurals
+    are collected.
+
+    The aliases below are deliberately **not** the conventional `_n` / `_p`.
+    A first version of this test used those, and passed with the
+    import-reading code disabled, because `_n` and `_p` are in the fallback
+    list too — a test that could not fail. Only a name nothing could have
+    guessed proves the imports are really being read.
+    """
+    (tmp_path / "m.py").write_text(
+        "from .i18n import gettext as speak\n"
+        "from .i18n import ngettext as however_many, pgettext as in_context\n"
+        'speak("Plain")\n'
+        'however_many("%d slide", "%d slides", n)\n'
+        'in_context("toolbar", "Render")\n',
+        encoding="utf-8",
+    )
+    assert osh.extract_call_sites(tmp_path) == {
+        "Plain",
+        "%d slide\x00%d slides",
+        "toolbar\x04Render",
+    }
+
+
+def test_vendored_and_unparseable_files_are_passed_over(tmp_path: Path) -> None:
+    """A dependency's strings are not this package's, and a syntax error is not
+    a translation fault — failing the sweep over one would hide the findings."""
+    (tmp_path / "ours.py").write_text('_("Keep")\n', encoding="utf-8")
+    broken = tmp_path / "broken.py"
+    broken.write_text('_("Unclosed"\n', encoding="utf-8")
+    vendored = tmp_path / ".venv" / "lib"
+    vendored.mkdir(parents=True)
+    (vendored / "theirs.py").write_text('_("Not ours")\n', encoding="utf-8")
+
+    assert osh.extract_call_sites(tmp_path) == {"Keep"}

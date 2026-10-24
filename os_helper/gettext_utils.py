@@ -53,6 +53,7 @@ Author
 
 from __future__ import annotations
 
+import ast
 import gettext as _gettext
 import re
 import struct
@@ -232,6 +233,136 @@ def parse_po(path: str | Path) -> dict[str, str]:
 #: per module, so the marker lives in the markup rather than in a function
 #: call, and this is the form `render_gui` substitutes.
 SOURCE_MARKER_RE = re.compile(r'\{\{_\("(.*?)"\)\}\}')
+
+
+def extract_call_sites(*paths: str | Path) -> set[str]:
+    """Every msgid a Python source asks for, read from the syntax tree.
+
+    The companion to :func:`extract_sources`, which scans template markup.
+    Some members keep their human-facing strings in ``_()`` calls spread across
+    modules rather than in one template, and for those the template scanner
+    finds nothing.
+
+    Why this matters beyond convenience: :meth:`Catalog.problems` can only
+    report a **catalogue entry nothing uses** — the orphan left behind when a
+    source string is reworded — if it is handed the *complete* set of strings
+    the code asks for. An incomplete set turns that half of the check into
+    noise. On md2star, a first attempt that collected only bare ``_("…")``
+    literals reported sixty-nine dead entries of which **none** was dead, and
+    the check had to be left unasserted.
+
+    The three shapes are collected in the form the catalogue stores them, so
+    the two sides compare directly:
+
+    * ``_("text")`` and ``gettext("text")`` yield ``"text"``.
+    * ``ngettext("one", "many", n)`` yields ``"one\x00many"`` — the plural
+      separator gettext itself uses, so a plural entry is not reported as an
+      orphan just because the singular was collected alone.
+    * ``pgettext("context", "text")`` yields ``"context\x04text"``, likewise.
+
+    Only literal arguments are collected, because only those are knowable
+    without running the code. A call like ``_(message)`` where ``message`` is a
+    variable is invisible here, which is why this function makes the
+    *code-uses-it-but-the-catalogue-does-not* direction sound and the orphan
+    direction only as sound as the caller's own coverage. Say which one you are
+    asserting.
+
+    Parameters
+    ----------
+    *paths : str or Path
+        Files or directories. A directory is walked for ``*.py``, skipping
+        ``.venv``, ``build`` and ``__pycache__`` — a vendored dependency's
+        strings are not this package's.
+
+    Returns
+    -------
+    set of str
+        The msgids, keyed as the catalogue keys them.
+
+    Examples
+    --------
+    >>> import pathlib, tempfile
+    >>> folder = pathlib.Path(tempfile.mkdtemp())
+    >>> code = [
+    ...     'from .i18n import ngettext as _n',
+    ...     '_("Save")',
+    ...     '_n("%d file", "%d files", n)',
+    ... ]
+    >>> _ = (folder / 'm.py').write_text(chr(10).join(code))
+    >>> found = extract_call_sites(folder)
+    >>> sorted(m.replace(chr(0), ' | ') for m in found)
+    ['%d file | %d files', 'Save']
+    """
+    # The conventional names, plus whatever each file aliases them to. Reading
+    # the aliases from the file's own imports rather than hard-coding a list is
+    # what makes this follow a member's choices: md2star writes
+    # `from .i18n import ngettext as _n`, and a hard-coded marker set missed
+    # every plural it asked for -- reporting each plural catalogue entry as a
+    # dead orphan, which is precisely the noise this function exists to remove.
+    CANONICAL = {
+        "gettext": "single",
+        "ugettext": "single",
+        "_": "single",
+        "ngettext": "plural",
+        "ungettext": "plural",
+        "_n": "plural",
+        "pgettext": "context",
+        "_p": "context",
+    }
+    found: set[str] = set()
+
+    def literal(node: ast.expr) -> str | None:
+        """The string a node spells out, or None when it is not a literal."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        return None
+
+    files: list[Path] = []
+    for entry in paths:
+        path = Path(entry)
+        if path.is_dir():
+            files.extend(
+                f
+                for f in sorted(path.rglob("*.py"))
+                if not {".venv", "build", "__pycache__", "dist"} & set(f.parts)
+            )
+        elif path.suffix == ".py":
+            files.append(path)
+
+    for source in files:
+        try:
+            tree = ast.parse(source.read_text(encoding="utf-8"), str(source))
+        except (OSError, SyntaxError):
+            # A file this package cannot parse is not a translation fault, and
+            # failing the whole sweep over one would hide the real findings.
+            continue
+
+        kinds = dict(CANONICAL)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    kind = CANONICAL.get(alias.name)
+                    if kind and alias.asname:
+                        kinds[alias.asname] = kind
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+            kind = kinds.get(name)
+            if kind == "single" and node.args:
+                text = literal(node.args[0])
+                if text is not None:
+                    found.add(text)
+            elif kind == "plural" and len(node.args) >= 2:
+                one, many = literal(node.args[0]), literal(node.args[1])
+                if one is not None and many is not None:
+                    found.add(f"{one}\x00{many}")
+            elif kind == "context" and len(node.args) >= 2:
+                context, text = literal(node.args[0]), literal(node.args[1])
+                if context is not None and text is not None:
+                    found.add(f"{context}\x04{text}")
+    return found
 
 
 def extract_sources(*texts: str) -> set[str]:
