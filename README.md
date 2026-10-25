@@ -107,12 +107,13 @@ dependency, pure-Python across macOS / Linux / Windows.
 - **Logging surface**: `init_logging()` (colored console + file, named-logger
   and live-stream modes), `verbosity()` (integer level get/set), and
   `debug()` / `info()` / `warning()` / `error()` / `critical()` / `check()`.
-- **Multiple surfaces, one codebase**: importable library, an `os-helper` argparse
-  CLI (always installed), an `os-helper-click` twin (via the `[cli]` extra), an
-  HTTP API (`os-helper-api`, via `[api]`), and MCP tools (`os-helper-mcp`, via
-  `[mcp]`). The API/MCP surfaces expose only the safe, side-effect-free
-  subset (hardware info, hashing, ASCII, formatting, URL check, config
-  loading; no filesystem mutation).
+- **Multiple surfaces, one codebase**: importable library, an HTTP API
+  (`os-helper-api`, via `[api]`), MCP tools (`os-helper-mcp`, via `[mcp]`) and
+  the Tree Radar GUI (`os-helper-gui`, via `[gui]`). The API/MCP surfaces expose
+  only the safe, side-effect-free subset (hardware info, hashing, ASCII,
+  formatting, URL check, config loading; no filesystem mutation). There is
+  deliberately **no command line**: os-helper is the suite's foundation, and
+  every other member reaches it by `import os_helper as osh`.
 
 ## Installation
 
@@ -127,11 +128,7 @@ We recommend using Python environments. Check this link if you're unfamiliar wit
 ### From PyPI (recommended)
 
 ```bash
-# Core utilities (library + argparse CLI)
 pip install os-helper
-
-# Optional click-based CLI twin
-pip install "os-helper[cli]"
 ```
 
 ### From source (no PyPI)
@@ -140,11 +137,7 @@ pip install "os-helper[cli]"
 git clone https://github.com/warith-harchaoui/os-helper.git
 cd os-helper
 
-# Core utilities (library + argparse CLI)
 pip install -e .
-
-# Optional click-based CLI twin
-pip install -e ".[cli]"
 ```
 
 ## Usage
@@ -268,26 +261,18 @@ osh.info(f"Folder {folder_to_zip} zipped into {zip_output}")
 
 ## Multi-surface exposure
 
-`os-helper` is not just a library: the same functions are exposed as a
-Python import, an argparse CLI, a click CLI twin, an HTTP API, and MCP tools:
+`os-helper` is a library first. The same safe operations are also reachable
+over HTTP, as MCP tools, and through the Tree Radar GUI:
 
-```bash
-# Python library (default)
+```python
+# Python library — the way every other suite member uses it
 import os_helper as osh
-
-# argparse-based CLI (installed automatically)
-os-helper os system
-os-helper hardware info
-os-helper path exists ~/.zshrc
-os-helper hash string hello --size 8
-os-helper misc format-size 12345678
-os-helper misc now --fmt filename
-
-# click-based CLI twin (needs the [cli] extra)
-pip install "os-helper[cli]"
-os-helper-click hash file ./pyproject.toml
-os-helper-click hardware info
 ```
+
+There is **no command line**, on purpose: a shell wrapper around
+`path exists` or `str ascii` duplicated the shell's own vocabulary without
+adding anything, and the nine suite packages that `import os_helper` never
+called it.
 
 ### HTTP API + MCP
 

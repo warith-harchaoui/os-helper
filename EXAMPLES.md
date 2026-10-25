@@ -62,11 +62,7 @@ This document provides detailed examples for using the `OS Helper` module to sim
 Install the package from PyPI (or directly from GitHub; see the README):
 
 ```bash
-# Core utilities (library + argparse CLI)
 pip install os-helper
-
-# Optional click-based CLI twin
-pip install "os-helper[cli]"
 ```
 
 Then import the library; examples below use the conventional `osh` alias:

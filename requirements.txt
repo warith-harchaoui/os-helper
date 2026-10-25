@@ -5,7 +5,9 @@
 #     pip install -e .           # os-helper itself (editable) or `pip install .`
 #
 # Optional surfaces live behind extras (not pulled by this file):
-#     pip install '.[cli]'       # click-based CLI twin
+#     pip install '.[api]'       # FastAPI HTTP surface
+#     pip install '.[mcp]'       # MCP tools over the same app
+#     pip install '.[gui]'       # Tree Radar disk-treemap dashboard
 #
 # os-helper is the suite's leaf dependency — it pins no sibling *-helper.
 

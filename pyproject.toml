@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "os-helper"
-version = "2.10.0"
-description = "Cross-platform Python utility functions for file handling, system operations, string manipulation, folder management, hashing, configuration loading, and timing/profiling primitives — exposed as library, argparse CLI and click CLI."
+version = "3.0.0"
+description = "Cross-platform Python utility functions for file handling, system operations, string manipulation, folder management, hashing, configuration loading, and timing/profiling primitives, exposed as a library plus optional HTTP API, MCP and GUI surfaces."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license = {text = "BSD-3-Clause"}
@@ -37,9 +37,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# CLI-only-with-click extra. argparse variant needs no runtime dep and
-# is always available.
-cli = ["click>=8.1,<9"]
 # GUI extra — the optional "Tree Radar" treemap dashboard (os_helper.gui).
 # Deliberately kept OUT of the core dependencies: `import os_helper as osh`
 # must stay FastAPI-free so the 9 suite repos that depend on os-helper never
@@ -71,13 +68,12 @@ mcp = [
     # fastapi-mcp ships a 2.x-compatible release (same issue hit md2star).
     "mcp>=1.12,<2",
 ]
-# `dev` keeps the bar low for CI — pytest + click (so the click CLI
+# `dev` keeps the bar low for CI — pytest alone (os-helper's core has no
 # import always resolves in tests) + the api/gui/mcp stacks (so those
 # surfaces are actually exercised on every push, not silently skipped).
 # No AI inference here, so no DeepEval / Giskard.
 dev = [
     "pytest>=8", "pytest-timeout>=2.3",
-    "click>=8.1,<9",
     "fastapi>=0.110,<1",
     "uvicorn>=0.29,<1",
     "httpx>=0.27,<1",
@@ -86,10 +82,9 @@ dev = [
 ]
 
 [project.scripts]
-# argparse-based CLI — no runtime dep beyond stdlib + core package.
-os-helper = "os_helper.cli_argparse:main"
-# click-based twin — install with [cli] extra.
-os-helper-click = "os_helper.cli_click:main"
+# os-helper ships NO command line: it is the suite's library foundation, and a
+# shell wrapper over `path abs` or `str empty` earned nobody anything. The
+# entry points below start other surfaces; none of them is a CLI.
 # Optional GUI launcher — starts the local Tree Radar server (needs [gui]).
 os-helper-gui = "os_helper.gui:_cli_main"
 # Optional HTTP API server (needs [api]).

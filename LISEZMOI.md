@@ -117,13 +117,14 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   modes logger nommé et flux « live »), `verbosity()` (niveau entier en
   lecture/écriture) et `debug()` / `info()` / `warning()` / `error()` /
   `critical()` / `check()`.
-- **Plusieurs surfaces, un seul code** : bibliothèque importable, une CLI argparse
-  `os-helper` (toujours installée), sa jumelle `os-helper-click` (via l'extra
-  `[cli]`), une API HTTP (`os-helper-api`, via `[api]`) et des outils MCP
-  (`os-helper-mcp`, via `[mcp]`). Les surfaces API/MCP n'exposent que le
-  sous-ensemble sûr et sans effet de bord (info matérielle, hachage, ASCII,
-  formatage, vérification d'URL, chargement de config ; aucune mutation du
-  système de fichiers).
+- **Plusieurs surfaces, un seul code** : bibliothèque importable, une API HTTP
+  (`os-helper-api`, via `[api]`), des outils MCP (`os-helper-mcp`, via `[mcp]`)
+  et l'interface Tree Radar (`os-helper-gui`, via `[gui]`). Les surfaces API/MCP
+  n'exposent que le sous-ensemble sûr et sans effet de bord (info matérielle,
+  hachage, ASCII, formatage, vérification d'URL, chargement de config ; aucune
+  mutation du système de fichiers). Il n'y a **aucune ligne de commande**,
+  délibérément : os-helper est le socle de la suite, et chaque autre membre
+  l'atteint par `import os_helper as osh`.
 
 ## Installation
 
@@ -138,11 +139,7 @@ On recommande de travailler dans un environnement Python. Si vous ne savez pas c
 ### Depuis PyPI (recommandé)
 
 ```bash
-# Utilitaires principaux (bibliothèque + CLI argparse)
 pip install os-helper
-
-# Jumelle CLI click optionnelle
-pip install "os-helper[cli]"
 ```
 
 ### Depuis les sources (sans PyPI)
@@ -151,11 +148,7 @@ pip install "os-helper[cli]"
 git clone https://github.com/warith-harchaoui/os-helper.git
 cd os-helper
 
-# Utilitaires principaux (bibliothèque + CLI argparse)
 pip install -e .
-
-# Jumelle CLI click optionnelle
-pip install -e ".[cli]"
 ```
 
 ## Utilisation
@@ -279,27 +272,18 @@ osh.info(f"Dossier {folder_to_zip} zippé dans {zip_output}")
 
 ## Exposition multi-surface
 
-`os-helper` n'est pas qu'une bibliothèque : les mêmes fonctions sont
-exposées comme import Python, comme CLI argparse, comme jumelle CLI click,
-comme API HTTP et comme outils MCP :
+`os-helper` est d'abord une bibliothèque. Les mêmes opérations sûres sont
+aussi joignables par HTTP, comme outils MCP, et par l'interface Tree Radar :
 
-```bash
-# Bibliothèque Python (par défaut)
+```python
+# Bibliothèque Python — la façon dont chaque membre de la suite s'en sert
 import os_helper as osh
-
-# CLI basée sur argparse (installée automatiquement)
-os-helper os system
-os-helper hardware info
-os-helper path exists ~/.zshrc
-os-helper hash string hello --size 8
-os-helper misc format-size 12345678
-os-helper misc now --fmt filename
-
-# Jumelle click (nécessite l'extra [cli])
-pip install "os-helper[cli]"
-os-helper-click hash file ./pyproject.toml
-os-helper-click hardware info
 ```
+
+Il n'y a **aucune ligne de commande**, à dessein : un habillage shell autour
+de `path exists` ou de `str ascii` redisait le vocabulaire du shell sans rien
+y ajouter, et les neuf paquets de la suite qui font `import os_helper` ne
+l'appelaient jamais.
 
 ### API HTTP + MCP
 

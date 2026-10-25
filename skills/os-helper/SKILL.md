@@ -10,9 +10,9 @@ description: >-
   logging. Use when a task needs to inspect the machine ("how much RAM", "which
   GPU", "how many workers"), hash or compare files, build a safe temp path, walk
   or clean a directory tree, format sizes or durations, check whether a URL is
-  alive, download a file, or load a config. Fires on `os-helper`,
-  `os-helper-click`, `os-helper-api`, `os-helper-mcp`, `os-helper-gui`, `import
-  os_helper as osh`, "Tree Radar", "treemap my disk". Do NOT use for audio,
+  alive, download a file, or load a config. Fires on `import os_helper as osh`,
+  any `osh.` call, `os-helper-api`, `os-helper-mcp`, `os-helper-gui`, "Tree
+  Radar", "treemap my disk". A library, with no command line. Do NOT use for audio,
   video, capture, download-site or document work — reach for the matching suite
   helper instead.
 license: BSD-3-Clause
@@ -41,8 +41,7 @@ python -c "import os_helper"     # library import check
 If missing:
 
 ```bash
-pip install os-helper                   # core: library + argparse CLI, no web stack
-pip install 'os-helper[cli]'            # + the click twin (os-helper-click)
+pip install os-helper                   # core: the library, no web stack
 pip install 'os-helper[api]'            # + FastAPI HTTP surface (os-helper-api)
 pip install 'os-helper[mcp]'            # + MCP tools over the same app (os-helper-mcp)
 pip install 'os-helper[gui]'            # + Tree Radar disk-treemap GUI (os-helper-gui)
@@ -94,7 +93,6 @@ with osh.temporary_folder() as tmp:  # cleaned up on exit
 raises in one call. Every other helper uses `osh.info/warning/error` for logging
 and `os_helper` for file management — follow that when writing suite code.
 
-For the full subcommand and flag matrix, read `references/cli-reference.md`.
 For the HTTP API, MCP tools and the Tree Radar GUI, read `references/surfaces.md`.
 For the exhaustive, auditable trigger list, read `references/triggers.md`.
 

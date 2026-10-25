@@ -47,7 +47,7 @@ with three deliberate network exceptions named below.
 - "add a guard / assertion with a message"
 
 **Explicit tool and symbol mentions**
-- `os-helper`, `os-helper-click`, `os-helper-api`, `os-helper-mcp`, `os-helper-gui`
+- `os-helper-api`, `os-helper-mcp`, `os-helper-gui` (there is no `os-helper` command)
 - `import os_helper`, `import os_helper as osh`, `osh.<anything>`
 - `hardware_info`, `get_nb_workers`, `recursive_glob`, `temporary_folder`,
   `hashfile`, `hashfolder`, `get_config`, `init_logging`, `check`, `format_size`

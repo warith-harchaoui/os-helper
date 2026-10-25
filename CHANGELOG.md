@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-10-25
+
+### Removed
+- **The command line, both of them.** `os-helper` (argparse) and
+  `os-helper-click` are gone, with the `[cli]` extra, the `click` dependency
+  and the 2 219 lines the two modules held.
+
+  os-helper is the foundation the rest of the suite imports: nine packages do
+  `import os_helper as osh` and **not one of them ever shelled out to the
+  command**, which is the measurement that settled it. What the CLI offered was
+  a shell wrapper around the shell's own vocabulary — `os-helper path exists`
+  beside `test -f`, `os-helper str ascii` beside `iconv` — and keeping two
+  implementations of forty-five subcommands in step cost more than the thing
+  was worth.
+
+  **Breaking.** A script calling `os-helper <group> <cmd>` or
+  `os-helper-click …` must call the library instead; every subcommand was a
+  thin shell over one public function, so the replacement is a one-line
+  `python -c` or an import. `pip install "os-helper[cli]"` now fails on the
+  unknown extra — install `os-helper` plain.
+
+### Kept
+- `os-helper-api`, `os-helper-mcp` and `os-helper-gui`. These launch the HTTP
+  API, the MCP server and the Tree Radar dashboard; they are doors onto other
+  surfaces, not a command line, and they stay behind their `[api]` / `[mcp]` /
+  `[gui]` extras.
+
+### Added
+- **`tests/test_no_cli.py`** — three assertions holding the decision in place:
+  no `cli*.py` in the package, no console script outside the three launchers or
+  pointing at a CLI module, and no `click` declared anywhere in
+  `pyproject.toml`. Each was proven by breaking its property and watching that
+  test alone go red. A deletion with nothing holding it drifts back.
+
+### Changed
+- The container image is a **library** image now: it installs the core package
+  and its default command reports the installed version. It used to install
+  `[cli]` and print CLI help, which no longer exists.
+- README, LISEZMOI, `TRIGGERS.md` and the agent skill drop the CLI surface.
+  `skills/os-helper/references/cli-reference.md` is deleted and `surfaces.md`
+  goes from five doors to four.
+
 ## [2.10.0] - 2026-10-24
 
 ### Added

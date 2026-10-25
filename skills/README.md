@@ -12,8 +12,7 @@ terminal.
 skills/os-helper/
 ├── SKILL.md                  # name + trigger-rich description + instructions
 └── references/
-    ├── cli-reference.md      # full subcommand + flag matrix, output contract
-    ├── surfaces.md           # library, two CLIs, HTTP API, MCP, and the Tree Radar GUI
+    ├── surfaces.md           # library, HTTP API, MCP, and the Tree Radar GUI
     └── triggers.md           # exhaustive, auditable trigger catalogue
 ```
 

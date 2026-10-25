@@ -62,11 +62,7 @@ Ce document fournit des exemples détaillés pour utiliser le module `OS Helper`
 Installez le paquet depuis PyPI (ou directement depuis GitHub, voir le README) :
 
 ```bash
-# Utilitaires principaux (bibliothèque + CLI argparse)
 pip install os-helper
-
-# Jumelle CLI click optionnelle
-pip install "os-helper[cli]"
 ```
 
 Puis importez la bibliothèque : les exemples ci-dessous utilisent l'alias conventionnel `osh`.

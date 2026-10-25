@@ -21,9 +21,10 @@ Usage Example
 >>> osh.info(osh.now_string("filename"))
 >>> h = osh.hash_string("hello", size=8)
 
-The same helpers are also exposed as an argparse CLI (``os-helper``) and a
-click CLI (``os-helper-click``, install ``[cli]`` extra). See the README
-and ``GUI.md`` for the multi-surface story.
+There is no command line: this package is the suite's library foundation and
+every member reaches it by import. The same safe helpers are also exposed over
+HTTP (``[api]``), as MCP tools (``[mcp]``) and through the Tree Radar dashboard
+(``[gui]``). See the README and ``GUI.md`` for the multi-surface story.
 
 Author
 ------

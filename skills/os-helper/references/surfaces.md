@@ -1,6 +1,6 @@
-# os-helper non-CLI surfaces
+# os-helper surfaces
 
-Five doors onto the same toolbox. The core install deliberately carries none of
+Four doors onto the same toolbox. The core install deliberately carries none of
 the web stack — nine suite packages depend on `import os_helper` and must not
 pay for FastAPI.
 
@@ -22,11 +22,7 @@ helper uses it for:
 
 Everything exported is listed in `os_helper.__all__`.
 
-## 2. CLIs — argparse (core) and click (`[cli]`)
-
-`os-helper` and `os-helper-click`. Documented in `cli-reference.md`.
-
-## 3. HTTP API — FastAPI (`[api]`)
+## 2. HTTP API — FastAPI (`[api]`)
 
 ```bash
 pip install 'os-helper[api]'
@@ -50,7 +46,7 @@ os-helper-api                       # 127.0.0.1:8000, OpenAPI docs at /docs
 no `cp`, no `download` route: an HTTP surface that can delete the caller's disk
 is not a surface worth shipping. Use the library or the CLI for mutations.
 
-## 4. MCP — `fastapi-mcp` over the *same* app (`[mcp]`)
+## 3. MCP — `fastapi-mcp` over the *same* app (`[mcp]`)
 
 ```bash
 pip install 'os-helper[mcp]'
@@ -67,7 +63,7 @@ Register it with Claude Code:
 claude mcp add os-helper --transport http http://127.0.0.1:8000/mcp
 ```
 
-## 5. Tree Radar GUI (`[gui]`)
+## 4. Tree Radar GUI (`[gui]`)
 
 ```bash
 pip install 'os-helper[gui]'
