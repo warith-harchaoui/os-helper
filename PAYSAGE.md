@@ -83,9 +83,10 @@ Là où `os-helper` gagne dans la famille :
   « donne-moi juste un hash / un dossier temporaire / une valeur `.env` ».
 - **`pathlib` (stdlib)** : quand on veut zéro dépendance tierce et qu'on
   accepte de câbler soi-même journalisation / configuration / hachage.
-- **`click` / `typer`** : quand la CLI *est* le produit et qu'on veut des
-  décorateurs riches / la complétion shell prête à l'emploi (nous livrons déjà
-  un jumeau click, les deux mondes sont couverts).
+- **`click` / `typer`** : quand la CLI *est* le produit. os-helper ne l'est
+  pas : il ne livre aucune ligne de commande, seulement les trois lanceurs de
+  surface (`os-helper-api`, `os-helper-mcp`, `os-helper-gui`). Mieux vaut donc
+  prendre click directement qu'un habillage d'ici.
 - **`pydantic-settings`** : quand la configuration est complexe, typée et
   validée contre un schéma.
 - **`fsspec` / `smart_open`** : quand on a besoin d'une abstraction uniforme
@@ -98,3 +99,44 @@ Là où `os-helper` gagne dans la famille :
 - **`psutil`** : quand on a besoin de télémétrie fine par processus (cartes
   mémoire, affinité CPU, compteurs d'E/S par processus) au-delà de
   l'instantané matériel CPU/RAM/GPU en un appel d'`os-helper`.
+
+## Sources et date de relevé
+
+**Relevé du 2026-10-27**, comparant `os-helper` 3.1.0 (ce dépôt) aux
+bibliothèques citées plus haut.
+
+Les notes en ⭐ traduisent une lecture du **périmètre documenté** de chaque
+projet, pas un banc d'essai : rien n'a été chronométré ici et aucune
+affirmation n'est faite sur la qualité du code des autres. Une case se lit
+« quelle part de cette colonne le projet se donne-t-il pour mission » ; la
+documentation du projet reste la référence avant de parier dessus.
+
+La ligne d'`os-helper` est mesurée dans ce dépôt plutôt qu'affirmée : la
+surface publique exportée par `os_helper/__init__.py`, les routes HTTP
+déclarées par l'API (`/health`, `/os`, `/hardware`, `/hash/string`,
+`/str/ascii`, `/misc/format-size`, `/misc/now`, `/misc/url-ok`, `/config`) et
+les trois scripts de console de `pyproject.toml`. « Cohésion de la suite » est
+un décompte, pas un avis : les seize autres membres d'AI Helpers importent
+tous `os_helper` depuis le code de leur paquet.
+
+Chaque autre ligne vient de la documentation du projet concerné :
+
+| Ligne | Source |
+|---|---|
+| stdlib os | [docs.python.org — `os.path`](https://docs.python.org/3/library/os.path.html) |
+| click | [click.palletsprojects.com](https://click.palletsprojects.com/) |
+| python-dotenv | [saurabh-kumar.com/python-dotenv](https://saurabh-kumar.com/python-dotenv/) |
+| pydantic-settings | [docs.pydantic.dev — settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) |
+| PyYAML | [pyyaml.org — documentation](https://pyyaml.org/wiki/PyYAMLDocumentation) |
+| requests | [requests.readthedocs.io](https://requests.readthedocs.io/en/latest/) |
+| psutil | [psutil.readthedocs.io](https://psutil.readthedocs.io/en/latest/) |
+| sh | [sh.readthedocs.io](https://sh.readthedocs.io/en/latest/) |
+| fsspec | [filesystem-spec.readthedocs.io](https://filesystem-spec.readthedocs.io/en/latest/) |
+| smart_open | [github.com/piskvorky/smart_open](https://github.com/piskvorky/smart_open) |
+| pooch | [fatiando.org/pooch](https://www.fatiando.org/pooch/latest/) |
+| platformdirs | [platformdirs.readthedocs.io](https://platformdirs.readthedocs.io/en/latest/) |
+
+Tous ces liens ont répondu HTTP 200 au contrôle du 2026-10-27. Aucun numéro de
+version d'une bibliothèque tierce n'est cité dans ce document, à dessein : une
+version figée dans un comparatif se périme en affirmation sur un logiciel que
+personne n'a relu depuis.

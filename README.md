@@ -113,7 +113,7 @@ dependency, pure-Python across macOS / Linux / Windows.
   only the safe, side-effect-free subset (hardware info, hashing, ASCII,
   formatting, URL check, config loading; no filesystem mutation). There is
   deliberately **no command line**: os-helper is the suite's foundation, and
-  every other member reaches it by `import os_helper as osh`.
+  every one of the sixteen other members reaches it by `import os_helper as osh`.
 
 ## Installation
 
@@ -140,7 +140,7 @@ cd os-helper
 pip install -e .
 ```
 
-## Usage
+## Quick start
 
 Below are examples demonstrating how to use various features of the `os_helper` library. Make sure to import the library as `osh` before starting.
 
@@ -151,6 +151,10 @@ import os_helper as osh
 1. Set Verbosity and Check Operating System
 
 ```python
+# Attach a console handler first: verbosity() only sets the *level*, so
+# without init_logging() the info() calls below are filtered out silently.
+osh.init_logging()
+
 # Set verbosity level to display debugging messages
 osh.verbosity(3)
 
@@ -189,8 +193,11 @@ osh.info(f"Matching files: {matching_files}")
 
 4. Copy and Remove Files
 ```python
-# Copy a file from source to destination
+# Copy a file from source to destination (the source has to exist first)
 source_file = "source.txt"
+with open(source_file, "w") as handle:
+    handle.write("some content worth backing up")
+
 destination_file = "backup_source.txt"
 osh.copyfile(source_file, destination_file)
 osh.info(f"File {source_file} copied to {destination_file}")
@@ -252,9 +259,9 @@ if osh.is_working_url(url):
 else:
     osh.error(f"The URL {url} is not reachable.")
 
-# Zip a folder
-folder_to_zip = "my_folder"
-zip_output = "my_folder_backup.zip"
+# Zip a folder (reusing the one created in step 3)
+folder_to_zip = test_dir
+zip_output = "test_directory_backup.zip"
 osh.zip_folder(folder_to_zip, zip_output)
 osh.info(f"Folder {folder_to_zip} zipped into {zip_output}")
 ```
@@ -271,7 +278,7 @@ import os_helper as osh
 
 There is **no command line**, on purpose: a shell wrapper around
 `path exists` or `str ascii` duplicated the shell's own vocabulary without
-adding anything, and the nine suite packages that `import os_helper` never
+adding anything, and the sixteen suite packages that `import os_helper` never
 called it.
 
 ### HTTP API + MCP

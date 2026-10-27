@@ -123,8 +123,8 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   n'exposent que le sous-ensemble sûr et sans effet de bord (info matérielle,
   hachage, ASCII, formatage, vérification d'URL, chargement de config ; aucune
   mutation du système de fichiers). Il n'y a **aucune ligne de commande**,
-  délibérément : os-helper est le socle de la suite, et chaque autre membre
-  l'atteint par `import os_helper as osh`.
+  délibérément : os-helper est le socle de la suite et chacun des seize
+  autres membres l'atteint par `import os_helper as osh`.
 
 ## Installation
 
@@ -151,7 +151,7 @@ cd os-helper
 pip install -e .
 ```
 
-## Utilisation
+## Prise en main rapide
 
 Les exemples ci-dessous couvrent les principales fonctions d'`os_helper`. Importez la bibliothèque sous l'alias `osh` pour commencer.
 
@@ -162,6 +162,10 @@ import os_helper as osh
 1. Régler le niveau de verbosité et vérifier le système d'exploitation
 
 ```python
+# Brancher d'abord un handler console : verbosity() ne règle que le *niveau*,
+# sans init_logging() les appels à info() ci-dessous sont filtrés en silence.
+osh.init_logging()
+
 # Régler le niveau de verbosité pour afficher les messages de débogage
 osh.verbosity(3)
 
@@ -200,8 +204,11 @@ osh.info(f"Fichiers correspondants : {matching_files}")
 
 4. Copier et supprimer des fichiers
 ```python
-# Copier un fichier de la source vers la destination
+# Copier un fichier de la source vers la destination (la source doit exister)
 source_file = "source.txt"
+with open(source_file, "w") as handle:
+    handle.write("un contenu à sauvegarder")
+
 destination_file = "backup_source.txt"
 osh.copyfile(source_file, destination_file)
 osh.info(f"Fichier {source_file} copié vers {destination_file}")
@@ -263,9 +270,9 @@ if osh.is_working_url(url):
 else:
     osh.error(f"L'URL {url} n'est pas accessible.")
 
-# Zipper un dossier
-folder_to_zip = "my_folder"
-zip_output = "my_folder_backup.zip"
+# Zipper un dossier (celui créé à l'étape 3)
+folder_to_zip = test_dir
+zip_output = "test_directory_backup.zip"
 osh.zip_folder(folder_to_zip, zip_output)
 osh.info(f"Dossier {folder_to_zip} zippé dans {zip_output}")
 ```
@@ -273,7 +280,7 @@ osh.info(f"Dossier {folder_to_zip} zippé dans {zip_output}")
 ## Exposition multi-surface
 
 `os-helper` est d'abord une bibliothèque. Les mêmes opérations sûres sont
-aussi joignables par HTTP, comme outils MCP, et par l'interface Tree Radar :
+aussi joignables par HTTP, comme outils MCP ou par l'interface Tree Radar :
 
 ```python
 # Bibliothèque Python — la façon dont chaque membre de la suite s'en sert
@@ -282,7 +289,7 @@ import os_helper as osh
 
 Il n'y a **aucune ligne de commande**, à dessein : un habillage shell autour
 de `path exists` ou de `str ascii` redisait le vocabulaire du shell sans rien
-y ajouter, et les neuf paquets de la suite qui font `import os_helper` ne
+y ajouter ; les seize paquets de la suite qui font `import os_helper` ne
 l'appelaient jamais.
 
 ### API HTTP + MCP

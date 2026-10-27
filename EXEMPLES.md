@@ -6,15 +6,16 @@ Ce document fournit des exemples détaillés pour utiliser le module `OS Helper`
 
 ## Table des matières
 
-1. [Installation et configuration](#installation-et-configuration)
-2. [Informations système](#informations-système)
+[Mise en place](#mise-en-place)
+
+1. [Informations système](#1-informations-système)
    - [Résolution du nombre de workers](#résolution-du-nombre-de-workers)
-3. [Inspection matérielle](#inspection-matérielle)
+2. [Inspection matérielle](#2-inspection-matérielle)
    - [Instantané en un appel](#instantané-en-un-appel)
    - [Sondes individuelles](#sondes-individuelles)
    - [Métriques en direct](#métriques-en-direct)
-4. [Chargement de configuration](#chargement-de-configuration)
-5. [Utilitaires fichiers et dossiers](#utilitaires-fichiers-et-dossiers)
+3. [Chargement de configuration](#3-chargement-de-configuration)
+4. [Utilitaires fichiers et dossiers](#4-utilitaires-fichiers-et-dossiers)
    - [Vérifier l'existence d'un fichier ou d'un dossier](#vérifier-lexistence-dun-fichier-ou-dun-dossier)
    - [Gérer les dossiers](#gérer-les-dossiers)
    - [Taille de fichier et opérations sur les chemins](#taille-de-fichier-et-opérations-sur-les-chemins)
@@ -22,42 +23,44 @@ Ce document fournit des exemples détaillés pour utiliser le module `OS Helper`
    - [Décrire le contenu d'un dossier](#décrire-le-contenu-dun-dossier)
    - [Décomposer un chemin fichier/dossier](#décomposer-un-chemin-fichierdossier)
    - [Compresser un dossier en fichier ZIP](#compresser-un-dossier-en-fichier-zip)
-6. [Utilitaires de chaînes](#utilitaires-de-chaînes)
+5. [Utilitaires de chaînes](#5-utilitaires-de-chaînes)
    - [Détecter les chaînes vides](#détecter-les-chaînes-vides)
    - [Conversion en chaîne ASCII](#conversion-en-chaîne-ascii)
-7. [Ressources temporaires](#ressources-temporaires)
+6. [Ressources temporaires](#6-ressources-temporaires)
    - [Créer un fichier temporaire](#créer-un-fichier-temporaire)
    - [Créer un dossier temporaire](#créer-un-dossier-temporaire)
    - [Créer un répertoire temporaire persistant](#créer-un-répertoire-temporaire-persistant-nettoyage-à-la-charge-de-lappelant)
    - [Déposer un fichier sur un backend distant](#déposer-un-fichier-sur-un-backend-distant)
-8. [Commandes système](#commandes-système)
+7. [Commandes système](#7-commandes-système)
    - [Exécuter une commande système](#exécuter-une-commande-système)
-9. [Réseau](#réseau)
+8. [Réseau](#8-réseau)
    - [Vérifier qu'une URL est valide et accessible](#vérifier-quune-url-est-valide-et-accessible)
    - [Récupérer les adresses IP publiques](#récupérer-les-adresses-ip-publiques)
-10. [Hachage](#hachage)
-    - [Générer un hachage pour une chaîne](#générer-un-hachage-pour-une-chaîne)
-    - [Hacher un fichier](#hacher-un-fichier)
-    - [Hacher un dossier](#hacher-un-dossier)
-11. [Utilitaires de durée](#utilitaires-de-durée)
+9. [Hachage](#9-hachage)
+   - [Générer un hachage pour une chaîne](#générer-un-hachage-pour-une-chaîne)
+   - [Hacher un fichier](#hacher-un-fichier)
+   - [Hacher un dossier](#hacher-un-dossier)
+10. [Utilitaires de durée](#10-utilitaires-de-durée)
     - [Formater des durées en chaînes lisibles](#formater-des-durées-en-chaînes-lisibles)
     - [Analyser des chaînes en durées](#analyser-des-chaînes-en-durées)
-12. [Utilitaires divers](#utilitaires-divers)
+11. [Utilitaires divers](#11-utilitaires-divers)
     - [Verbosité et journalisation](#verbosité-et-journalisation)
     - [Horodatages et tailles en octets](#horodatages-et-tailles-en-octets)
     - [Télécharger des fichiers](#télécharger-des-fichiers)
     - [Barres de progression pour des transferts personnalisés](#barres-de-progression-pour-des-transferts-personnalisés)
     - [Ouvrir des fichiers avec l'application par défaut](#ouvrir-des-fichiers-avec-lapplication-par-défaut)
-13. [Utilitaires de profilage](#utilitaires-de-profilage)
+12. [Utilitaires de profilage](#12-utilitaires-de-profilage)
     - [Chronomètre en temps réel](#chronomètre-en-temps-réel)
     - [Chronomètre CPU](#chronomètre-cpu)
     - [Chronomètre GPU](#chronomètre-gpu)
     - [tic / toc façon MATLAB](#tic--toc-façon-matlab)
 
+[Ligne de commande](#ligne-de-commande)
+
 ---
 
 
-## Installation et configuration
+## Mise en place
 
 Installez le paquet depuis PyPI (ou directement depuis GitHub, voir le README) :
 
@@ -65,13 +68,23 @@ Installez le paquet depuis PyPI (ou directement depuis GitHub, voir le README) :
 pip install os-helper
 ```
 
-Puis importez la bibliothèque : les exemples ci-dessous utilisent l'alias conventionnel `osh`.
+Puis importez la bibliothèque et donnez aux logs une destination. La
+convention de toute la suite est l'alias `osh` ; `verbosity()` règle un
+*niveau*, pas une destination, si bien que sans `init_logging()` les lignes
+`info()` / `debug()` plus bas sont filtrées en silence :
 
 ```python
 import os_helper as osh
+
+osh.init_logging()  # console colorée
+osh.verbosity(1)  # INFO et au-dessus
 ```
 
-## Informations système
+Les sections ci-dessous écrivent leurs imports en entier
+(`from os_helper import hashfile`) pour que chacune se tienne seule et se colle
+telle quelle ; `osh.hashfile(...)` désigne la même fonction via l'alias.
+
+## 1. Informations système
 
 Utilisez les fonctions suivantes pour déterminer la plateforme sur laquelle votre script s'exécute. Elles sont particulièrement utiles pour écrire des scripts multiplateformes.
 
@@ -114,7 +127,7 @@ print(get_nb_workers(0))  # 0 : la taille complète du pool
 print(getpid())  # ID du processus courant, sous forme de chaîne
 ```
 
-## Inspection matérielle
+## 2. Inspection matérielle
 
 Faits matériels et métriques en direct, multiplateformes : aucune dépendance
 système lourde au-delà de `psutil` (le socle) et des outils propres à
@@ -124,8 +137,8 @@ appelés uniquement quand c'est pertinent).
 ### Instantané en un appel
 
 `hardware_info()` agrège chaque sonde ci-dessous en un seul dict prêt pour
-le JSON : la même charge utile que renvoient les surfaces CLI/API/MCP
-`hardware info`.
+le JSON : exactement la charge utile que renvoie la route `/hardware` de l'API
+HTTP, donc aussi celle que l'outil MCP monté sur cette route remet à un agent.
 
 ```python
 from os_helper import hardware_info
@@ -186,7 +199,7 @@ if gpu_vendor() == "apple":
 ### Métriques en direct
 
 À distinguer des faits statiques ci-dessus : ces valeurs sont ré-échantillonnées
-à chaque appel (adapté à un rapport de diagnostic ponctuel ou un print CLI ;
+à chaque appel (adapté à un rapport de diagnostic ponctuel ou une ligne d'état ;
 pas à une boucle chaude). `hardware_info()` les intègre déjà : n'y accédez
 directement que si vous voulez une seule valeur sans payer pour tout un
 instantané.
@@ -207,7 +220,7 @@ print(disk_usage_gb("/tmp"))  # ou vérifiez le système de fichiers d'un chemin
 print(gpu_utilization_percent())  # 14.0 ou None
 ```
 
-## Chargement de configuration
+## 3. Chargement de configuration
 
 `get_config` résout les réglages selon un ordre de repli fixe : un fichier
 JSON/YAML explicite (ou le premier fichier correspondant dans un dossier),
@@ -217,6 +230,11 @@ satisfait toutes les clés requises.
 
 ```python
 from os_helper import get_config
+
+# Un fichier de config à lire. Le vôtre existe déjà ; celui-ci rend l'extrait
+# exécutable tel quel.
+with open("config.yaml", "w") as handle:
+    handle.write("host: localhost\nport: 5432\n")
 
 # 1) Un fichier de config (ou un dossier qui en contient un) l'emporte en premier,
 #    s'il possède toutes les clés.
@@ -230,7 +248,11 @@ print(config)  # {'host': 'localhost', 'port': 5432}
 
 # 2) Pas de chemin (ou le fichier manque une clé) : repli sur les fichiers .env,
 #    fusionnés dans os.environ (par défaut : [".env"] dans le dossier courant).
+with open(".env.local", "w") as handle:
+    handle.write("API_KEY=sk-from-dotenv\n")
+
 config = get_config(keys=["api_key"], config_type="API", env_files=[".env.local"])
+print(config)  # {'api_key': 'sk-from-dotenv'}
 
 # 3) Puis les simples variables d'environnement, essayées d'abord en UPPER_CASE
 #    (l'orthographe conventionnelle), puis la clé exacte telle que donnée.
@@ -247,7 +269,7 @@ print(config)  # {'api_key': 'sk-example'}
 > précautions de sécurité et comment superposer un vault (HashiCorp Vault,
 > gestionnaires de secrets AWS/GCP/Azure) par-dessus `get_config`.
 
-## Utilitaires fichiers et dossiers
+## 4. Utilitaires fichiers et dossiers
 
 Les utilitaires suivants aident à travailler efficacement avec les fichiers et
 dossiers : vérifier leur existence, gérer les chemins ou effectuer des
@@ -271,12 +293,12 @@ print(dir_exists("/path/to/folder", check_empty=True))  # True si non vide, Fals
 ```python
 from os_helper import make_directory, remove_directory
 
-# Créer un dossier
-make_directory("/path/to/new_folder")
+# Créer un dossier (parents inclus ; un dossier déjà présent n'est pas une erreur)
+make_directory("demo_folder/nested")
 print("Dossier créé !")
 
 # Supprimer un dossier (et son contenu, s'il existe)
-remove_directory("/path/to/new_folder")
+remove_directory("demo_folder")
 print("Dossier supprimé !")
 ```
 
@@ -300,24 +322,37 @@ print(absolute_path)  # Sortie : '/home/user/relative/path/to/file'
 ### Copier, supprimer et localiser des fichiers
 
 ```python
-from os_helper import checkfile, copyfile, remove_files, join, recursive_glob, path_without_home
+import os
+
+from os_helper import (
+    checkfile,
+    copyfile,
+    make_directory,
+    remove_files,
+    join,
+    recursive_glob,
+    path_without_home,
+)
 
 # Vérifier qu'un fichier existe (et optionnellement qu'il n'est pas vide)
 # et lever une exception avec un message clair sinon : pratique comme
 # précondition en tête de fonction.
 checkfile("example.txt", "Expected input file is missing", check_empty=True)
 
-# Copier un fichier, en créant au passage les dossiers de destination manquants.
+# Copier un fichier. Le *dossier* de destination doit exister au préalable :
+# copyfile imite `cp` et n'en crée aucun (donnez-lui un dossier existant et le
+# nom du fichier source est conservé).
+make_directory("backups")
 copyfile("example.txt", "backups/example.txt")
 
 # Suppression par lot au mieux : chaque suppression est journalisée, les
 # fichiers absents sont ignorés plutôt que de lever une exception.
 remove_files(["backups/example.txt", "does-not-exist.txt"])
 
-# join() est os.path.join avec normalisation, l'appelant obtient donc un
-# séparateur cohérent quelle que soit la façon dont les morceaux ont été passés.
+# join() normalise *et* rend absolu : le résultat est toujours pleinement
+# qualifié, les morceaux relatifs étant résolus depuis le dossier courant.
 config_path = join("configs", "prod", "app.yaml")
-print(config_path)  # 'configs/prod/app.yaml'
+print(config_path)  # '<dossier courant>/configs/prod/app.yaml'
 
 # Trouver récursivement toutes les correspondances d'un motif glob sous un
 # dossier racine.
@@ -326,7 +361,9 @@ print(python_files)  # ['src/main.py', 'src/utils/helpers.py', ...]
 
 # Afficher un chemin relatif au dossier personnel, pour des lignes de log
 # destinées à l'utilisateur qui ne doivent pas exposer le chemin absolu complet.
-print(path_without_home("/Users/alice/projects/app/config.yaml"))
+# Seul le dossier personnel de *cet* utilisateur est replié : un chemin situé
+# chez quelqu'un d'autre revient inchangé.
+print(path_without_home(os.path.expanduser("~/projects/app/config.yaml")))
 # '~/projects/app/config.yaml'
 ```
 
@@ -338,21 +375,30 @@ print(path_without_home("/Users/alice/projects/app/config.yaml"))
 à côté.
 
 ```python
-from os_helper import folder_description
+from os_helper import folder_description, make_directory
+
+# Une petite arborescence à décrire, pour que l'appel ci-dessous ait de quoi
+# parcourir.
+make_directory("demo/subfolder")
+with open("demo/file1.txt", "w") as handle:
+    handle.write("a" * 1024)
+with open("demo/subfolder/file2.txt", "w") as handle:
+    handle.write("b" * 2048)
 
 description = folder_description(
-    "/path/to/folder",
+    "demo",
     recursive=True,  # descendre dans les sous-dossiers
-    index_html=True,  # écrire /path/to/folder/index.html
+    index_html=True,  # écrire demo/index.html
     with_size=True,  # inclure une colonne de taille dans l'index HTML
-    description_json=True,  # écrire /path/to/folder/description.json
+    description_json=True,  # écrire demo/description.json
 )
 
 print(description)
-# {
-#     'file1.txt': 1024,
-#     'subfolder/file2.txt': 2097152,
-# }
+# {'file1.txt': 1024, 'subfolder/file2.txt': 2048}
+#
+# Les deux fichiers qu'il vient d'écrire ne sont pas dans le dict ; ils sont
+# dans le dossier : sorted(os.listdir("demo")) ->
+# ['description.json', 'file1.txt', 'index.html', 'subfolder']
 ```
 
 ### Décomposer un chemin fichier/dossier
@@ -381,14 +427,21 @@ print(folder, name, ext)  # Sortie : '/path/to', 'file', ''
 ### Compresser un dossier en fichier ZIP
 
 ```python
-from os_helper import zip_folder
+from os_helper import make_directory, zip_folder
 
-# Créer une archive ZIP d'un dossier et de son contenu
-zip_folder("/path/to/folder", "/path/to/folder_archive.zip")
+# Un dossier à archiver (l'arborescence `demo` de la section précédente
+# ferait aussi l'affaire).
+make_directory("demo")
+with open("demo/file1.txt", "w") as handle:
+    handle.write("a" * 1024)
+
+# Créer une archive ZIP d'un dossier et de son contenu. Sans second argument,
+# `<dossier>.zip` est écrit à côté du dossier.
+zip_folder("demo", "demo_archive.zip")
 print("Dossier compressé avec succès en archive ZIP !")
 ```
 
-## Utilitaires de chaînes
+## 5. Utilitaires de chaînes
 
 Les utilitaires de chaînes simplifient les tâches courantes de manipulation
 de texte, comme garantir la compatibilité ASCII ou nettoyer des chaînes pour
@@ -429,7 +482,7 @@ safe_string = asciistring("Café@2024.txt")
 print(safe_string)  # Sortie : 'cafe-2024-txt'
 ```
 
-## Ressources temporaires
+## 6. Ressources temporaires
 
 Les utilitaires de ressources temporaires permettent de créer des fichiers
 ou des dossiers temporaires pour des tests ou du stockage intermédiaire. Ces
@@ -488,11 +541,13 @@ choisi (par exemple pour qu'un outil qui résout des chemins relatifs au
 fichier retrouve quand même ses voisins) :
 
 ```python
-from os_helper import temporary_filename
+from os_helper import make_temporary_directory, remove_directory, temporary_filename
 
+work = make_temporary_directory(prefix="myjob-")
 with temporary_filename(suffix=".wav", directory=work) as tmp:
     # `tmp` se trouve dans `work`, à côté des éventuels fichiers d'entrée voisins
-    ...
+    print(tmp)  # '/tmp/myjob-xxxx/<aléatoire>.wav'
+remove_directory(work)
 ```
 
 ### Déposer un fichier sur un backend distant
@@ -535,7 +590,7 @@ with temporary_remote_file(
 # l'artefact distant a disparu après le bloc
 ```
 
-## Commandes système
+## 7. Commandes système
 
 La fonction utilitaire `system` permet d'exécuter des commandes système et
 d'en capturer la sortie et les messages d'erreur. Elle fournit une gestion
@@ -561,7 +616,7 @@ assert output["err"] == ""  # Pas de sortie stderr pour la commande 'touch'
 ```
 
 
-## Réseau
+## 8. Réseau
 
 Les utilitaires `Réseau` fournissent des moyens simples de vérifier des URLs
 et de récupérer des adresses IP publiques.
@@ -592,7 +647,7 @@ print(f"Adresse IPv4 : {ip_info['ipv4']}")
 print(f"Adresse IPv6 : {ip_info['ipv6']}")
 ```
 
-## Hachage
+## 9. Hachage
 
 Les utilitaires `Hachage` permettent de générer des empreintes pour des
 chaînes, des fichiers et des dossiers, avec diverses options de contenu et
@@ -656,7 +711,7 @@ print(f"Hachage du dossier avec date : {dated_hash}")
 ```
 
 
-## Utilitaires de durée
+## 10. Utilitaires de durée
 
 Utilitaires pour formater et analyser des durées lisibles par un humain.
 
@@ -690,7 +745,7 @@ print(str2time("90 minutes"))  # 5400.0
 print(str2time("1.5 days"))  # 129600.0
 ```
 
-## Utilitaires divers
+## 11. Utilitaires divers
 
 La section `Utilitaires divers` contient des fonctions pour la
 journalisation, le téléchargement de fichiers et la génération de messages
@@ -760,8 +815,8 @@ print(now_string("filename"))  # "2026-08-09-14-32-07"
 # Tailles en octets lisibles par un humain (unités décimales/SI, comme les
 # fabricants de disques les affichent).
 print(format_size(512))  # "512 B"
-print(format_size(1_536))  # "1.50 KB"
-print(format_size(1_536_000))  # "1.50 MB"
+print(format_size(1_536))  # "1.54 KB"
+print(format_size(1_536_000))  # "1.54 MB"
 print(format_size(1_500_000_000))  # "1.50 GB"
 ```
 
@@ -856,7 +911,7 @@ openfile(
 )  # mettez votre propre fichier à ouvrir par votre propre OS à la place de cet exemple fictif
 ```
 
-## Utilitaires de profilage
+## 12. Utilitaires de profilage
 
 Trois gestionnaires de contexte et une paire façon MATLAB pour mesurer le
 temps que prend du code. Choisissez le bon outil pour la question posée :
@@ -944,3 +999,93 @@ print(toc(t_outer))  # bloc externe
 ```
 
 Appelez `toc(log=True)` pour aussi émettre une ligne de log INFO.
+
+## Ligne de commande
+
+Il n'y en a pas : c'est le choix de conception. os-helper est la bibliothèque
+socle de la suite — les seize autres membres d'AI Helpers l'atteignent par
+`import os_helper as osh` et aucun n'est jamais passé par un shell pour
+l'appeler. Les deux lignes de commande qu'il portait ne faisaient que redire le
+vocabulaire du shell : `test -f` existait déjà, `iconv` aussi. Toutes deux ont
+disparu en 3.0.0, avec les 2 219 lignes des deux modules. C'est
+`tests/test_no_cli.py` qui les garde parties : il échoue si un module CLI
+réapparaît dans le paquet, si un script de console pointe vers l'un d'eux ou si
+un document livré annonce une commande qui n'existe plus.
+
+Ce que font les trois scripts de console, c'est *démarrer une autre surface* :
+
+| Commande | Extra | Ce qu'elle démarre |
+|---|---|---|
+| `os-helper-gui` | `[gui]` | le tableau de bord treemap Tree Radar |
+| `os-helper-api` | `[api]` | l'API HTTP |
+| `os-helper-mcp` | `[mcp]` | la même application plus un point d'entrée `/mcp` |
+
+### Le lanceur de l'IHM
+
+Le seul à prendre des options. Depuis la 3.1.0 il les analyse avec click, donc
+`-h` marche aussi bien que `--help` (l'aide du lanceur est en anglais, telle
+qu'elle sort réellement) :
+
+```bash
+pip install "os-helper[gui]"
+os-helper-gui --help
+```
+
+```text
+Usage: os-helper-gui [OPTIONS]
+
+  Launch the local Tree Radar treemap disk dashboard.
+
+Options:
+  --root DIRECTORY      Folder to pre-fill and scan (default: current
+                        directory).
+  --host TEXT           Bind interface (localhost only by default).  [default:
+                        127.0.0.1]
+  --port INTEGER RANGE  Port to serve on.  [default: 8017; 1<=x<=65535]
+  -h, --help            Show this message and exit.
+```
+
+Pointez-le sur un dossier ; il n'écoute que sur la boucle locale, le tableau de
+bord n'est donc joignable que depuis cette machine :
+
+```bash
+os-helper-gui --root ~/Downloads
+# puis ouvrir http://127.0.0.1:8017/gui   (?lang=fr / ?lang=en choisit la langue)
+```
+
+Un port impossible est refusé au niveau de l'option plutôt qu'au niveau de la
+socket, avec le code de sortie 2 :
+
+```bash
+os-helper-gui --port 99999
+```
+
+```text
+Usage: os-helper-gui [OPTIONS]
+Try 'os-helper-gui --help' for help.
+
+Error: Invalid value for '--port': 99999 is not in the range 1<=x<=65535.
+```
+
+### Les lanceurs de l'API et de MCP
+
+Aucun des deux ne prend d'option : tous deux lisent `OS_HELPER_HOST` et
+`OS_HELPER_PORT` dans l'environnement, avec `127.0.0.1` et `8010` par défaut.
+
+```bash
+pip install "os-helper[api]"
+os-helper-api                          # -> http://127.0.0.1:8010 (docs sur /docs)
+curl http://127.0.0.1:8010/hardware    # le même dict que hardware_info()
+
+OS_HELPER_PORT=9000 os-helper-api      # la même surface sur un autre port
+
+pip install "os-helper[mcp]"
+os-helper-mcp                          # la même application + un point /mcp
+```
+
+Tous deux n'exposent que le sous-ensemble sûr et sans effet de bord : `/health`,
+`/os`, `/hardware`, `/hash/string`, `/str/ascii`, `/misc/format-size`,
+`/misc/now`, `/misc/url-ok`, `/config`. Aucune route n'écrit sur le système de
+fichiers : aucun trafic HTTP ou MCP ne peut donc supprimer un fichier — les
+fonctions mutantes de ce document ne sont joignables que depuis Python.
+

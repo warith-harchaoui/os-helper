@@ -22,11 +22,12 @@ legible treemap:
 
 Why it exists
 -------------
-The CLI handles "one path, one predicate at a time" well. A GUI must go
-further, so this one shows the *whole* tree at a glance. It is a thin
-client: **all** the read/compute work is delegated to the existing
-``os_helper`` helpers (``os.walk`` size collection, ``format_size``,
-``hashfile``), never reinvented here.
+The library answers "one path, one predicate at a time" well, and a shell
+already answers it too — which is why os-helper ships no command line. A GUI
+has to go further to be worth anything, so this one shows the *whole* tree at
+a glance. It is a thin client: **all** the read/compute work is delegated to
+the existing ``os_helper`` helpers (``os.walk`` size collection,
+``format_size``, ``hashfile``), never reinvented here.
 
 What it consumes / produces
 ---------------------------

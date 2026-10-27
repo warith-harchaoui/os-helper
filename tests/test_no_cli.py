@@ -1,8 +1,8 @@
 """os-helper ships no command line, and this is what keeps it that way.
 
-The decision (2026-10-25): os-helper is the suite's library foundation — nine
-packages reach it with ``import os_helper as osh`` and none ever shelled out to
-it. A wrapper over ``path exists`` or ``str ascii`` restated the shell's own
+The decision (2026-10-25): os-helper is the suite's library foundation — every
+one of the sixteen other suite members reaches it with ``import os_helper as
+osh`` and none ever shelled out to it. A wrapper over ``path exists`` or ``str ascii`` restated the shell's own
 vocabulary, so both CLIs (argparse and click) were deleted along with the
 ``[cli]`` extra.
 
@@ -149,9 +149,9 @@ def test_click_is_not_a_core_dependency() -> None:
 
     Narrowed on 2026-10-27, when the ``os-helper-gui`` launcher moved from
     argparse to click like the rest of the suite. click is a real dependency
-    again — but of the ``[gui]`` extra, not of the library. The nine packages
-    that reach os-helper with ``import os_helper as osh`` never start that
-    launcher, so the rule that matters is the one this test now states: a
+    again — but of the ``[gui]`` extra, not of the library. The sixteen other
+    suite members that reach os-helper with ``import os_helper as osh`` never
+    start that launcher, so the rule that matters is the one this test now states: a
     plain ``pip install os-helper`` must not pull a CLI framework.
 
     The wider form ("click nowhere in pyproject.toml") would have had to be

@@ -6,15 +6,16 @@ This document provides detailed examples for using the `OS Helper` module to sim
 
 ## Table of Contents
 
-1. [Setup and Configuration](#setup-and-configuration)
-2. [System Information](#system-information)
+[Setup](#setup)
+
+1. [System Information](#1-system-information)
    - [Worker Count Resolution](#worker-count-resolution)
-3. [Hardware Inspection](#hardware-inspection)
+2. [Hardware Inspection](#2-hardware-inspection)
    - [One-Call Snapshot](#one-call-snapshot)
    - [Individual Probes](#individual-probes)
    - [Live Metrics](#live-metrics)
-4. [Configuration Loading](#configuration-loading)
-5. [File and Directory Utilities](#file-and-directory-utilities)
+3. [Configuration Loading](#3-configuration-loading)
+4. [File and Directory Utilities](#4-file-and-directory-utilities)
    - [Check File or Directory Existence](#check-file-or-directory-existence)
    - [Manage Directories](#manage-directories)
    - [File Size and Path Operations](#file-size-and-path-operations)
@@ -22,42 +23,44 @@ This document provides detailed examples for using the `OS Helper` module to sim
    - [Describe Folder Contents](#describe-folder-contents)
    - [Decompose File/Folder Path](#decompose-filefolder-path)
    - [Compress a Folder into a ZIP File](#compress-a-folder-into-a-zip-file)
-6. [String Utilities](#string-utilities)
+5. [String Utilities](#5-string-utilities)
    - [Check for Blank Strings](#check-for-blank-strings)
    - [ASCII String Conversion](#ascii-string-conversion)
-7. [Temporary Resources](#temporary-resources)
+6. [Temporary Resources](#6-temporary-resources)
    - [Create a Temporary File](#create-a-temporary-file)
    - [Create a Temporary Folder](#create-a-temporary-folder)
    - [Create a Persistent Temporary Directory](#create-a-persistent-temporary-directory-caller-owned-cleanup)
    - [Stage a File on a Remote Backend](#stage-a-file-on-a-remote-backend)
-8. [System Commands](#system-commands)
+7. [System Commands](#7-system-commands)
    - [Run a System Command](#run-a-system-command)
-9. [Networking](#networking)
+8. [Networking](#8-networking)
    - [Check if a URL is Valid and Reachable](#check-if-a-url-is-valid-and-reachable)
    - [Retrieve Public IP Addresses](#retrieve-public-ip-addresses)
-10. [Hashing](#hashing)
-    - [Generate a Hash for a String](#generate-a-hash-for-a-string)
-    - [Hash a File](#hash-a-file)
-    - [Hash a Folder](#hash-a-folder)
-11. [Duration Helpers](#duration-helpers)
+9. [Hashing](#9-hashing)
+   - [Generate a Hash for a String](#generate-a-hash-for-a-string)
+   - [Hash a File](#hash-a-file)
+   - [Hash a Folder](#hash-a-folder)
+10. [Duration Helpers](#10-duration-helpers)
     - [Format Durations into Readable Strings](#format-durations-into-readable-strings)
     - [Parse Strings into Durations](#parse-strings-into-durations)
-12. [Miscellaneous Utilities](#miscellaneous-utilities)
+11. [Miscellaneous Utilities](#11-miscellaneous-utilities)
     - [Verbosity and Logging](#verbosity-and-logging)
     - [Timestamps and Byte Sizes](#timestamps-and-byte-sizes)
     - [Download Files](#download-files)
     - [Progress Bars for Custom Transfers](#progress-bars-for-custom-transfers)
     - [Open Files with Default Applications](#open-files-with-default-applications)
-13. [Profiling Helpers](#profiling-helpers)
+12. [Profiling Helpers](#12-profiling-helpers)
     - [Wall-Clock Timer](#wall-clock-timer)
     - [CPU Timer](#cpu-timer)
     - [GPU Timer](#gpu-timer)
     - [MATLAB-style tic / toc](#matlab-style-tic--toc)
 
+[Command line](#command-line)
+
 ---
 
 
-## Setup and Configuration
+## Setup
 
 Install the package from PyPI (or directly from GitHub; see the README):
 
@@ -65,13 +68,23 @@ Install the package from PyPI (or directly from GitHub; see the README):
 pip install os-helper
 ```
 
-Then import the library; examples below use the conventional `osh` alias:
+Then import the library and give the logs somewhere to go. The suite-wide
+convention is the `osh` alias; `verbosity()` sets a *level*, not a destination,
+so without `init_logging()` the `info()` / `debug()` lines further down are
+filtered out in silence:
 
 ```python
 import os_helper as osh
+
+osh.init_logging()  # colored console handler
+osh.verbosity(1)  # INFO and above
 ```
 
-## System Information
+The sections below spell their imports out (`from os_helper import hashfile`)
+so each one stands alone and can be pasted on its own; `osh.hashfile(...)` is
+the same function reached through the alias.
+
+## 1. System Information
 
 Use the following functions to determine the platform your script is running on. These are especially useful for writing cross-platform scripts.
 
@@ -113,7 +126,7 @@ print(get_nb_workers(0))  # 0: the full pool size
 print(getpid())  # current process ID, as a string
 ```
 
-## Hardware Inspection
+## 2. Hardware Inspection
 
 Cross-platform hardware facts and live metrics: no heavy system dependency
 beyond `psutil` (core) and the platform's own tools (`system_profiler` /
@@ -122,7 +135,8 @@ beyond `psutil` (core) and the platform's own tools (`system_profiler` /
 ### One-Call Snapshot
 
 `hardware_info()` aggregates every probe below into a single JSON-ready
-dict, the same payload the `hardware info` CLI/API/MCP surfaces return.
+dict — the same payload the HTTP API's `/hardware` route returns, and therefore
+the same one the MCP tool mounted on that route hands an agent.
 
 ```python
 from os_helper import hardware_info
@@ -182,7 +196,7 @@ if gpu_vendor() == "apple":
 ### Live Metrics
 
 Distinct from the static facts above: these are sampled fresh on every call
-(fine for a one-shot diagnostic report or a CLI print; not for a hot loop).
+(fine for a one-shot diagnostic report or a status line; not for a hot loop).
 `hardware_info()` already folds them in; reach for these directly only when
 you want a single figure without paying for a whole snapshot.
 
@@ -202,7 +216,7 @@ print(disk_usage_gb("/tmp"))  # or check any specific path's filesystem
 print(gpu_utilization_percent())  # 14.0, or None
 ```
 
-## Configuration Loading
+## 3. Configuration Loading
 
 `get_config` resolves settings through a fixed fallback order: an explicit
 JSON/YAML file (or the first matching file in a folder), then `.env` files
@@ -211,6 +225,11 @@ merged into `os.environ`, then the process environment. It raises a clear
 
 ```python
 from os_helper import get_config
+
+# A config file to read. Yours exists already; this one makes the snippet
+# runnable as it stands.
+with open("config.yaml", "w") as handle:
+    handle.write("host: localhost\nport: 5432\n")
 
 # 1) A config file (or a folder containing one) wins first, if it has every key.
 config = get_config(
@@ -223,7 +242,11 @@ print(config)  # {'host': 'localhost', 'port': 5432}
 
 # 2) No path (or the file is missing a key): falls through to .env files,
 #    merged into os.environ (default: [".env"] in the current directory).
+with open(".env.local", "w") as handle:
+    handle.write("API_KEY=sk-from-dotenv\n")
+
 config = get_config(keys=["api_key"], config_type="API", env_files=[".env.local"])
+print(config)  # {'api_key': 'sk-from-dotenv'}
 
 # 3) Then plain environment variables, tried as UPPER_CASE first
 #    (the conventional spelling), then the exact key as given.
@@ -239,7 +262,7 @@ print(config)  # {'api_key': 'sk-example'}
 > caveats and how to layer a vault (HashiCorp Vault, AWS/GCP/Azure secret
 > managers) on top of `get_config`.
 
-## File and Directory Utilities
+## 4. File and Directory Utilities
 
 The following utilities help you work with files and directories efficiently, including checking their existence, managing paths, and performing operations like zipping folders or describing contents.
 
@@ -261,12 +284,12 @@ print(dir_exists("/path/to/folder", check_empty=True))  # True if non-empty, Fal
 ```python
 from os_helper import make_directory, remove_directory
 
-# Create a directory
-make_directory("/path/to/new_folder")
+# Create a directory (parents included, and already-exists is not an error)
+make_directory("demo_folder/nested")
 print("Directory created!")
 
 # Remove a directory (and its contents, if it exists)
-remove_directory("/path/to/new_folder")
+remove_directory("demo_folder")
 print("Directory removed!")
 ```
 
@@ -290,31 +313,45 @@ print(absolute_path)  # Output: '/home/user/relative/path/to/file'
 ### Copy, Remove, and Locate Files
 
 ```python
-from os_helper import checkfile, copyfile, remove_files, join, recursive_glob, path_without_home
+import os
+
+from os_helper import (
+    checkfile,
+    copyfile,
+    make_directory,
+    remove_files,
+    join,
+    recursive_glob,
+    path_without_home,
+)
 
 # Assert a file exists (and optionally isn't empty), raising with a clear
 # message otherwise; handy as a precondition at the top of a function.
 checkfile("example.txt", "Expected input file is missing", check_empty=True)
 
-# Copy a file, creating any missing destination directories along the way.
+# Copy a file. The destination *directory* has to exist first — copyfile
+# mirrors `cp`, so it will not create one for you (hand it an existing
+# directory and the source file name is kept).
+make_directory("backups")
 copyfile("example.txt", "backups/example.txt")
 
 # Best-effort batch removal: each deletion is logged, missing files are
 # skipped rather than raising.
 remove_files(["backups/example.txt", "does-not-exist.txt"])
 
-# join() is os.path.join with normalization, so callers get a consistent
-# separator regardless of how the pieces were passed in.
+# join() normalizes *and* absolutizes, so the result is always fully
+# qualified: relative pieces are resolved against the current directory.
 config_path = join("configs", "prod", "app.yaml")
-print(config_path)  # 'configs/prod/app.yaml'
+print(config_path)  # '<cwd>/configs/prod/app.yaml'
 
 # Recursively find every match for a glob pattern under a root directory.
 python_files = recursive_glob("src", "*.py")
 print(python_files)  # ['src/main.py', 'src/utils/helpers.py', ...]
 
 # Render a path relative to the home directory, for user-facing log lines
-# that shouldn't leak the full absolute path.
-print(path_without_home("/Users/alice/projects/app/config.yaml"))
+# that shouldn't leak the full absolute path. Only *this* user's home is
+# folded; a path under someone else's comes back untouched.
+print(path_without_home(os.path.expanduser("~/projects/app/config.yaml")))
 # '~/projects/app/config.yaml'
 ```
 
@@ -325,21 +362,29 @@ mapping, and optionally writes a Bootstrap-styled `index.html` and a
 `description.json` companion file next to it.
 
 ```python
-from os_helper import folder_description
+from os_helper import folder_description, make_directory
+
+# A small tree to describe, so the call below has something to walk.
+make_directory("demo/subfolder")
+with open("demo/file1.txt", "w") as handle:
+    handle.write("a" * 1024)
+with open("demo/subfolder/file2.txt", "w") as handle:
+    handle.write("b" * 2048)
 
 description = folder_description(
-    "/path/to/folder",
+    "demo",
     recursive=True,  # descend into subdirectories
-    index_html=True,  # write /path/to/folder/index.html
+    index_html=True,  # write demo/index.html
     with_size=True,  # include a size column in the HTML index
-    description_json=True,  # write /path/to/folder/description.json
+    description_json=True,  # write demo/description.json
 )
 
 print(description)
-# {
-#     'file1.txt': 1024,
-#     'subfolder/file2.txt': 2097152,
-# }
+# {'file1.txt': 1024, 'subfolder/file2.txt': 2048}
+#
+# The two files it just wrote are not in the mapping; they are in the folder:
+# sorted(os.listdir("demo")) ->
+# ['description.json', 'file1.txt', 'index.html', 'subfolder']
 ```
 
 ### Decompose File/Folder Path
@@ -367,14 +412,20 @@ print(folder, name, ext)  # Output: '/path/to', 'file', ''
 ### Compress a Folder into a ZIP File
 
 ```python
-from os_helper import zip_folder
+from os_helper import make_directory, zip_folder
 
-# Create a ZIP archive of a folder and its contents
-zip_folder("/path/to/folder", "/path/to/folder_archive.zip")
+# A folder to archive (the `demo` tree from the section above would do too).
+make_directory("demo")
+with open("demo/file1.txt", "w") as handle:
+    handle.write("a" * 1024)
+
+# Create a ZIP archive of a folder and its contents. Omit the second argument
+# to get `<folder>.zip` written beside the folder.
+zip_folder("demo", "demo_archive.zip")
 print("Folder successfully compressed into a ZIP archive!")
 ```
 
-## String Utilities
+## 5. String Utilities
 
 String utilities simplify common string manipulation tasks, such as ensuring ASCII compatibility and cleaning up strings for safe usage in filenames or URLs.
 
@@ -412,7 +463,7 @@ safe_string = asciistring("Café@2024.txt")
 print(safe_string)  # Output: 'cafe-2024-txt'
 ```
 
-## Temporary Resources
+## 6. Temporary Resources
 
 Temporary resource utilities allow the creation of temporary files or directories for testing or intermediate data storage. These resources are automatically cleaned up when the context ends.
 
@@ -467,11 +518,13 @@ You can also pin a `temporary_filename` inside a chosen directory (e.g. so a
 tool that resolves paths relative to the file still finds its siblings):
 
 ```python
-from os_helper import temporary_filename
+from os_helper import make_temporary_directory, remove_directory, temporary_filename
 
+work = make_temporary_directory(prefix="myjob-")
 with temporary_filename(suffix=".wav", directory=work) as tmp:
     # `tmp` sits inside `work`, next to any sibling inputs
-    ...
+    print(tmp)  # '/tmp/myjob-xxxx/<random>.wav'
+remove_directory(work)
 ```
 
 ### Stage a File on a Remote Backend
@@ -512,7 +565,7 @@ with temporary_remote_file(
 # remote artifact is gone after the block
 ```
 
-## System Commands
+## 7. System Commands
 
 The `system` utility function allows you to run system commands and capture their output and error messages. It provides robust error handling and optional checks for expected output files or directories.
 
@@ -535,7 +588,7 @@ assert output["err"] == ""  # No stderr output for the 'touch' command
 ```
 
 
-## Networking
+## 8. Networking
 
 The `Networking` utilities provide simple ways to check URLs and retrieve public IP addresses.
 
@@ -565,7 +618,7 @@ print(f"IPv4 Address: {ip_info['ipv4']}")
 print(f"IPv6 Address: {ip_info['ipv6']}")
 ```
 
-## Hashing
+## 9. Hashing
 
 The `Hashing` utilities allow you to generate hashes for strings, files, and folders, including support for various content and configuration options.
 
@@ -627,7 +680,7 @@ print(f"Folder hash with date: {dated_hash}")
 ```
 
 
-## Duration Helpers
+## 10. Duration Helpers
 
 Helpers to render and parse human-readable durations.
 
@@ -661,7 +714,7 @@ print(str2time("90 minutes"))  # 5400.0
 print(str2time("1.5 days"))  # 129600.0
 ```
 
-## Miscellaneous Utilities
+## 11. Miscellaneous Utilities
 
 The `Miscellaneous Utilities` section contains functions for logging, downloading files, and generating verbose messages.
 
@@ -725,8 +778,8 @@ print(now_string("filename"))  # "2026-08-09-14-32-07"
 
 # Human-readable byte counts (decimal/SI units, like disk vendors quote).
 print(format_size(512))  # "512 B"
-print(format_size(1_536))  # "1.50 KB"
-print(format_size(1_536_000))  # "1.50 MB"
+print(format_size(1_536))  # "1.54 KB"
+print(format_size(1_536_000))  # "1.54 MB"
 print(format_size(1_500_000_000))  # "1.50 GB"
 ```
 
@@ -811,7 +864,7 @@ from os_helper import openfile
 openfile("example.pdf")  # replace with a real file on your machine
 ```
 
-## Profiling Helpers
+## 12. Profiling Helpers
 
 Three context managers and a MATLAB-style pair for measuring how long
 code takes. Pick the right tool for the question:
@@ -896,3 +949,92 @@ print(toc(t_outer))  # outer block
 ```
 
 Call `toc(log=True)` to also emit an INFO log line.
+
+## Command line
+
+There is none, and that is the design. os-helper is the suite's foundation
+library: all sixteen other AI Helpers members reach it with
+`import os_helper as osh`, not one of them ever shelled out to it, and the two
+command lines it used to carry restated the shell's own vocabulary —
+`test -f` already existed, and so did `iconv`. Both went in 3.0.0, along with
+the 2 219 lines the two modules held. `tests/test_no_cli.py` is what keeps them
+gone: it fails if a CLI module reappears in the package, if a console script
+points at one, or if a shipped document advertises a command that no longer
+exists.
+
+What the three console scripts do is *start another surface*:
+
+| Command | Extra | What it starts |
+|---|---|---|
+| `os-helper-gui` | `[gui]` | the Tree Radar treemap dashboard |
+| `os-helper-api` | `[api]` | the HTTP API |
+| `os-helper-mcp` | `[mcp]` | the same app plus an `/mcp` endpoint |
+
+### The GUI launcher
+
+The only one that takes flags. Since 3.1.0 it parses them with click, so `-h`
+works as well as `--help`:
+
+```bash
+pip install "os-helper[gui]"
+os-helper-gui --help
+```
+
+```text
+Usage: os-helper-gui [OPTIONS]
+
+  Launch the local Tree Radar treemap disk dashboard.
+
+Options:
+  --root DIRECTORY      Folder to pre-fill and scan (default: current
+                        directory).
+  --host TEXT           Bind interface (localhost only by default).  [default:
+                        127.0.0.1]
+  --port INTEGER RANGE  Port to serve on.  [default: 8017; 1<=x<=65535]
+  -h, --help            Show this message and exit.
+```
+
+Point it at a folder; it binds to loopback only, so the dashboard is reachable
+from this machine and nowhere else:
+
+```bash
+os-helper-gui --root ~/Downloads
+# then open http://127.0.0.1:8017/gui   (?lang=fr / ?lang=en picks the language)
+```
+
+An impossible port is refused at the flag rather than at the socket layer,
+with exit code 2:
+
+```bash
+os-helper-gui --port 99999
+```
+
+```text
+Usage: os-helper-gui [OPTIONS]
+Try 'os-helper-gui --help' for help.
+
+Error: Invalid value for '--port': 99999 is not in the range 1<=x<=65535.
+```
+
+### The API and MCP launchers
+
+Neither takes a flag: both read `OS_HELPER_HOST` and `OS_HELPER_PORT` from the
+environment, defaulting to `127.0.0.1` and `8010`.
+
+```bash
+pip install "os-helper[api]"
+os-helper-api                          # -> http://127.0.0.1:8010 (docs at /docs)
+curl http://127.0.0.1:8010/hardware    # same dict as hardware_info()
+
+OS_HELPER_PORT=9000 os-helper-api      # same surface, different port
+
+pip install "os-helper[mcp]"
+os-helper-mcp                          # the same app + an /mcp endpoint
+```
+
+Both expose the safe, side-effect-free subset and nothing else: `/health`,
+`/os`, `/hardware`, `/hash/string`, `/str/ascii`, `/misc/format-size`,
+`/misc/now`, `/misc/url-ok`, `/config`. There is no endpoint that writes to the
+filesystem, so no amount of HTTP or MCP traffic can delete a file — the
+mutating helpers in this document are reachable from Python only.
+

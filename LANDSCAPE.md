@@ -79,9 +79,10 @@ Where `os-helper` uniquely wins in the family:
   hash / a temp folder / a `.env` value" ergonomics.
 - **stdlib `pathlib`**: when you want zero third-party deps and are
   fine wiring up your own logging / config / hashing.
-- **`click` / `typer`**: when the CLI *is* the product and you want
-  richer decorators / shell completion out of the box (we ship a click
-  twin already, so both worlds are covered).
+- **`click` / `typer`**: when the CLI *is* the product. os-helper is not
+  one: it ships no command line at all, only the three surface launchers
+  (`os-helper-api`, `os-helper-mcp`, `os-helper-gui`), so reach for click
+  directly rather than for a wrapper here.
 - **`pydantic-settings`**: when configuration is complex, typed, and
   validated against a schema.
 - **`fsspec` / `smart_open`**: when you need a uniform filesystem
@@ -93,3 +94,43 @@ Where `os-helper` uniquely wins in the family:
 - **`psutil`**: when you need deep per-process system telemetry
   (memory maps, CPU affinity, per-process I/O counters) beyond
   `os-helper`'s one-call CPU/RAM/GPU hardware snapshot.
+
+## Sources and as-of date
+
+**As of 2026-10-27**, comparing `os-helper` 3.1.0 (this repository) against the
+libraries named above.
+
+The ⭐ ratings are a reading of each project's **documented scope**, not a
+benchmark: nothing here was timed, and no claim is made about anyone's code
+quality. Read a cell as "how much of this column does the project set out to
+do", and read the project's own documentation before betting on it.
+
+`os-helper`'s own row is measured in this repository rather than asserted: the
+public surface exported by `os_helper/__init__.py`, the HTTP routes the API
+declares (`/health`, `/os`, `/hardware`, `/hash/string`, `/str/ascii`,
+`/misc/format-size`, `/misc/now`, `/misc/url-ok`, `/config`) and the three
+console scripts in `pyproject.toml`. "Suite cohesion" is a count, not an
+opinion: all sixteen other AI Helpers members import `os_helper` from their
+package source.
+
+Every other row comes from that project's own documentation:
+
+| Row | Source |
+|---|---|
+| stdlib os | [docs.python.org — `os.path`](https://docs.python.org/3/library/os.path.html) |
+| click | [click.palletsprojects.com](https://click.palletsprojects.com/) |
+| python-dotenv | [saurabh-kumar.com/python-dotenv](https://saurabh-kumar.com/python-dotenv/) |
+| pydantic-settings | [docs.pydantic.dev — settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) |
+| PyYAML | [pyyaml.org — documentation](https://pyyaml.org/wiki/PyYAMLDocumentation) |
+| requests | [requests.readthedocs.io](https://requests.readthedocs.io/en/latest/) |
+| psutil | [psutil.readthedocs.io](https://psutil.readthedocs.io/en/latest/) |
+| sh | [sh.readthedocs.io](https://sh.readthedocs.io/en/latest/) |
+| fsspec | [filesystem-spec.readthedocs.io](https://filesystem-spec.readthedocs.io/en/latest/) |
+| smart_open | [github.com/piskvorky/smart_open](https://github.com/piskvorky/smart_open) |
+| pooch | [fatiando.org/pooch](https://www.fatiando.org/pooch/latest/) |
+| platformdirs | [platformdirs.readthedocs.io](https://platformdirs.readthedocs.io/en/latest/) |
+
+Every link above answered HTTP 200 when checked on 2026-10-27. No version
+number of a third-party library is quoted anywhere in this document, on
+purpose: a pinned version in a comparison rots into a claim about software
+nobody re-read.

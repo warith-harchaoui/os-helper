@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Documentation
+- **The six spine documents now carry the suite's shared structure**
+  (`CODING.md` 16-18). `README.md` / `LISEZMOI.md` rename `Usage` to the spine's
+  `Quick start` / `Prise en main rapide`; `LANDSCAPE.md` / `PAYSAGE.md` gain the
+  `Sources and as-of date` / `Sources et date de relevé` section the rule asks
+  for — the one section where an unsourced claim is a claim about somebody
+  else's software; `EXAMPLES.md` / `EXEMPLES.md` rename `Setup and
+  Configuration` to `Setup` / `Mise en place`, number their twelve example
+  sections, and gain the `Command line` / `Ligne de commande` section. That last
+  one documents the truth rather than resurrecting anything: there is no
+  `os-helper` command, only the three surface launchers, and the section shows
+  the real `os-helper-gui --help` output and the `--port 99999` refusal.
+
+### Fixed
+- **Five documented claims that the code contradicts.** Every Python snippet in
+  both examples files was executed; 37 of the 39 run standalone (the two that
+  do not are a download from a deliberately fake URL and `openfile`, which
+  hands a PDF to the OS viewer). The casualties:
+  - `copyfile` was documented as "creating any missing destination directories
+    along the way". It does not: it mirrors `cp`, and the snippet's
+    `copyfile("example.txt", "backups/example.txt")` raised `FileNotFoundError`
+    on a clean checkout.
+  - `join("configs", "prod", "app.yaml")` was shown returning
+    `'configs/prod/app.yaml'`. It absolutizes, so the output is always fully
+    qualified.
+  - `path_without_home("/Users/alice/...")` was shown returning `'~/...'`. Only
+    *this* user's home is folded; somebody else's path comes back untouched.
+  - `format_size(1_536)` was shown as `"1.50 KB"`; the units are SI, so it is
+    `"1.54 KB"`.
+  - `hardware_info()` was described as "the same payload the `hardware info`
+    CLI/API/MCP surfaces return". That CLI went in 3.0.0; the route is
+    `/hardware`.
+- **Snippets that could not run as pasted.** Four used `/path/to/folder`
+  placeholders that assert or hit a read-only filesystem, one read a
+  `config.yaml` nobody had written, and two referred to a variable defined in
+  an earlier fence. They now create what they need.
+- **The quick start printed nothing.** Both READMEs opened with `verbosity(3)`
+  and a run of `info()` calls. `verbosity()` sets a level, not a destination,
+  so with no handler attached every one of those lines was filtered out in
+  silence. `init_logging()` now comes first, and the whole walkthrough runs
+  top to bottom.
+- **"Nine packages import os_helper" was stale** in both READMEs, in
+  `LANDSCAPE.md` / `PAYSAGE.md` and in two docstrings. It is sixteen: every
+  other member of the suite imports it from its own package source.
+- **`LANDSCAPE.md` / `PAYSAGE.md` still offered a click twin** under "when to
+  pick what", two releases after both command lines were deleted.
+- **`os_helper/gui.py`'s module docstring opened on "the CLI handles…"**, a
+  surface this package no longer has — and that docstring feeds the published
+  API documentation.
+
 ## [3.1.0] - 2026-10-27
 
 ### Changed
