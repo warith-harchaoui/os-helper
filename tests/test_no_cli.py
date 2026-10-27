@@ -7,10 +7,12 @@ vocabulary, so both CLIs (argparse and click) were deleted along with the
 ``[cli]`` extra.
 
 A deletion with nothing holding it is an invitation to drift: the next person
-adding a convenience command would find no objection in the repo. These three
+adding a convenience command would find no objection in the repo. These
 assertions are that objection, and each one fails on its own property —
-a CLI module reappearing, a console script pointing at one, or ``click``
-creeping back into the dependency list.
+a CLI module reappearing, a console script pointing at one, a shipped
+document advertising a removed command, or ``click`` creeping into the
+*core* dependencies (the ``[gui]`` extra may declare it: the GUI launcher
+imports it).
 
 The surviving entry points (``os-helper-api``, ``-mcp``, ``-gui``) are
 *launchers* for other surfaces, not command lines, so they are explicitly
@@ -37,6 +39,26 @@ _PYPROJECT = _REPO / "pyproject.toml"
 # The three launchers that may legitimately own a console script. Anything else
 # would be a command line by another name.
 _ALLOWED_SCRIPTS = {"os-helper-api", "os-helper-mcp", "os-helper-gui"}
+
+# A shell fence: ```bash / ```sh / ```console / ```shell.
+_SHELL_FENCE = re.compile(r"^```(?:bash|sh|shell|console)\s*$(.*?)^```", re.M | re.S)
+# Inside one of those, a line that *runs* `os-helper ...`. The three launcher
+# suffixes are excluded by the lookahead.
+#
+# Scoping to shell fences is not fussiness: anchoring on the start of any line
+# flagged both READMEs, whose body paragraphs happen to open with the package
+# name ("os-helper is part of a local-first suite..."). A guard that cries wolf
+# on prose is one the next person deletes instead of reading.
+_INVOCATION = re.compile(r"^os-helper(?!-(?:api|mcp|gui))\s+(\S.*)$", re.M)
+
+
+def _shell_invocations(text: str) -> list[str]:
+    """Every ``os-helper <something>`` run inside a shell code fence."""
+    return [
+        hit
+        for fence in _SHELL_FENCE.findall(text)
+        for hit in _INVOCATION.findall(fence)
+    ]
 
 
 def _scripts() -> dict[str, str]:
@@ -98,16 +120,61 @@ def test_no_document_still_advertises_a_cli() -> None:
         for needle in ("os-helper-click", "[cli]", "os_helper.cli"):
             if needle in text:
                 stale.append(f"{doc.relative_to(_REPO)}: {needle}")
+        # Widened on 2026-10-27. The needles above are all *names* of removed
+        # things, so they missed the worst case: SKILL.md told an agent to run
+        # `os-helper --help` to check the install. The command does not exist,
+        # so the check reported "not installed" for a perfectly good install.
+        # What matters is an invocation, not a mention -- `pip install
+        # os-helper` and prose about the package must stay legal.
+        for line in _shell_invocations(text):
+            stale.append(f"{doc.relative_to(_REPO)}: runs `os-helper {line.strip()}`")
     assert not stale, "document(s) still advertising a removed CLI:\n  " + "\n  ".join(stale)
 
 
-def test_click_is_not_a_dependency() -> None:
-    """``click`` is gone from dependencies and from every extra.
+def _core_dependencies() -> str:
+    """The ``dependencies = [...]`` block only, comments stripped.
 
-    It was only ever there for the click CLI; leaving it behind would make the
-    core install pay for a library nothing imports.
+    Regex rather than ``tomllib`` for the reason given in :func:`_scripts`:
+    3.10 is a declared floor and must not silently skip this test.
     """
     text = _PYPROJECT.read_text(encoding="utf-8")
-    # Strip comments: prose explaining the removal is allowed to say "click".
-    code = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
-    assert "click" not in code, "click must not be declared anywhere in pyproject.toml"
+    block = re.search(r"^dependencies = \[\n(.*?)^\]", text, re.M | re.S)
+    assert block, "pyproject.toml should declare a core dependencies block"
+    # Prose explaining a removal is allowed to say "click".
+    return "\n".join(line.split("#", 1)[0] for line in block.group(1).splitlines())
+
+
+def test_click_is_not_a_core_dependency() -> None:
+    """``click`` stays out of the *core* install, which nothing there imports.
+
+    Narrowed on 2026-10-27, when the ``os-helper-gui`` launcher moved from
+    argparse to click like the rest of the suite. click is a real dependency
+    again — but of the ``[gui]`` extra, not of the library. The nine packages
+    that reach os-helper with ``import os_helper as osh`` never start that
+    launcher, so the rule that matters is the one this test now states: a
+    plain ``pip install os-helper`` must not pull a CLI framework.
+
+    The wider form ("click nowhere in pyproject.toml") would have had to be
+    deleted outright to let the conversion land, which is how a guard turns
+    into a formality. This keeps the half that still protects something.
+    """
+    assert "click" not in _core_dependencies(), (
+        "click must not be a core dependency — the [gui] extra is where it belongs"
+    )
+
+
+def test_the_gui_launcher_declares_the_click_it_imports() -> None:
+    """The flip side: an extra whose code imports click must say so.
+
+    ``flip.py`` shipped four suite repos with click imported and undeclared,
+    because click sat in their ``[dev]`` extra and every development
+    environment therefore had it. Nothing failed until a user installed one.
+    """
+    launcher = (_PKG / "gui.py").read_text(encoding="utf-8")
+    if "import click" not in launcher:
+        return  # no click imported, nothing to declare
+    text = _PYPROJECT.read_text(encoding="utf-8")
+    gui_extra = re.search(r"^gui = \[\n(.*?)^\]", text, re.M | re.S)
+    assert gui_extra, "pyproject.toml should declare a [gui] extra"
+    code = "\n".join(line.split("#", 1)[0] for line in gui_extra.group(1).splitlines())
+    assert "click" in code, "os_helper/gui.py imports click; the [gui] extra must declare it"

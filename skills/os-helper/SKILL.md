@@ -27,15 +27,20 @@ metadata:
 
 `os-helper` is the AI Helpers suite's base layer: the module every other helper
 imports for logging and file management. It is a *local* toolbox — paths, sizes,
-hashes and hardware readings never leave the machine — reachable five ways
-(library, two CLIs, HTTP API, MCP, and the Tree Radar GUI) so an agent can pick
+hashes and hardware readings never leave the machine — reachable four ways
+(library, HTTP API, MCP, and the Tree Radar GUI) so an agent can pick
 whichever fits.
+
+There is deliberately **no `os-helper` command**: a shell wrapper over `path
+exists` or `str ascii` only restated the shell's own vocabulary, so both CLIs
+were removed in 3.0.0. The three console scripts that remain all *launch a
+surface*: `os-helper-api`, `os-helper-mcp`, `os-helper-gui`.
 
 ## Before anything: verify it is installed
 
 ```bash
-os-helper --help                 # argparse CLI (always installed with the pkg)
-python -c "import os_helper"     # library import check
+python -c "import os_helper"                                  # the library IS the package
+python -c "import importlib.metadata as m; print(m.version('os-helper'))"
 ```
 
 If missing:
@@ -52,31 +57,28 @@ The core install is deliberately FastAPI-free: nine suite packages depend on
 
 ## What it does, and how to invoke it
 
-| Intent | CLI | Library |
-|--------|-----|---------|
-| Machine / OS facts | `os-helper hardware`, `os-helper os` | `hardware_info`, `platform_name`, `gpus` |
-| How many parallel workers to use | `os-helper workers` | `get_nb_workers` |
-| Does this file / folder exist, how big | `os-helper exists`, `os-helper size` | `file_exists`, `dir_exists`, `size_file` |
-| Walk / clean a tree | `os-helper glob`, `os-helper rm`, `os-helper rmdir` | `recursive_glob`, `remove_files`, `remove_directory` |
-| Safe temp file / folder | `os-helper temp file`, `os-helper temp folder` | `temporary_filename`, `temporary_folder` |
-| Hash a string / file / folder | `os-helper hash string|file|folder` | `hash_string`, `hashfile`, `hashfolder` |
-| Split or join a path | `os-helper split`, `os-helper join` | `folder_name_ext`, `join` |
-| Format bytes / parse-print a duration | `os-helper format-size`, `os-helper time2str` | `format_size`, `time2str`, `str2time` |
-| Is this URL alive | `os-helper url-ok URL` | `is_working_url` |
-| Download a file | `os-helper download URL` | `download_file` |
-| Load a YAML/JSON/env config | `os-helper config` | `get_config` |
-| Zip a folder | `os-helper zip DIR` | `zip_folder` |
-| Browse disk usage visually | `os-helper gui` | — |
+| Intent | Library |
+|--------|---------|
+| Machine / OS facts | `hardware_info`, `platform_name`, `gpus` |
+| How many parallel workers to use | `get_nb_workers` |
+| Does this file / folder exist, how big | `file_exists`, `dir_exists`, `size_file` |
+| Walk / clean a tree | `recursive_glob`, `remove_files`, `remove_directory` |
+| Safe temp file / folder | `temporary_filename`, `temporary_folder` |
+| Hash a string / file / folder | `hash_string`, `hashfile`, `hashfolder` |
+| Split or join a path | `folder_name_ext`, `join` |
+| Format bytes / parse-print a duration | `format_size`, `time2str`, `str2time` |
+| Is this URL alive | `is_working_url` |
+| Download a file | `download_file` |
+| Load a YAML/JSON/env config | `get_config` |
+| Zip a folder | `zip_folder` |
+| Browse disk usage visually | `os-helper-gui` (the `[gui]` extra) |
+
+This table had a third column until 3.0.0, mapping each intent to an
+`os-helper <verb>` command. The commands are gone, so the column is too:
+`os-helper hash file x.onnx` said nothing that `osh.hashfile("x.onnx")` did
+not, and one of the two can be passed a variable.
 
 Quick examples:
-
-```bash
-os-helper hardware --json           # CPU model, cores, RAM, GPU vendor, Apple chip
-os-helper workers                   # safe parallelism for this machine
-os-helper hash file ./model.onnx    # content hash, for cache keys and integrity
-os-helper glob ./data '*.wav'       # recursive glob
-os-helper url-ok https://example.com
-```
 
 ```python
 import os_helper as osh

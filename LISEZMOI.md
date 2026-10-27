@@ -319,8 +319,6 @@ défaut) :
 pip install "os-helper[gui]"
 
 # Lancer le tableau de bord local (loopback uniquement), puis ouvrir http://127.0.0.1:8017/gui
-os-helper gui --root ~/Downloads
-# ou le point d'entrée dédié :
 os-helper-gui --root ~/Downloads
 ```
 

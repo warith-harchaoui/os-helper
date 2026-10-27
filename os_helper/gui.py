@@ -80,6 +80,7 @@ import html
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -970,8 +971,16 @@ def run(
 def _cli_main(argv: list[str] | None = None) -> int:
     """Console-script entry point for the ``os-helper-gui`` command.
 
-    A tiny argparse wrapper around :func:`run` so the GUI can be launched
-    directly from the shell once the ``gui`` extra is installed.
+    A thin click wrapper around :func:`run`, so the GUI can be launched from
+    the shell once the ``gui`` extra is installed.
+
+    click is imported *inside* this function, and the command is built here
+    rather than with module-level decorators. That is the lean-import contract
+    at the top of this module: ``import os_helper.gui`` must stay cheap, and a
+    ``@click.command`` decorator would pull click at module import time. click
+    also sits in the ``[gui]`` extra rather than the core dependencies, for the
+    same reason FastAPI does — the packages that reach os-helper as a *library*
+    never start this launcher and should not pay for it.
 
     Parameters
     ----------
@@ -981,27 +990,56 @@ def _cli_main(argv: list[str] | None = None) -> int:
     Returns
     -------
     int
-        Process exit code (0 on success).
+        Process exit code: ``0`` on success, ``2`` on a usage error.
     """
-    # argparse lives in the stdlib, so this stays importable without the extra;
-    # the FastAPI/uvicorn requirement only bites inside run().
-    import argparse
+    try:
+        import click
+    except ModuleNotFoundError as exc:  # pragma: no cover — needs a click-less env
+        # The console script is installed even without the extra, so this is a
+        # reachable path. Say which extra to install instead of letting a bare
+        # ModuleNotFoundError surface, which is what `run()` already does for
+        # uvicorn.
+        raise ImportError(
+            'The Tree Radar GUI needs its extra:\n    pip install "os-helper[gui]"'
+        ) from exc
 
-    parser = argparse.ArgumentParser(
-        prog="os-helper-gui",
-        description="Launch the local Tree Radar treemap disk dashboard.",
+    # ``-h`` as well as ``--help``: argparse supplied the short form for free,
+    # and click does not. Without this the conversion would quietly take a flag
+    # away from anyone who had been using it.
+    @click.command(context_settings={"help_option_names": ["-h", "--help"]})
+    @click.option(
+        "--root",
+        default=None,
+        type=click.Path(file_okay=False),
+        help="Folder to pre-fill and scan (default: current directory).",
     )
-    parser.add_argument(
-        "--root", default=None, help="Folder to pre-fill and scan (default: current directory)."
+    @click.option(
+        "--host",
+        default="127.0.0.1",
+        show_default=True,
+        help="Bind interface (localhost only by default).",
     )
-    parser.add_argument(
-        "--host", default="127.0.0.1", help="Bind interface (default: 127.0.0.1, localhost only)."
+    @click.option(
+        "--port",
+        default=8017,
+        show_default=True,
+        type=click.IntRange(1, 65535),
+        help="Port to serve on.",
     )
-    parser.add_argument("--port", type=int, default=8017, help="Port to serve on (default: 8017).")
-    ns = parser.parse_args(argv)
+    def _gui(root: str | None, host: str, port: int) -> None:
+        """Launch the local Tree Radar treemap disk dashboard."""
+        # Delegate to run(); it raises a friendly ImportError if uvicorn is absent.
+        run(root=root, host=host, port=port)
 
-    # Delegate to run(); it raises a friendly ImportError if the extra is absent.
-    run(root=ns.root, host=ns.host, port=ns.port)
+    # ``standalone_mode=False`` keeps the ``-> int`` contract: click would
+    # otherwise call sys.exit() itself and this function would never return.
+    try:
+        _gui.main(args=argv if argv is not None else sys.argv[1:], standalone_mode=False)
+    except click.ClickException as exc:
+        exc.show()
+        return exc.exit_code
+    except click.exceptions.Exit as exc:  # --help lands here
+        return int(exc.exit_code)
     return 0
 
 

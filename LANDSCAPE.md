@@ -60,10 +60,12 @@ counters), or `pydantic-settings` on typed configuration.
 Where `os-helper` uniquely wins in the family:
 
 1. **Multi-surface exposure**. Every helper is reachable from Python,
-   an argparse CLI, a click CLI, an HTTP API (FastAPI), and MCP tools
-   (for agents), all sharing the same function signatures, no drift.
+   an HTTP API (FastAPI), MCP tools (for agents) and the Tree Radar GUI,
+   all sharing the same function signatures, no drift. There is no
+   command line: wrapping `path exists` in a shell command restated what
+   the shell already said, so both CLIs went in 3.0.0.
 2. **Zero heavy runtime deps** for the core (`requests`, `pyyaml`,
-   `python-dotenv`, `validators`). The click CLI is an optional extra
+   `python-dotenv`, `validators`). Every surface is an optional extra,
    so `pip install os-helper` stays lean for library users.
 3. **Foundation of the AI Helpers family**: every other `*-helper`
    package imports from ``os_helper`` for logging, path handling,

@@ -305,8 +305,6 @@ The GUI's web stack lives behind the `[gui]` extra so the core
 pip install "os-helper[gui]"
 
 # Launch the local dashboard (loopback only), then open http://127.0.0.1:8017/gui
-os-helper gui --root ~/Downloads
-# or the dedicated entry point:
 os-helper-gui --root ~/Downloads
 ```
 

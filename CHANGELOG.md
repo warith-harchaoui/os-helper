@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-10-27
+
+### Changed
+- **The `os-helper-gui` launcher parses with click, not argparse.** It was the
+  last argparse in the whole AI Helpers suite — every other command line had
+  moved, and this one stayed behind because it is a *launcher* rather than a
+  CLI and nobody had to touch it.
+
+  click is imported **inside** `_cli_main`, and the command is built there
+  instead of with module-level `@click.command` decorators. That is not style:
+  the module's lean-import contract says `import os_helper.gui` must stay
+  cheap, and a decorator would pull click at import time. `tests/
+  test_gui_launcher.py` proves the contract by making click unimportable and
+  importing the module anyway.
+
+  For the same reason `click` joins the **`[gui]` extra**, not the core
+  dependencies. The nine packages that reach os-helper with `import os_helper
+  as osh` never start this launcher and should not pay for its parser.
+
+- **`--port 99999` is now refused.** argparse validated the *shape* of the
+  port with `type=int` and nothing else, so an impossible number travelled all
+  the way to the socket layer and failed there, far from the flag that caused
+  it. `click.IntRange(1, 65535)` rejects it at the boundary, exit code 2.
+
+- **`-h` still works**, which took saying so: argparse supplies the short form
+  for free and click does not. A plain conversion would have quietly removed a
+  flag people use. There is a test that fails without it.
+
+### Fixed
+- **Documents that still advertised the removed command line.** 3.0.0 deleted
+  both CLIs; four shipped documents did not get the message, and the worst was
+  the agent-facing one. `skills/os-helper/SKILL.md` opened with
+  `os-helper --help` as its *verify the install* step — a command that exits
+  127, so an agent following it concluded a perfectly good install was broken —
+  and carried a thirteen-row table mapping each intent to an `os-helper <verb>`
+  command. The table lost its CLI column; the intents and library functions
+  stay. `LANDSCAPE.md` and `PAYSAGE.md` still counted "an argparse CLI, a click
+  CLI" among the surfaces, and both READMEs offered `os-helper gui` beside
+  `os-helper-gui`.
+
+  The guard that should have caught this searched for the *names* of removed
+  things (`os-helper-click`, `[cli]`, `os_helper.cli`), which is why a plain
+  `os-helper --help` walked past it. It now also rejects any `os-helper <verb>`
+  run inside a shell code fence, scoped to fences because anchoring on line
+  starts flagged both READMEs for body paragraphs that open with the package
+  name.
+
 ## [3.0.0] - 2026-10-25
 
 ### Removed
