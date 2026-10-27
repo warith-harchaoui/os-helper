@@ -15,6 +15,7 @@ jobs:
   test:
     name: pytest (${{ matrix.os }}, py${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -46,6 +47,7 @@ jobs:
   lint:
     name: ruff
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -65,6 +67,7 @@ jobs:
   floor:
     name: Floor (py3.10 installs and imports)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # `requires-python = ">=3.10"` is a promise to anyone running `pip install`:
     # on 3.10 this package installs and imports. Nothing in the suite checked
     # it -- sixteen members made the promise and only speaker-helper ran the
