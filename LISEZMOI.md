@@ -126,6 +126,10 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   délibérément : os-helper est le socle de la suite et chacun des seize
   autres membres l'atteint par `import os_helper as osh`.
 
+## Comment ça marche
+
+![Comment os-helper fonctionne : le même appel, quelle que soit la machine](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/diagrams/comment-ca-marche.png)
+
 ## Installation
 
 **Prérequis** : **Python 3.10–3.13** et **git**, multiplateforme (os-helper ne nécessite aucune dépendance système lourde) :

@@ -115,6 +115,10 @@ dependency, pure-Python across macOS / Linux / Windows.
   deliberately **no command line**: os-helper is the suite's foundation, and
   every one of the sixteen other members reaches it by `import os_helper as osh`.
 
+## How it works
+
+![How os-helper works: the same call, whatever machine it lands on](https://raw.githubusercontent.com/warith-harchaoui/os-helper/main/assets/diagrams/how-it-works.png)
+
 ## Installation
 
 **Prerequisites**: **Python 3.10–3.13** and **git**, cross-platform (os-helper needs no heavy system dependency):

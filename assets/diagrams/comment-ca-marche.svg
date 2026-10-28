@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1368 432" width="1368" height="432" role="img" aria-labelledby="osh-title osh-desc" font-family="Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="osh-title">Comment os-helper fonctionne : le même appel, quelle que soit la machine</title>
+  <desc id="osh-desc">Une plaque de gauche à droite. Entrée : un chemin, un fichier de configuration ou la machine elle-même. Le travail, en trois étapes numérotées : détecter le système et inspecter le matériel ; mener les opérations de fichiers et de dossiers avec hachage, dossiers temporaires et entrées-sorties sûres ; fournir la journalisation, le chargement de configuration et le chronométrage que tous les autres membres appellent. Sortie : du code qui tourne tel quel sur macOS, Linux et Windows. Dessous, l'objet central atteint par les quatre surfaces que chaque membre expose : une API Python, une CLI click, un serveur FastAPI avec ses outils MCP montés sur la même application, et un skill d'agent. La légende rappelle que c'est le seul membre dont tous les autres dépendent.</desc>
+  <style>
+    .panel      { fill: #ffffff; stroke: #d6d6d6; stroke-width: 1.5; }
+    .panel-label{ fill: #6b6b6b; font-size: 13px; font-weight: 600; letter-spacing: .08em; }
+    .io         { fill: #F8F8F8; stroke: #9a9a9a; stroke-width: 1.5; }
+    .stage      { fill: #FFF4E0; stroke: #FF9500; stroke-width: 1.5; }
+    .core       { fill: #007AFF; stroke: #0062CC; stroke-width: 1.5; }
+    .surface    { fill: #EAF3FF; stroke: #007AFF; stroke-width: 1.5; }
+    .n-title    { font-size: 15px; font-weight: 600; fill: #111111; }
+    .n-sub      { font-size: 12px; fill: #5a5a5a; }
+    .on-dark    { fill: #ffffff; font-size: 15px; font-weight: 600; }
+    .on-dark-sub{ fill: #d8e8ff; font-size: 12px; }
+    .flow       { fill: none; stroke: #9a9a9a; stroke-width: 2; }
+    .tie        { fill: none; stroke: #007AFF; stroke-width: 1.5; }
+    .caption    { font-size: 12.5px; fill: #5a5a5a; font-style: italic; }
+    .step       { font-size: 11px; font-weight: 700; fill: #B26A00;
+                  font-family: 'Roboto Mono', ui-monospace, monospace; }
+    .surf-label { font-size: 13px; font-weight: 600; fill: #0062CC; }
+
+    @media (prefers-color-scheme: dark) {
+      .panel      { fill: #1b1b1d; stroke: #3a3a3d; }
+      .panel-label{ fill: #a0a0a6; }
+      .io         { fill: #2a2a2e; stroke: #6f6f76; }
+      .stage      { fill: #3a2d12; stroke: #FF9500; }
+      .surface    { fill: #10243d; stroke: #4da2ff; }
+      .n-title    { fill: #f2f2f4; }
+      .n-sub      { fill: #b4b4ba; }
+      .flow       { stroke: #7a7a82; }
+      .tie        { stroke: #4da2ff; }
+      .caption    { fill: #a0a0a6; }
+      .step       { fill: #FFCC00; }
+      .surf-label { fill: #4da2ff; }
+    }
+  </style>
+  <defs><marker id="ah-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#9a9a9a"/></marker></defs>
+  <text class="panel-label" x="28" y="40">ENTRÉE</text>
+  <rect class="io" x="28" y="87" width="215" height="78" rx="10"/>
+  <text class="n-title" x="136" y="120" text-anchor="middle">un chemin, une config</text>
+  <text class="n-sub" x="136" y="139" text-anchor="middle">ou la machine elle-même</text>
+  <path class="flow" d="M249 126 H265" marker-end="url(#ah-arrow)"/>
+  <rect class="panel" x="269" y="54" width="839" height="144" rx="12"/>
+  <text class="panel-label" x="289" y="76">CE QU'ELLE FAIT</text>
+  <rect class="stage" x="289" y="94" width="217" height="78" rx="10"/>
+  <text class="n-title" x="398" y="127" text-anchor="middle">détecter la machine</text>
+  <text class="n-sub" x="398" y="146" text-anchor="middle">système, matériel, capacités</text>
+  <text class="step" x="300" y="110">1</text>
+  <path class="flow" d="M510 133 H526" marker-end="url(#ah-arrow)"/>
+  <rect class="stage" x="532" y="94" width="297" height="78" rx="10"/>
+  <text class="n-title" x="681" y="127" text-anchor="middle">fichiers et dossiers</text>
+  <text class="n-sub" x="681" y="146" text-anchor="middle">hachage, dossiers temporaires, E/S sûres</text>
+  <text class="step" x="543" y="110">2</text>
+  <path class="flow" d="M833 133 H849" marker-end="url(#ah-arrow)"/>
+  <rect class="stage" x="855" y="94" width="232" height="78" rx="10"/>
+  <text class="n-title" x="971" y="127" text-anchor="middle">journal, config, chrono</text>
+  <text class="n-sub" x="971" y="146" text-anchor="middle">ce que tout membre appelle</text>
+  <text class="step" x="866" y="110">3</text>
+  <path class="flow" d="M1114 126 H1130" marker-end="url(#ah-arrow)"/>
+  <text class="panel-label" x="1134" y="40">SORTIE</text>
+  <rect class="io" x="1134" y="87" width="206" height="78" rx="10"/>
+  <text class="n-title" x="1237" y="120" text-anchor="middle">le même comportement</text>
+  <text class="n-sub" x="1237" y="139" text-anchor="middle">macOS, Linux, Windows</text>
+  <rect class="core" x="474" y="232" width="420" height="54" rx="10"/>
+  <text class="on-dark" x="684" y="253" text-anchor="middle">une bibliothèque, appelée pareil partout</text>
+  <text class="on-dark-sub" x="684" y="272" text-anchor="middle">le socle que tous les autres membres importent</text>
+  <path class="tie" d="M684 286 V314 H420 V332"/>
+  <path class="tie" d="M684 314 H948 V332"/>
+  <path class="tie" d="M420 314 V332"/>
+  <rect class="surface" x="345" y="332" width="150" height="46" rx="9"/>
+  <text class="surf-label" x="420" y="360" text-anchor="middle">API Python</text>
+  <path class="tie" d="M596 314 V332"/>
+  <rect class="surface" x="521" y="332" width="150" height="46" rx="9"/>
+  <text class="surf-label" x="596" y="360" text-anchor="middle">CLI (click)</text>
+  <path class="tie" d="M772 314 V332"/>
+  <rect class="surface" x="697" y="332" width="150" height="46" rx="9"/>
+  <text class="surf-label" x="772" y="360" text-anchor="middle">FastAPI + MCP</text>
+  <path class="tie" d="M948 314 V332"/>
+  <rect class="surface" x="873" y="332" width="150" height="46" rx="9"/>
+  <text class="surf-label" x="948" y="360" text-anchor="middle">skill d'agent</text>
+  <text class="caption" x="684" y="412" text-anchor="middle">Le seul membre dont toute la suite dépend : chaque helper fait passer par ici sa journalisation et sa gestion de fichiers.</text>
+</svg>
