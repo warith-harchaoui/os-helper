@@ -140,3 +140,15 @@ Tous ces liens ont répondu HTTP 200 au contrôle du 2026-10-27. Aucun numéro d
 version d'une bibliothèque tierce n'est cité dans ce document, à dessein : une
 version figée dans un comparatif se périme en affirmation sur un logiciel que
 personne n'a relu depuis.
+
+## Idées à reprendre
+
+Étudié plutôt que deviné : ce que chaque voisin fait mieux, puis ce que cette bibliothèque devrait changer pour l'égaler. Rien ici n'est un engagement : c'est la liste de lecture dont part la version suivante.
+
+- **`pydantic-settings` — une config validée au chargement, pas à l'usage** — Des réglages typés liés aux variables d'environnement, qui échouent avec une erreur lisible dès le démarrage du processus. Une config en forme de dictionnaire lue au fond d'un appel échoue plus tard puis plus loin de sa cause, or c'est la forme qu'os-helper tend aujourd'hui à chaque membre.
+
+- **`platformdirs` — les conventions de dossiers par OS, déjà justes** — Les dossiers de cache, de config, d'état puis de données diffèrent entre macOS, Linux et Windows. os-helper arbitre les chemins temporaires avec ceux de cache pour toute la suite : le prendre d'une bibliothèque qui suit ces conventions vaut mieux que d'écrire une jointure `~/.cache` de plus.
+
+- **`pooch` — récupérer, vérifier l'empreinte, mettre en cache, revérifier** — Plusieurs membres téléchargent des poids de modèle au premier usage. `pooch` en fait un registre déclaré avec une empreinte par fichier, revérifiée à chaque chargement, plutôt qu'un téléchargement auquel on fait confiance parce qu'il s'est terminé.
+
+- **`fsspec` / `smart_open` — un seul `open()` pour le local, S3 puis HTTP** — Les membres bifurquent aujourd'hui entre un chemin local et une URL distante. Un open conscient des URL dans le seul module dont ils dépendent tous supprimerait cette bifurcation partout d'un coup.

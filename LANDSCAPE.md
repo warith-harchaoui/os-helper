@@ -134,3 +134,15 @@ Every link above answered HTTP 200 when checked on 2026-10-27. No version
 number of a third-party library is quoted anywhere in this document, on
 purpose: a pinned version in a comparison rots into a claim about software
 nobody re-read.
+
+## Ideas worth stealing
+
+Researched rather than guessed: what each neighbour does better, and what this library would have to change to match it. Nothing here is a commitment — it is the reading list the next version starts from.
+
+- **`pydantic-settings` — config that is validated at load, not at use** — Typed settings bound to environment variables, failing with a readable error the moment the process starts. A dict-shaped config read deep inside a call fails later and further from its cause, which is the shape os-helper hands every member today.
+
+- **`platformdirs` — the per-OS directory conventions, already correct** — Cache, config, state and data directories differ across macOS, Linux and Windows. os-helper brokers temp and cache paths for the whole suite, so getting this from a library that tracks the conventions beats hand-rolling one more `~/.cache` join.
+
+- **`pooch` — fetch, checksum, cache, re-verify** — Several members download model weights on first use. `pooch` makes that a declared registry with a hash per file, re-verified on every load, rather than a download that is trusted because it completed.
+
+- **`fsspec` / `smart_open` — one `open()` across local, S3 and HTTP** — Members branch today between a local path and a remote URL. A URL-aware open in the one module they all already depend on would delete that branch everywhere at once.
