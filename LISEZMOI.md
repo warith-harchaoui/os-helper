@@ -86,7 +86,9 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   environnement du processus.
 - **Localisation** : deux mécanismes, un par forme de problème.
   - **`Catalog`** — `Catalog.from_package()` lit des catalogues `gettext` `.po`/`.mo` indexés sur la chaîne source anglaise, ce qu'utilisent les GUI de la suite. `Catalog.problems(used=...)` signale une source que le code demande puis qu'aucun catalogue ne porte : c'est le contrôle qui empêche une phrase reformulée de se dé-traduire en silence. `compile_catalogs()` écrit le `.mo` lui-même, si bien que `msgfmt` de GNU n'est jamais une dépendance de construction.
-  - **`Locales`** — `Locales.from_path()` lit un `locales/i18n.yaml` qui tient en un seul endroit toutes les chaînes lisibles par un humain. Il résout une clé pour une locale avec repli déterministe sur la langue par défaut déclarée, remplit sans danger les champs `{placeholder}` via `render()`, puis signale d'un coup chaque traduction manquante comme chaque placeholder incohérent via `problems()` — le contrôle qu'un job de CI vérifie. Les sections sont nommées par l'appelant puis ne signifient rien ici, de sorte qu'un seul chargeur sert ce que chaque paquet garde dans son fichier.
+  - **`Locales`** — `Locales.from_path()` lit un `locales/i18n.yaml` qui tient en un seul endroit toutes les chaînes lisibles par un humain. Il résout une clé pour une locale avec repli déterministe sur la langue par défaut déclarée, remplit sans danger les champs `{placeholder}` via `render()`, puis signale d'un coup chaque traduction manquante comme chaque placeholder incohérent via `problems()` — le contrôle qu'un job de CI vérifie.
+
+    Les sections sont nommées par l'appelant puis ne signifient rien ici, de sorte qu'un seul chargeur sert ce que chaque paquet garde dans son fichier.
 - **Chaînes** : `emptystring()` (None / vide / espaces), `asciistring()`
   (dépliage des accents, slugs sûrs pour le système de fichiers).
 - **Téléchargements et réseau** : `download_file()` (en flux, mémoire plate,
