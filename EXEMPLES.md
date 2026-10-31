@@ -681,6 +681,14 @@ with open("example.txt", "w") as f:
 # Générer un hachage pour le fichier
 file_hash = hashfile("example.txt")
 print(f"Hachage du fichier : {file_hash}")
+
+# Les trois drapeaux sont indépendants : choisissez la question réellement
+# posée. Le contenu seul ne distingue pas deux copies des mêmes octets, puis
+# le chemin seul ne distingue pas un fichier modifié de ce qu'il était.
+par_contenu = hashfile("example.txt", hash_content=True)  # les octets
+par_nom = hashfile("example.txt", hash_content=False, hash_path=True)  # le nom
+par_les_deux = hashfile("example.txt", hash_content=True, hash_path=True)  # ce fichier, ici
+print(par_contenu != par_nom != par_les_deux)
 ```
 
 ### Hacher un dossier

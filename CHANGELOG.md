@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0.0] - 2026-10-31
 
+### Added
+
+- **`hashfile` can now fingerprint the path and the content together.**
+  `hashfolder` has taken three independent flags (`hash_content`, `hash_path`,
+  `date`) for as long as it has existed; `hashfile` took only `hash_content`,
+  with the path as its `else` branch. So "this file, at this path" was the one
+  question its sibling could put and it could not — and it is not a contrived
+  one: two copies of the same bytes under different names share a content
+  digest, two different files at the same name share a path digest, and a
+  cache keyed on a file that may legitimately appear at more than one path
+  needs both halves.
+
+  `hashfile(path, hash_content=True, hash_path=True)` now answers it, in the
+  same flag order as `hashfolder`, so the two siblings finally ask the same
+  questions. Asking for none of the three raises **`ValueError`** rather than
+  returning the engine's empty digest, which is what `hashfolder` already did.
+
+  **Not breaking.** `hash_path` defaults to `None`, meaning "the path is
+  hashed exactly when the content is not" — the behaviour of the two older
+  spellings — so every digest produced before this parameter existed is
+  unchanged, including `hashfile(p, hash_content=False)`.
+
 ### Changed
 
 - **`hashfile` no longer answers a digest for a file it did not read.**
@@ -24,9 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   caller *deliberately* asking for a path digest, which is legitimate and is
   what the option is for. `hash_content=True` on a missing file is a caller
   asking for content and silently getting something else. The first keeps
-  working unchanged; the second now raises **`FileNotFoundError`**. No new
-  parameter was added, because a `missing_ok=True` would have been an exact
-  synonym for the `hash_content=False` that already exists.
+  working unchanged; the second now raises **`FileNotFoundError`**. No
+  `missing_ok=True` was added for it, because that would have been an exact
+  synonym for the `hash_content=False` that already exists. (The `hash_path`
+  flag under **Added** above is a different matter: it adds a combination that
+  was unreachable, not a second spelling of one that already worked.)
 
   **Breaking.** Code that relied on getting *a* digest for a path that may not
   exist must ask for the path digest explicitly with `hash_content=False`, or

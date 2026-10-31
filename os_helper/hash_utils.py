@@ -115,7 +115,12 @@ def hash_string(s: str, size: int = -1) -> str:
     return full_hash
 
 
-def hashfile(path: str, hash_content: bool = True, date: bool = False) -> str:
+def hashfile(
+    path: str,
+    hash_content: bool = True,
+    hash_path: bool | None = None,
+    date: bool = False,
+) -> str:
     """
     Generate a hash for a file's content and/or its last modification date.
 
@@ -125,9 +130,18 @@ def hashfile(path: str, hash_content: bool = True, date: bool = False) -> str:
         The path to the file to hash.
     hash_content : bool, optional
         If True, includes the file's content in the hash (default: True).
-        If False, the digest is computed from the path *string* instead — the
-        way to fingerprint a name rather than bytes, for a file that need not
-        exist.
+    hash_path : bool or None, optional
+        If True, includes the path *string* in the hash — the way to
+        fingerprint a name rather than bytes, for a file that need not exist.
+        Combined with ``hash_content=True`` it answers "this file, at this
+        path", which neither flag can express alone: two copies of the same
+        bytes under different names share a content digest, and two different
+        files under the same name share a path digest.
+
+        Left unset (``None``, the default) it mirrors the older two-spelling
+        behaviour — the path is hashed exactly when the content is not — so
+        every digest produced before this parameter existed is unchanged.
+        Pass it explicitly to control the two halves independently.
     date : bool, optional
         If True, includes the file's own last modification time
         (``os.stat().st_mtime_ns``) in the hash (default: False). It is the
@@ -145,6 +159,9 @@ def hashfile(path: str, hash_content: bool = True, date: bool = False) -> str:
         If ``hash_content`` or ``date`` is True and ``path`` names nothing.
     IsADirectoryError
         If ``hash_content`` or ``date`` is True and ``path`` names a directory.
+    ValueError
+        If ``hash_content``, ``hash_path`` and ``date`` are all False, which
+        asks for a fingerprint of nothing.
 
     Notes
     -----
@@ -153,9 +170,28 @@ def hashfile(path: str, hash_content: bool = True, date: bool = False) -> str:
     ``hashfile("/gone")`` returned a plausible 40-hex-char value for a file
     nobody had read — which made ``hashfile`` useless for noticing that a file
     is missing, the very reason one fingerprints a file. Callers who want a
-    path digest ask for it with ``hash_content=False``.
+    path digest ask for it with ``hash_path=True``.
+
+    The three flags are the same three ``hashfolder`` has always taken, in the
+    same order, so the two siblings now answer the same questions about a file
+    and about a folder.
     """
     h = _hash_engine()
+
+    # Resolve the one tri-state default before anything reads it: unset means
+    # "the path stands in for the content", which is what the two older
+    # spellings did.
+    if hash_path is None:
+        hash_path = not hash_content
+
+    # Hashing nothing yields the engine's empty digest: a constant that looks
+    # like a measurement and is not one. Say so instead of returning it.
+    if not (hash_content or hash_path or date):
+        msg = (
+            "hashfile() was asked for a digest of nothing: set at least one of "
+            "hash_content, hash_path or date."
+        )
+        raise ValueError(msg)
 
     # Reading the bytes and reading the mtime both need the file to be there,
     # so refuse before hashing anything rather than quietly measuring the path
@@ -181,13 +217,17 @@ def hashfile(path: str, hash_content: bool = True, date: bool = False) -> str:
     if date:
         h.update(str(os.stat(path).st_mtime_ns).encode("utf-8"))
 
-    # Content, or the path string when the caller deliberately asked for a name
-    # rather than bytes. The two are now exclusive branches of an explicit
-    # request, not a guess about what is on disk.
+    # Content and path are two independent contributions, not two branches of
+    # one choice: asking for both is a legitimate question ("this file, at
+    # this path") that the exclusive form could not put. The order — content
+    # then path, after the mtime above — matches hashfolder, and is pinned by
+    # test_hashfile_both_mode_pins_its_composition_order so a rearrangement of
+    # this body cannot silently move a digest.
     if hash_content:
         with open(path, "rb") as fi:
             h.update(fi.read())
-    else:
+
+    if hash_path:
         h.update(path.encode("utf-8"))
 
     return h.hexdigest()

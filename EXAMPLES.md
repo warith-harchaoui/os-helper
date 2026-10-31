@@ -650,6 +650,14 @@ with open("example.txt", "w") as f:
 # Generate a hash for the file
 file_hash = hashfile("example.txt")
 print(f"File hash: {file_hash}")
+
+# The three flags are independent, so pick the question you are actually
+# asking. Content alone cannot tell two copies of the same bytes apart, and
+# the path alone cannot tell an edited file from its old self.
+by_content = hashfile("example.txt", hash_content=True)  # the bytes
+by_name = hashfile("example.txt", hash_content=False, hash_path=True)  # the name
+by_both = hashfile("example.txt", hash_content=True, hash_path=True)  # this file, here
+print(by_content != by_name != by_both)
 ```
 
 ### Hash a Folder

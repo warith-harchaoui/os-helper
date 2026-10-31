@@ -317,3 +317,85 @@ def test_digests_of_readable_targets_did_not_move(tmp_path) -> None:
     engine.update(b"hello")
     assert hu.hashfile(str(f), hash_content=True) == engine.hexdigest()
     assert hu.hashfile(str(f), hash_content=False) == hu.hash_string(str(f))
+
+
+# ---------------------------------------------------------------------------
+# hashfile(): path AND/OR content
+#
+# `hashfolder` has taken three independent flags (hash_content, hash_path,
+# date) for as long as it has existed, so a caller can fingerprint a folder by
+# its contents, by its name, or by both. `hashfile` took only hash_content,
+# with the path as its `else` branch -- so "this file, at this path" was the
+# one combination its sibling could express and it could not. A cache keyed on
+# a file that can legitimately appear at two paths with the same bytes needs
+# exactly that combination.
+# ---------------------------------------------------------------------------
+
+
+def test_hashfile_can_hash_path_and_content_together(tmp_path) -> None:
+    """The combination neither flag could reach alone."""
+    f = tmp_path / "data.txt"
+    f.write_bytes(b"hello")
+
+    content_only = hu.hashfile(str(f), hash_content=True)
+    path_only = hu.hashfile(str(f), hash_content=False, hash_path=True)
+    both = hu.hashfile(str(f), hash_content=True, hash_path=True)
+
+    # Three distinct questions, three distinct answers.
+    assert len({content_only, path_only, both}) == 3
+    assert len(both) == 40
+
+
+def test_hashfile_both_mode_moves_with_either_half(tmp_path) -> None:
+    """Content and path each have to reach the digest, or the mode is a lie."""
+    a = tmp_path / "a.txt"
+    a.write_bytes(b"hello")
+    both_before = hu.hashfile(str(a), hash_content=True, hash_path=True)
+
+    # Same path, different bytes.
+    a.write_bytes(b"goodbye")
+    assert hu.hashfile(str(a), hash_content=True, hash_path=True) != both_before
+
+    # Same bytes, different path -- the case content-only cannot distinguish,
+    # which is the whole reason the combination has to exist.
+    c, d = tmp_path / "c.txt", tmp_path / "d.txt"
+    c.write_bytes(b"hello")
+    d.write_bytes(b"hello")
+    assert hu.hashfile(str(c), hash_content=True) == hu.hashfile(str(d), hash_content=True)
+    assert hu.hashfile(str(c), hash_content=True, hash_path=True) != hu.hashfile(
+        str(d), hash_content=True, hash_path=True
+    )
+
+
+def test_hashfile_both_mode_pins_its_composition_order(tmp_path) -> None:
+    """Fix the order, so the digest cannot drift when the body is rearranged."""
+    f = tmp_path / "data.txt"
+    f.write_bytes(b"hello")
+
+    # Mirrors hashfolder's order: date, then content, then path.
+    engine = hu._hash_engine()
+    engine.update(b"hello")
+    engine.update(str(f).encode("utf-8"))
+    assert hu.hashfile(str(f), hash_content=True, hash_path=True) == engine.hexdigest()
+
+
+def test_hashfile_refuses_a_digest_of_nothing(tmp_path) -> None:
+    """Asking for neither half must say so, as hashfolder already does."""
+    f = tmp_path / "data.txt"
+    f.write_bytes(b"hello")
+    with pytest.raises(ValueError, match="nothing"):
+        hu.hashfile(str(f), hash_content=False, hash_path=False)
+
+
+def test_hashfile_keeps_its_old_two_spellings(tmp_path) -> None:
+    """Adding a flag must not move a digest anybody already stored."""
+    f = tmp_path / "data.txt"
+    f.write_bytes(b"hello")
+
+    engine = hu._hash_engine()
+    engine.update(b"hello")
+    assert hu.hashfile(str(f), hash_content=True) == engine.hexdigest()
+    # hash_content=False, with hash_path left unsaid, still means "the path".
+    assert hu.hashfile(str(f), hash_content=False) == hu.hash_string(str(f))
+    missing = tmp_path / "gone.txt"
+    assert hu.hashfile(str(missing), hash_content=False) == hu.hash_string(str(missing))
