@@ -705,9 +705,17 @@ print(f"Hachage du contenu du dossier : {folder_hash}")
 path_hash = hashfolder("test_folder", hash_content=False, hash_path=True)
 print(f"Hachage du chemin du dossier : {path_hash}")
 
-# Générer un hachage incluant la date courante
+# Générer un hachage incluant la date de dernière modification du dossier
 dated_hash = hashfolder("test_folder", date=True)
 print(f"Hachage du dossier avec date : {dated_hash}")
+
+# Demander le contenu d'un dossier qui n'est pas là est une erreur et non une
+# empreinte : hashfile et hashfolder lèvent FileNotFoundError au lieu de hacher
+# discrètement la chaîne du chemin à la place.
+try:
+    hashfolder("no-such-folder", hash_content=True)
+except FileNotFoundError as exc:
+    print(f"Refusé, et c'est bien ainsi : {exc}")
 ```
 
 

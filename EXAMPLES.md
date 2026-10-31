@@ -674,9 +674,17 @@ print(f"Folder content hash: {folder_hash}")
 path_hash = hashfolder("test_folder", hash_content=False, hash_path=True)
 print(f"Folder path hash: {path_hash}")
 
-# Generate a hash including the current date
+# Generate a hash including the folder's own last modification time
 dated_hash = hashfolder("test_folder", date=True)
 print(f"Folder hash with date: {dated_hash}")
+
+# Asking for the content of a folder that is not there is an error, not a
+# digest: hashfile / hashfolder raise FileNotFoundError rather than quietly
+# fingerprinting the path string instead.
+try:
+    hashfolder("no-such-folder", hash_content=True)
+except FileNotFoundError as exc:
+    print(f"Refused, as it should be: {exc}")
 ```
 
 

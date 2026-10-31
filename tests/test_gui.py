@@ -137,3 +137,42 @@ def test_gui_and_api_tree_routes(sample_tree):
 
     resp = client.get("/api/tree", params={"root": os.path.join(sample_tree, "nope")})
     assert resp.status_code == 400
+
+
+def test_dedupe_skips_a_file_that_vanished_mid_walk(tmp_path) -> None:
+    """A file gone between the scan and the hash is skipped, not fatal.
+
+    ``_dedupe_groups`` hashes paths that ``_scan_tree`` collected earlier, so
+    one of them can disappear in between. The call is wrapped in
+    ``except OSError``, which is exactly why ``hashfile`` signals a missing
+    file with ``FileNotFoundError`` rather than the ``AssertionError`` that
+    ``check`` / ``checkfile`` raise elsewhere in the repo: an AssertionError
+    would walk straight through that guard and take the whole dedupe pass down
+    with it. This test is the one place where that choice is observable.
+    """
+    from os_helper.gui import _dedupe_groups
+
+    real = tmp_path / "still-here.txt"
+    real.write_text("identical payload")
+    twin = tmp_path / "also-here.txt"
+    twin.write_text("identical payload")
+
+    # Hand-built node tree: two real files plus one that no longer exists.
+    node = {
+        "name": tmp_path.name,
+        "path": str(tmp_path),
+        "is_dir": True,
+        "children": [
+            {"path": str(real), "is_dir": False},
+            {"path": str(twin), "is_dir": False},
+            {"path": str(tmp_path / "vanished.txt"), "is_dir": False},
+        ],
+    }
+
+    groups = _dedupe_groups(node)
+
+    # The surviving duplicate pair is still reported; the vanished file simply
+    # does not appear anywhere in the result.
+    assert len(groups) == 1
+    (paths,) = groups.values()
+    assert {os.path.basename(p) for p in paths} == {"still-here.txt", "also-here.txt"}

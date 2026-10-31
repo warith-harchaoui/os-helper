@@ -36,7 +36,6 @@ import hashlib
 import os
 from typing import TYPE_CHECKING
 
-from .misc_utils import now_string
 from .path_utils import dir_exists, file_exists
 
 # ``hashlib._Hash`` is a private runtime type; guard the import behind
@@ -126,26 +125,69 @@ def hashfile(path: str, hash_content: bool = True, date: bool = False) -> str:
         The path to the file to hash.
     hash_content : bool, optional
         If True, includes the file's content in the hash (default: True).
+        If False, the digest is computed from the path *string* instead — the
+        way to fingerprint a name rather than bytes, for a file that need not
+        exist.
     date : bool, optional
-        If True, includes the current date in the hash (default: False).
+        If True, includes the file's own last modification time
+        (``os.stat().st_mtime_ns``) in the hash (default: False). It is the
+        file's mtime, never the current clock: a digest that moved on every
+        call could not be a cache key.
 
     Returns
     -------
     str
         The resulting hash of the file as a 40-character hex string.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``hash_content`` or ``date`` is True and ``path`` names nothing.
+    IsADirectoryError
+        If ``hash_content`` or ``date`` is True and ``path`` names a directory.
+
+    Notes
+    -----
+    Asking for content (or an mtime) that cannot be read is an error, not a
+    fallback. This function used to answer a *path* digest in that case, so
+    ``hashfile("/gone")`` returned a plausible 40-hex-char value for a file
+    nobody had read — which made ``hashfile`` useless for noticing that a file
+    is missing, the very reason one fingerprints a file. Callers who want a
+    path digest ask for it with ``hash_content=False``.
     """
     h = _hash_engine()
 
-    # Optionally incorporate current date into the hash
-    if date:
-        h.update(now_string("log").encode("utf-8"))
+    # Reading the bytes and reading the mtime both need the file to be there,
+    # so refuse before hashing anything rather than quietly measuring the path
+    # instead. The directory case is the same mistake wearing a disguise:
+    # `file_exists` is `os.path.isfile`, so a folder handed to `hashfile` used
+    # to take the missing-file branch even though nothing was missing. Both
+    # exceptions are OSError subclasses, which is what callers walking a tree
+    # (see `os_helper.gui._dedupe_groups`) already guard against for a file
+    # that vanishes mid-walk.
+    if hash_content or date:
+        if os.path.isdir(path):
+            msg = f"hashfile() needs a file, but '{path}' is a directory (see hashfolder())."
+            raise IsADirectoryError(msg)
+        if not file_exists(path):
+            msg = (
+                f"Cannot hash the content or the modification time of '{path}': "
+                "no such file. Pass hash_content=False to hash the path string instead."
+            )
+            raise FileNotFoundError(msg)
 
-    # If the file exists and we want to hash its content
-    if hash_content and file_exists(path):
+    # The file's last modification time, as integer nanoseconds: exact, with no
+    # float formatting to argue about, and it only moves when the file does.
+    if date:
+        h.update(str(os.stat(path).st_mtime_ns).encode("utf-8"))
+
+    # Content, or the path string when the caller deliberately asked for a name
+    # rather than bytes. The two are now exclusive branches of an explicit
+    # request, not a guess about what is on disk.
+    if hash_content:
         with open(path, "rb") as fi:
             h.update(fi.read())
     else:
-        # Otherwise, just hash the path
         h.update(path.encode("utf-8"))
 
     return h.hexdigest()
@@ -166,21 +208,69 @@ def hashfolder(
     hash_path : bool, optional
         If True, includes the folder's path in the hash (default: False).
     date : bool, optional
-        If True, includes the current date in the hash (default: False).
+        If True, includes the folder's own last modification time
+        (``os.stat().st_mtime_ns``) in the hash (default: False). It is the
+        folder's mtime, never the current clock. Note that a directory's mtime
+        tracks entries appearing and disappearing, not edits made *inside* a
+        file it holds — that is what ``hash_content=True`` is for.
 
     Returns
     -------
     str
         The resulting hash of the folder and/or its contents as a
         40-character hex string.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``hash_content`` or ``date`` is True and ``path`` names nothing.
+    NotADirectoryError
+        If ``hash_content`` or ``date`` is True and ``path`` names a file.
+    ValueError
+        If ``hash_content``, ``hash_path`` and ``date`` are all False, which
+        asks for a fingerprint of nothing.
+
+    Notes
+    -----
+    Asking to walk a folder that is not there is an error, not a fallback.
+    This function used to return the digest of the empty string in that case —
+    the same constant for every missing folder, which is also what an *empty*
+    existing folder hashes to and what a file handed in by mistake hashed to.
+    Four different situations collapsed onto one plausible 40-hex-char answer,
+    so "have these two folders diverged" replied "no" when neither existed.
     """
     h = _hash_engine()
 
-    # Optionally incorporate current date into the hash
-    if date:
-        h.update(now_string("log").encode("utf-8"))
+    # Hashing nothing yields the engine's empty digest: a constant that looks
+    # like a measurement and is not one. Say so instead of returning it.
+    if not (hash_content or hash_path or date):
+        msg = (
+            "hashfolder() was asked for a digest of nothing: set at least one of "
+            "hash_content, hash_path or date."
+        )
+        raise ValueError(msg)
 
-    if hash_content and dir_exists(path):
+    # Walking the tree and reading the folder's mtime both need the folder to
+    # be there. Mirrors hashfile(): refuse up front rather than hand back a
+    # digest nobody measured, and raise OSError subclasses so a caller already
+    # guarding a tree walk keeps working.
+    if hash_content or date:
+        if os.path.isfile(path):
+            msg = f"hashfolder() needs a directory, but '{path}' is a file (see hashfile())."
+            raise NotADirectoryError(msg)
+        if not dir_exists(path):
+            msg = (
+                f"Cannot hash the contents or the modification time of '{path}': "
+                "no such directory. Pass hash_path=True alone to hash the path string."
+            )
+            raise FileNotFoundError(msg)
+
+    # The folder's last modification time, as integer nanoseconds — exact, and
+    # it only moves when the directory listing does.
+    if date:
+        h.update(str(os.stat(path).st_mtime_ns).encode("utf-8"))
+
+    if hash_content:
         for root, dirs, files in os.walk(path):
             # os.walk's traversal and per-directory listing order come from
             # os.scandir(), which reflects filesystem/directory-entry order,

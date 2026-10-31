@@ -110,6 +110,13 @@ For the exhaustive, auditable trigger list, read `references/triggers.md`.
   are context managers that clean up; `/tmp/foo.wav` is not.
 - **Hashing is for cache keys and integrity**, and `hashfolder` walks content,
   not mtimes — identical trees hash identically.
+- **`hashfile` / `hashfolder` raise when the target is missing.** Asking for the
+  content of a file that is not there gets you a `FileNotFoundError`, never a
+  digest: a 40-char answer for bytes nobody read would defeat the whole point
+  of a fingerprint. Pass `hash_content=False` when you deliberately want the
+  path string hashed instead. `date=True` folds in the target's own
+  `st_mtime_ns`, so the digest is a usable cache key — it moves when the file
+  moves, not on every call.
 - **The API surface is the side-effect-free subset only.** It exposes hardware,
   hashing, ASCII, size/time formatting, URL checks and config loading — not
   `rm`, not `download`. That is deliberate; do not expect destructive routes.

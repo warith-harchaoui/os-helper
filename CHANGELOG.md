@@ -7,7 +7,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-31
+
+### Changed
+
+- **`hashfile` no longer answers a digest for a file it did not read.**
+  `hash_content=True` on a path that is not there used to fall through to
+  hashing the *path string*, so `hashfile("/gone-aaa")` and
+  `hashfile("/gone-bbb")` returned two different, perfectly valid-looking
+  40-hex-char values. The one job you take a file's fingerprint for — noticing
+  the file is missing — was therefore the one job this function could not do,
+  and nothing in its docstring said so: it promised "a hash for a file's
+  content" and quietly delivered a hash of its name.
+
+  The `else` branch was conflating two situations. `hash_content=False` is a
+  caller *deliberately* asking for a path digest, which is legitimate and is
+  what the option is for. `hash_content=True` on a missing file is a caller
+  asking for content and silently getting something else. The first keeps
+  working unchanged; the second now raises **`FileNotFoundError`**. No new
+  parameter was added, because a `missing_ok=True` would have been an exact
+  synonym for the `hash_content=False` that already exists.
+
+  **Breaking.** Code that relied on getting *a* digest for a path that may not
+  exist must ask for the path digest explicitly with `hash_content=False`, or
+  catch the exception. Every digest this function ever produced for a file that
+  *did* exist is byte-for-byte unchanged (`tests/test_hash_utils.py::
+  test_digests_of_readable_targets_did_not_move` pins both working branches to
+  their definitions), so persisted content hashes stay valid.
+
+- **A directory handed to `hashfile` is now refused**, with
+  `IsADirectoryError`. This was the same defect in disguise: `file_exists` is
+  `os.path.isfile`, so a folder took the missing-file branch and came back with
+  a path digest even though nothing was missing at all.
+
+- **`hashfolder` no longer returns the digest of the empty string for a folder
+  it could not walk.** The miss was worse than `hashfile`'s, because there was
+  no `else` at all: with `hash_content=True` and no such directory, nothing was
+  ever fed to the engine, so the function returned
+  `9c1185a5c5e9fc54612808977ee8f548b2258d31` — RIPEMD-160 of nothing. That same
+  constant also came back for an *empty existing* folder, for a **file** passed
+  in by mistake, and for `hashfolder(p, hash_content=False, hash_path=False)`.
+  Four different situations collapsing onto one plausible answer is why "have
+  these two folders diverged" replied "no" when neither of them existed.
+
+  Now: **`FileNotFoundError`** for a missing directory, **`NotADirectoryError`**
+  for a file, and **`ValueError`** when `hash_content`, `hash_path` and `date`
+  are all False — a request for the fingerprint of nothing. An empty folder that
+  really exists keeps its constant digest: that one is a measurement.
+
+- **`date=True` now folds in the target's own modification time, not the
+  clock.** Both functions called `now_string("log")`, which is *now* to the
+  second. Measured on an untouched file, two calls 1.2 s apart returned
+  `42e2cdfc…` and `86e464df…`: a digest meant to change when the file changes
+  changed on every call, which makes it useless as the cache key the option
+  plainly exists for. It also flatly contradicted the docstring, which
+  advertised "a hash for a file's content **and/or its last modification
+  date**", while the parameter line underneath said "the current date" — the
+  two halves of the same docstring describing different functions.
+
+  `date=True` now hashes `os.stat(path).st_mtime_ns`, as integer nanoseconds:
+  exact, with no float formatting to argue about, and it moves only when the
+  file does. For `hashfolder` it is the *directory's* mtime, which tracks
+  entries appearing and disappearing rather than edits made inside a file it
+  holds — that is what `hash_content=True` is for, and the docstring now says
+  so. A `date=True` digest also requires the target to exist, since there is no
+  mtime without one.
+
+  **Breaking** for anyone who stored a `date=True` digest, though such a digest
+  never matched itself twice.
+
+### Added
+
+- **Eight tests over the two defect classes**, each proved by restoring the old
+  behaviour and watching it go red — together, then one sabotage per guard so
+  each test is pinned to the defect it names:
+  - `test_hashfile_refuses_to_fingerprint_what_it_cannot_read`,
+    `test_hashfolder_refuses_to_fingerprint_what_it_cannot_walk` — the missing
+    target, the wrong node type, the digest of nothing, and the path-only
+    escape hatch still working.
+  - `test_missing_target_raises_oserror_so_tree_walkers_keep_their_guard` —
+    the choice of exception *family* is load-bearing, not cosmetic. See below.
+  - `test_hashfile_date_follows_the_file_mtime_not_the_clock`,
+    `test_hashfolder_date_follows_the_folder_mtime_not_the_clock` — `os.utime`
+    moves the mtime by nineteen years with the content untouched, so the digest
+    must move and must come back when the mtime comes back. All three calls land
+    inside one wall-clock second, which is exactly what makes the old
+    second-granularity `now_string` fail here instead of passing by luck.
+  - `test_date_digests_are_stable_across_a_real_clock_tick` — the complement:
+    the `os.utime` tests pin the digest *to* the mtime, this one pins it
+    *against* the clock, and its `time.sleep(1.1)` is load-bearing. Without the
+    sleep both calls can land in the same second and the test would go green on
+    the broken implementation.
+  - `test_digests_of_readable_targets_did_not_move` — the release changed the
+    error paths only.
+  - `tests/test_gui.py::test_dedupe_skips_a_file_that_vanished_mid_walk` — the
+    internal caller, see below.
+
+### Notes
+
+- **`os_helper.gui._dedupe_groups` is the only caller of `hashfile` inside this
+  package**, and it needed no change: it already wraps the call in
+  `except OSError`, so a file that disappears between `_scan_tree` collecting
+  the path and the hash reading it is skipped with a warning rather than taking
+  the whole dedupe pass down. That is why a missing target is signalled with
+  `FileNotFoundError` rather than the `AssertionError` that `check` /
+  `checkfile` raise elsewhere in the repo — an `AssertionError` would walk
+  straight through that guard. `FileNotFoundError` is also already the repo's
+  own idiom for a path that is not there (`relative2absolute_path`,
+  `i18n_utils`, `temp_utils`). `hashfolder` and `hashfile` are not exposed by
+  the HTTP API or the MCP server (only `hash_string` is), so no surface
+  contract moved.
+
 ### Documentation
+- **The two examples files called `date=True` "the current date"**, which is
+  what the code did and not what it should have done. Both now name the
+  folder's last modification time, and both gained the refusal of a missing
+  folder as a runnable fence (executed, like every other snippet there).
+- **`skills/os-helper/SKILL.md` gained the new contract.** It is the
+  agent-facing document, so it is the costly one to leave stale: an agent that
+  believes `hashfile` always returns a digest writes code that never notices a
+  missing file. It now states the raise, points at `hash_content=False` for a
+  path digest, and says `date=True` is the target's own `st_mtime_ns`.
 - **The six spine documents now carry the suite's shared structure**
   (`CODING.md` 16-18). `README.md` / `LISEZMOI.md` rename `Usage` to the spine's
   `Quick start` / `Prise en main rapide`; `LANDSCAPE.md` / `PAYSAGE.md` gain the
