@@ -85,20 +85,8 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   déterministe : fichier JSON/YAML (ou dossier) → fichiers `.env` →
   environnement du processus.
 - **Localisation** : deux mécanismes, un par forme de problème.
-  `Catalog.from_package()` lit des catalogues `gettext` `.po`/`.mo` indexés sur
-  la chaîne source anglaise — ce qu'utilisent les GUI de la suite — et
-  `Catalog.problems(used=...)` signale une source que le code demande et
-  qu'aucun catalogue ne porte, ce qui empêche une phrase reformulée de se
-  dé-traduire en silence. `compile_catalogs()` écrit le `.mo` lui-même, si bien
-  que `msgfmt` de GNU n'est jamais une dépendance de construction. À côté,
-  `Locales.from_path()` lit un `locales/i18n.yaml` qui tient
-  en un seul endroit toutes les chaînes lisibles par un humain, résout une clé
-  pour une locale avec repli déterministe sur la langue par défaut déclarée,
-  remplit les champs `{placeholder}` sans jamais évaluer de code avec
-  `render()` et signale d'un coup chaque traduction manquante ou placeholder
-  divergent avec `problems()` — le contrôle sur lequel une CI s'appuie. Les
-  sections sont nommées par l'appelant et n'ont aucun sens ici : un seul
-  chargeur sert donc ce que chaque paquet range dans son fichier.
+  - **`Catalog`** — `Catalog.from_package()` lit des catalogues `gettext` `.po`/`.mo` indexés sur la chaîne source anglaise, ce qu'utilisent les GUI de la suite. `Catalog.problems(used=...)` signale une source que le code demande puis qu'aucun catalogue ne porte : c'est le contrôle qui empêche une phrase reformulée de se dé-traduire en silence. `compile_catalogs()` écrit le `.mo` lui-même, si bien que `msgfmt` de GNU n'est jamais une dépendance de construction.
+  - **`Locales`** — `Locales.from_path()` lit un `locales/i18n.yaml` qui tient en un seul endroit toutes les chaînes lisibles par un humain. Il résout une clé pour une locale avec repli déterministe sur la langue par défaut déclarée, remplit sans danger les champs `{placeholder}` via `render()`, puis signale d'un coup chaque traduction manquante comme chaque placeholder incohérent via `problems()` — le contrôle qu'un job de CI vérifie. Les sections sont nommées par l'appelant puis ne signifient rien ici, de sorte qu'un seul chargeur sert ce que chaque paquet garde dans son fichier.
 - **Chaînes** : `emptystring()` (None / vide / espaces), `asciistring()`
   (dépliage des accents, slugs sûrs pour le système de fichiers).
 - **Téléchargements et réseau** : `download_file()` (en flux, mémoire plate,
@@ -117,14 +105,11 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   modes logger nommé et flux « live »), `verbosity()` (niveau entier en
   lecture/écriture) et `debug()` / `info()` / `warning()` / `error()` /
   `critical()` / `check()`.
-- **Plusieurs surfaces, un seul code** : bibliothèque importable, une API HTTP
-  (`os-helper-api`, via `[api]`), des outils MCP (`os-helper-mcp`, via `[mcp]`)
-  et l'interface Tree Radar (`os-helper-gui`, via `[gui]`). Les surfaces API/MCP
-  n'exposent que le sous-ensemble sûr et sans effet de bord (info matérielle,
-  hachage, ASCII, formatage, vérification d'URL, chargement de config ; aucune
-  mutation du système de fichiers). Il n'y a **aucune ligne de commande**,
-  délibérément : os-helper est le socle de la suite et chacun des seize
-  autres membres l'atteint par `import os_helper as osh`.
+- **Plusieurs surfaces, un seul code** : bibliothèque importable, une API HTTP (`os-helper-api`, via `[api]`), des outils MCP (`os-helper-mcp`, via `[mcp]`) puis l'interface Tree Radar (`os-helper-gui`, via `[gui]`).
+
+  Les surfaces API puis MCP n'exposent que le sous-ensemble sûr, sans effet de bord — info matérielle, hachage, ASCII, formatage, vérification d'URL, chargement de config — sans aucune mutation du système de fichiers.
+
+  Il n'y a **aucune ligne de commande**, délibérément : os-helper est le socle de la suite, puis chacun des seize autres membres l'atteint par `import os_helper as osh`.
 
 ## Comment ça marche
 

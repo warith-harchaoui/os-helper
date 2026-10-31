@@ -79,19 +79,8 @@ dependency, pure-Python across macOS / Linux / Windows.
 - **Configuration loading**: `get_config()` with a deterministic fallback order,
   JSON/YAML file (or folder), then `.env` files, then process environment.
 - **Localization**: two mechanisms, one per shape of problem.
-  `Catalog.from_package()` reads `gettext` `.po`/`.mo` catalogues keyed on the
-  English source string — what the suite's GUIs use — and
-  `Catalog.problems(used=...)` reports a source the code asks for that no
-  catalogue carries, which is what keeps a reworded sentence from silently
-  half-reverting to English. `compile_catalogs()` writes the `.mo` itself, so
-  GNU `msgfmt` is never a build dependency. Alongside it,
-  `Locales.from_path()` reads a `locales/i18n.yaml` holding
-  every human-readable string in one place, resolves a key for a locale with a
-  deterministic fallback to the declared default, fills `{placeholder}` fields
-  safely with `render()`, and reports every missing translation or mismatched
-  placeholder at once with `problems()` — the check a CI job asserts on.
-  Sections are named by the caller and mean nothing here, so one loader serves
-  whatever each package keeps in its file.
+  - **`Catalog`** — `Catalog.from_package()` reads `gettext` `.po`/`.mo` catalogues keyed on the English source string, which is what the suite's GUIs use. `Catalog.problems(used=...)` reports a source the code asks for that no catalogue carries: the check that keeps a reworded sentence from silently half-reverting to English. `compile_catalogs()` writes the `.mo` itself, so GNU `msgfmt` is never a build dependency.
+  - **`Locales`** — `Locales.from_path()` reads a `locales/i18n.yaml` holding every human-readable string in one place. It resolves a key for a locale with a deterministic fallback to the declared default, fills `{placeholder}` fields safely with `render()`, and reports every missing translation or mismatched placeholder at once with `problems()` — the check a CI job asserts on. Sections are named by the caller and mean nothing here, so one loader serves whatever each package keeps in its file.
 - **Strings**: `emptystring()` (None / empty / whitespace), `asciistring()`
   (accent-folding, filesystem-safe slugs).
 - **Downloads and networking**: `download_file()` (streaming, flat memory,
@@ -107,13 +96,11 @@ dependency, pure-Python across macOS / Linux / Windows.
 - **Logging surface**: `init_logging()` (colored console + file, named-logger
   and live-stream modes), `verbosity()` (integer level get/set), and
   `debug()` / `info()` / `warning()` / `error()` / `critical()` / `check()`.
-- **Multiple surfaces, one codebase**: importable library, an HTTP API
-  (`os-helper-api`, via `[api]`), MCP tools (`os-helper-mcp`, via `[mcp]`) and
-  the Tree Radar GUI (`os-helper-gui`, via `[gui]`). The API/MCP surfaces expose
-  only the safe, side-effect-free subset (hardware info, hashing, ASCII,
-  formatting, URL check, config loading; no filesystem mutation). There is
-  deliberately **no command line**: os-helper is the suite's foundation, and
-  every one of the sixteen other members reaches it by `import os_helper as osh`.
+- **Multiple surfaces, one codebase**: importable library, an HTTP API (`os-helper-api`, via `[api]`), MCP tools (`os-helper-mcp`, via `[mcp]`) and the Tree Radar GUI (`os-helper-gui`, via `[gui]`).
+
+  The API and MCP surfaces expose only the safe, side-effect-free subset — hardware info, hashing, ASCII, formatting, URL check, config loading — with no filesystem mutation.
+
+  There is deliberately **no command line**: os-helper is the suite's foundation, and every one of the sixteen other members reaches it by `import os_helper as osh`.
 
 ## How it works
 
