@@ -47,7 +47,14 @@ import requests
 import validators
 
 from .logging_utils import error, info, warning
-from .path_utils import dir_exists, file_exists, join, size_file
+from .path_utils import (
+    dir_exists,
+    file_exists,
+    folder_name_ext,
+    join,
+    make_directory,
+    size_file,
+)
 from .string_utils import emptystring
 
 
@@ -288,6 +295,73 @@ def zip_folder(folder_path: str, zip_file_path: str = "") -> None:
                 arcname = os.path.relpath(full_path, folder_path)
                 zf.write(full_path, arcname)
     info(f"Zipped folder '{folder_path}' into '{zip_file_path}'")
+
+
+def unzip_folder(zip_file_path: str, folder_path: str = "", *, overwrite: bool = False) -> str:
+    """
+    Extract a ``.zip`` archive into a folder — the inverse of :func:`zip_folder`.
+
+    Entries that would land outside ``folder_path`` are refused rather than
+    written. ``zipfile.extractall`` happily honours a member named
+    ``../../etc/thing`` or an absolute path, so an archive from elsewhere can
+    overwrite files anywhere the process can write. Since the point of this
+    function is to unpack archives fetched over the network, that check is the
+    reason it exists rather than a one-line call at each site. Symlink members
+    are refused for the same reason: they are a second way out of the folder.
+
+    Parameters
+    ----------
+    zip_file_path : str
+        The archive to extract (must exist).
+    folder_path : str, optional
+        Destination folder, created if missing. Defaults to the archive path
+        without its ``.zip`` suffix.
+    overwrite : bool, optional
+        When ``False`` (default), an existing non-empty destination is left
+        untouched and returned as-is, which makes the call idempotent for a
+        download-once-then-reuse cache. ``True`` extracts over it.
+
+    Returns
+    -------
+    str
+        The destination folder.
+
+    Raises
+    ------
+    AssertionError
+        If the archive does not exist.
+    ValueError
+        If a member would escape ``folder_path``, or is a symlink.
+    """
+    assert file_exists(zip_file_path), f"Archive '{zip_file_path}' does not exist"
+    if emptystring(folder_path):
+        folder, name, _ = folder_name_ext(zip_file_path)
+        folder_path = os.path.join(folder, name)
+
+    # Idempotence: a populated destination is a cache hit, not an error.
+    if not overwrite and dir_exists(folder_path) and os.listdir(folder_path):
+        info(f"Folder '{folder_path}' already populated; leaving it alone")
+        return folder_path
+
+    make_directory(folder_path)
+    root = os.path.realpath(folder_path)
+    with zipfile.ZipFile(zip_file_path) as zf:
+        for member in zf.infolist():
+            # 0xA000 is the symlink bit in a zip's external attributes.
+            if (member.external_attr >> 16) & 0xA000 == 0xA000:
+                raise ValueError(
+                    f"Archive '{zip_file_path}' contains a symlink "
+                    f"('{member.filename}'); refusing to extract it"
+                )
+            target = os.path.realpath(os.path.join(root, member.filename))
+            if target != root and not target.startswith(root + os.sep):
+                raise ValueError(
+                    f"Archive '{zip_file_path}' member '{member.filename}' would "
+                    f"escape '{folder_path}'; refusing to extract it"
+                )
+        zf.extractall(folder_path)
+    info(f"Extracted '{zip_file_path}' into '{folder_path}'")
+    return folder_path
 
 
 def time2str(seconds: float, no_space: bool = False) -> str:

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import pathlib
 import zipfile
 
 import pytest
@@ -394,7 +395,9 @@ def test_download_file_sha256_verify_and_mismatch(
     # Wrong digest on a fresh download: raises, no partial left behind.
     bad_dest = str(tmp_path / "bad.bin")
     with pytest.raises(ValueError):
-        mu.download_file("https://example.invalid/v.bin", bad_dest, progress=False, sha256="00" * 32)
+        mu.download_file(
+            "https://example.invalid/v.bin", bad_dest, progress=False, sha256="00" * 32
+        )
     assert not os.path.exists(bad_dest + ".part")
 
 
@@ -462,3 +465,97 @@ def test_download_file_retries_then_succeeds_or_raises_when_exhausted(
     never_dest = str(tmp_path / "never.bin")
     with pytest.raises(requests.ConnectionError):
         mu.download_file("https://example.invalid/never.bin", never_dest, progress=False, retries=1)
+
+
+# ---------------------------------------------------------------------------
+# unzip_folder
+# ---------------------------------------------------------------------------
+
+
+def _archive(tmp_path, members: dict[str, bytes]) -> str:
+    """A zip holding exactly these members, written by hand."""
+    path = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(path, "w") as zf:
+        for name, payload in members.items():
+            zf.writestr(name, payload)
+    return str(path)
+
+
+def test_unzip_folder_round_trips_zip_folder(tmp_path) -> None:
+    src = tmp_path / "src"
+    (src / "deep").mkdir(parents=True)
+    (src / "a.txt").write_text("alpha")
+    (src / "deep" / "b.txt").write_text("beta")
+    mu.zip_folder(str(src))
+
+    out = mu.unzip_folder(str(tmp_path / "src.zip"), str(tmp_path / "out"))
+    assert (pathlib.Path(out) / "a.txt").read_text() == "alpha"
+    assert (pathlib.Path(out) / "deep" / "b.txt").read_text() == "beta"
+
+
+def test_unzip_folder_defaults_beside_the_archive(tmp_path) -> None:
+    archive = _archive(tmp_path, {"only.txt": b"x"})
+    out = mu.unzip_folder(archive)
+    assert pathlib.Path(out).name == "bundle"
+    assert (pathlib.Path(out) / "only.txt").read_bytes() == b"x"
+
+
+def test_unzip_folder_leaves_a_populated_destination_alone(tmp_path) -> None:
+    """Idempotence : un dossier déjà rempli est un cache, pas une erreur."""
+    archive = _archive(tmp_path, {"new.txt": b"fresh"})
+    dest = tmp_path / "out"
+    dest.mkdir()
+    (dest / "old.txt").write_text("kept")
+
+    assert mu.unzip_folder(archive, str(dest)) == str(dest)
+    assert (dest / "old.txt").read_text() == "kept"
+    assert not (dest / "new.txt").exists()
+
+
+def test_unzip_folder_overwrites_when_asked(tmp_path) -> None:
+    archive = _archive(tmp_path, {"new.txt": b"fresh"})
+    dest = tmp_path / "out"
+    dest.mkdir()
+    (dest / "old.txt").write_text("kept")
+
+    mu.unzip_folder(archive, str(dest), overwrite=True)
+    assert (dest / "new.txt").read_bytes() == b"fresh"
+
+
+def test_unzip_folder_refuses_a_member_escaping_upwards(tmp_path) -> None:
+    """``extractall`` écrirait ce membre hors du dossier ; nous refusons."""
+    archive = _archive(tmp_path, {"../escaped.txt": b"nope"})
+    with pytest.raises(ValueError, match="escape"):
+        mu.unzip_folder(archive, str(tmp_path / "out"))
+    assert not (tmp_path / "escaped.txt").exists()
+
+
+def test_unzip_folder_refuses_a_deeply_escaping_member(tmp_path) -> None:
+    archive = _archive(tmp_path, {"ok/../../escaped.txt": b"nope"})
+    with pytest.raises(ValueError, match="escape"):
+        mu.unzip_folder(archive, str(tmp_path / "out"))
+
+
+def test_unzip_folder_refuses_a_symlink_member(tmp_path) -> None:
+    """Un lien symbolique est une seconde façon de sortir du dossier."""
+    path = tmp_path / "linky.zip"
+    with zipfile.ZipFile(path, "w") as zf:
+        entry = zipfile.ZipInfo("link")
+        entry.external_attr = 0xA1FF << 16  # lrwxrwxrwx
+        zf.writestr(entry, "/etc/passwd")
+    with pytest.raises(ValueError, match="symlink"):
+        mu.unzip_folder(str(path), str(tmp_path / "out"))
+
+
+def test_unzip_folder_refuses_a_missing_archive(tmp_path) -> None:
+    with pytest.raises(AssertionError):
+        mu.unzip_folder(str(tmp_path / "absent.zip"))
+
+
+def test_unzip_folder_nothing_is_written_when_a_member_is_refused(tmp_path) -> None:
+    """Le contrôle passe avant toute écriture, pas pendant."""
+    archive = _archive(tmp_path, {"good.txt": b"ok", "../bad.txt": b"nope"})
+    dest = tmp_path / "out"
+    with pytest.raises(ValueError):
+        mu.unzip_folder(archive, str(dest))
+    assert not (dest / "good.txt").exists()

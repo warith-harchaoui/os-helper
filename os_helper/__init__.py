@@ -93,6 +93,7 @@ from .misc_utils import (
     progress_bar,
     str2time,
     time2str,
+    unzip_folder,
     zip_folder,
 )
 from .path_utils import (
@@ -223,6 +224,7 @@ __all__ = [
     "format_size",
     "folder_description",
     "is_working_url",
+    "unzip_folder",
     "zip_folder",
     "download_file",
     "progress_bar",
