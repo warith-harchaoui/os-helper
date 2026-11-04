@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-11-04
+
+### Added
+
+- **`unzip_folder`, the missing inverse of `zip_folder`.**
+  `zip_folder` had no counterpart, so every caller unpacked by hand with
+  `zipfile.extractall` — vocal-helper did it for a weight bundle of nearly a
+  gigabyte fetched over the network. `extractall` honours a member named
+  `../elsewhere` or an absolute path, so an archive from somewhere else can
+  write wherever the process can.
+
+  `unzip_folder(zip_file_path, folder_path="", *, overwrite=False)` checks
+  every member **before** the first write and raises **`ValueError`** on one
+  that would land outside the destination, or on a symlink member (a second
+  way out of the folder): a refused archive leaves nothing behind. The
+  destination defaults to the archive path without its `.zip` suffix and is
+  returned. A destination that is already populated is returned untouched,
+  which makes the call idempotent for a download-once-then-reuse cache;
+  `overwrite=True` extracts over it. A missing archive raises
+  `AssertionError`, like the other `file_exists` guards in the package.
+
+### Changed
+
+- **The two dependency declarations are now compared by a test.**
+  `requirements.txt` and `pyproject.toml` both list the runtime
+  dependencies, and nothing checked that they agreed. A test now fails when
+  one carries a requirement, specifier included, that the other does not.
+
 ## [4.0.0] - 2026-10-31
 
 ### Added

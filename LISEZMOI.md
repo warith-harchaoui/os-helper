@@ -97,7 +97,9 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   échelonnée en octets, silencieuse hors TTY), `is_working_url()`,
   `get_user_ip()`.
 - **Rapport de dossier et archivage** : `folder_description()` (carte des tailles
-  + `index.html` Bootstrap + `description.json`), `zip_folder()`.
+  + `index.html` Bootstrap + `description.json`), `zip_folder()` et son inverse `unzip_folder()`
+  (refuse un membre qui sortirait de la destination, idempotent sur un dossier
+  déjà peuplé).
 - **Durées et horodatages** : `now_string()`, `format_size()`, `time2str()`,
   `str2time()`.
 - **Chronométrage et profilage** : `wall_timer()`, `cpu_timer()`, `gpu_timer()`

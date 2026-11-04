@@ -88,7 +88,9 @@ dependency, pure-Python across macOS / Linux / Windows.
   `progress_bar()` (shared byte-scaled `tqdm` factory, auto-quiet off-TTY),
   `is_working_url()`, `get_user_ip()`.
 - **Folder reporting and archiving**: `folder_description()` (size map,
-  Bootstrap `index.html`, and `description.json`), `zip_folder()`.
+  Bootstrap `index.html`, and `description.json`), `zip_folder()` and its inverse `unzip_folder()`
+  (refuses members that would escape the destination, idempotent on a
+  populated folder).
 - **Durations and timestamps**: `now_string()`, `format_size()`, `time2str()`,
   `str2time()`.
 - **Timing and profiling**: `wall_timer()`, `cpu_timer()`, `gpu_timer()` (CUDA

@@ -71,6 +71,7 @@ The core install is deliberately FastAPI-free: nine suite packages depend on
 | Download a file | `download_file` |
 | Load a YAML/JSON/env config | `get_config` |
 | Zip a folder | `zip_folder` |
+| Unzip an archive safely (no path escape) | `unzip_folder` |
 | Browse disk usage visually | `os-helper-gui` (the `[gui]` extra) |
 
 This table had a third column until 3.0.0, mapping each intent to an

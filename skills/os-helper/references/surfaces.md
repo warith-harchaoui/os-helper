@@ -18,7 +18,7 @@ helper uses it for:
 - **Guards** — `osh.check(cond, msg="…")` logs and raises in one call.
 - **File management** — `file_exists`, `dir_exists`, `make_directory`, `join`,
   `folder_name_ext`, `recursive_glob`, `temporary_filename`, `temporary_folder`,
-  `copyfile`, `remove_files`, `remove_directory`, `zip_folder`.
+  `copyfile`, `remove_files`, `remove_directory`, `zip_folder`, `unzip_folder`.
 
 Everything exported is listed in `os_helper.__all__`.
 
