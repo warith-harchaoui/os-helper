@@ -31,10 +31,9 @@ réalité honnête, cas par cas :
    donnez) et les vérifications d'URL (`is_working_url()` / `check_url`).
    `get_user_ip()` interroge aussi, volontairement, un service public. Ce
    sont les seuls accès réseau de la bibliothèque ; vous ne les déclenchez
-   qu'en les appelant explicitement. Une requête de plus part du navigateur,
-   pas de la bibliothèque : la page Tree Radar charge son script de graphiques
-   (D3) depuis le CDN jsDelivr à l'ouverture. Elle n'envoie rien de vous, mais
-   la treemap ne se dessine pas hors ligne.
+   qu'en les appelant explicitement. La page Tree Radar n'en fait aucun non
+   plus : son script de graphiques (D3) est livré dans le paquet puis servi
+   par l'app locale, si bien que la treemap se dessine hors ligne.
 
 3. **Votre décision.** Rien ici ne force le cloud. `temporary_remote_file()`
    peut déposer vers S3/GCS/SFTP, mais seulement si *vous* le branchez sur
@@ -372,3 +371,5 @@ Remerciements chaleureux à [Mohamed Chelali](https://mchelali.github.io) et [Ba
 ## Licence
 
 Ce projet est distribué sous la licence BSD-3-Clause ; voir le fichier [LICENSE](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) pour plus de détails.
+
+Le Tree Radar embarque [D3](https://d3js.org) v7.9.0 (`os_helper/static/d3.v7.min.js`), © 2010-2023 Mike Bostock, sous la licence ISC reproduite dans [`os_helper/static/d3.LICENSE`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/static/d3.LICENSE).

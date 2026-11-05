@@ -65,6 +65,7 @@ __all__ = [
     "Catalog",
     "build_mo",
     "compile_catalogs",
+    "extract_call_sites",
     "extract_sources",
     "language_candidates",
     "parse_po",

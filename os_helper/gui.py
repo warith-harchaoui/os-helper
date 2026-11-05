@@ -106,6 +106,11 @@ if TYPE_CHECKING:  # pragma: no cover — typing only, never runs
 # `pip install` gave a package whose every GUI string raised FileNotFoundError.
 _LOCALES_DIR = Path(__file__).resolve().parent / "locales"
 
+#: D3, bundled so the Tree Radar draws offline (local-first): the page loads it
+#: from this app, never from a CDN. ISC license alongside, in ``d3.LICENSE``;
+#: both ship in the wheel through ``[tool.setuptools.package-data]``.
+_D3_FILE = Path(__file__).resolve().parent / "static" / "d3.v7.min.js"
+
 #: The gettext domain, and therefore each ``.mo`` file's stem.
 _DOMAIN = "os_helper"
 
@@ -526,7 +531,8 @@ def build_tree_payload(
 
 # ---------------------------------------------------------------------------
 # The single-page front-end. Self-contained HTML + vanilla JS; the only
-# client dependency is D3 loaded from a CDN (no build step, per GUI.md).
+# client dependency is D3, bundled in os_helper/static/ and served by the app
+# itself (no build step, no CDN: the page draws with the network off).
 # ---------------------------------------------------------------------------
 
 # One template, every language. Human-facing text is tokenised as {{TOKEN}}
@@ -546,8 +552,9 @@ _GUI_TEMPLATE: str = r"""<!DOCTYPE html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>OS Helper — Tree Radar</title>
-<!-- D3 is the only client dependency, loaded from a CDN (no build step). -->
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<!-- D3 is the only client dependency, served by this app from the package
+     (d3 v7.9.0, ISC license in os_helper/static/d3.LICENSE): no CDN. -->
+<script src="static/d3.v7.min.js"></script>
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
@@ -849,7 +856,7 @@ def create_app(default_root: str | None = None) -> FastAPI:
     # required. A clear ImportError beats an opaque ModuleNotFoundError.
     try:
         from fastapi import FastAPI, HTTPException, Query
-        from fastapi.responses import HTMLResponse, JSONResponse
+        from fastapi.responses import HTMLResponse, JSONResponse, Response
     except ImportError as exc:  # pragma: no cover — exercised only without extra
         # Not logged: the ImportError below says strictly more than the log
         # line did, including the exact pip command.
@@ -885,6 +892,22 @@ def create_app(default_root: str | None = None) -> FastAPI:
             injected so it auto-scans a sensible folder on first load.
         """
         return HTMLResponse(content=render_gui(lang=lang, root=launch_root))
+
+    @app.get("/static/d3.v7.min.js", include_in_schema=False)
+    def d3_script() -> Response:
+        """Serve the bundled D3 build, so the page never needs the network.
+
+        Returns
+        -------
+        fastapi.responses.Response
+            ``d3.v7.min.js`` read from the installed package, as JavaScript,
+            cacheable for a day (the file only changes with os-helper itself).
+        """
+        return Response(
+            content=_D3_FILE.read_bytes(),
+            media_type="application/javascript",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
     @app.get("/api/tree", response_class=JSONResponse)
     def api_tree(

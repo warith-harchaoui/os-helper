@@ -176,3 +176,25 @@ def test_dedupe_skips_a_file_that_vanished_mid_walk(tmp_path) -> None:
     assert len(groups) == 1
     (paths,) = groups.values()
     assert {os.path.basename(p) for p in paths} == {"still-here.txt", "also-here.txt"}
+
+
+def test_the_page_loads_d3_from_the_package_not_a_cdn(sample_tree):
+    """The Tree Radar is local-first: it must draw with no network at all.
+
+    It used to load ``d3@7`` from jsDelivr, so offline the page came up empty.
+    The page now references only scripts the app itself serves, and the
+    bundled D3 is served, as JavaScript, from inside the installed package.
+    """
+    import re
+    from urllib.parse import urljoin
+
+    client = TestClient(create_app(default_root=sample_tree))
+    body = client.get("/gui").text
+    srcs = re.findall(r'<script[^>]*\bsrc="([^"]+)"', body)
+    assert srcs, "the page no longer loads D3 at all"
+    for src in srcs:
+        assert "://" not in src and not src.startswith("//"), src
+        resp = client.get(urljoin("http://testserver/gui", src))
+        assert resp.status_code == 200, src
+        assert "javascript" in resp.headers["content-type"], resp.headers
+        assert "d3js.org v7" in resp.text[:200]

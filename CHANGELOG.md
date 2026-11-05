@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Tree Radar did not draw offline.** The page loaded `d3@7` from
+  jsDelivr, against the local-first promise. D3 v7.9.0 now ships inside the
+  package (`os_helper/static/d3.v7.min.js`, with its ISC license in
+  `d3.LICENSE`), the app serves it at `GET /static/d3.v7.min.js`, and the page
+  references nothing outside the app.
+- **`gettext_utils.__all__` omitted `extract_call_sites`**, which `os_helper`
+  re-exports, so `from os_helper.gettext_utils import *` did not bring it.
+
 ## [4.1.0] - 2026-11-04
 
 ### Added

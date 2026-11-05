@@ -25,8 +25,9 @@ scanned tree as JSON at `GET /api/tree` (`root`, `depth` from 1 to 64,
 default 12, `dedupe=1` to hash files and group duplicates). The Tree Radar
 colours by age, by hash-dedupe cluster or by type family, and speaks French
 and English (`?lang=fr` / `?lang=en`). The page is server-rendered HTML
-drawn with D3, loaded from the jsDelivr CDN, not the Svelte stack planned
-below. It has no action yet: no trash, no zip, no Dedupe Lens, no Config
+drawn with D3, bundled in the package (`os_helper/static/d3.v7.min.js`, ISC
+license) and served by the app itself, so it draws offline; it is not the
+Svelte stack planned below. It has no action yet: no trash, no zip, no Dedupe Lens, no Config
 Explorer, no hash cache on disk.
 
 ## Three surfaces, one product

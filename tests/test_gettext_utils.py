@@ -463,3 +463,18 @@ def test_vendored_and_unparseable_files_are_passed_over(tmp_path: Path) -> None:
     (vendored / "theirs.py").write_text('_("Not ours")\n', encoding="utf-8")
 
     assert osh.extract_call_sites(tmp_path) == {"Keep"}
+
+
+def test_the_module_exports_everything_the_package_re_exports() -> None:
+    """``__init__`` re-exports names from ``gettext_utils``; each must also be
+    in the module's own ``__all__``, or ``from os_helper.gettext_utils import *``
+    and the API docs silently lose it (``extract_call_sites`` did)."""
+    import os_helper.gettext_utils as gu
+
+    reexported = {
+        name
+        for name in osh.__all__
+        if getattr(getattr(osh, name, None), "__module__", None) == gu.__name__
+    }
+    assert reexported, "no re-export found; the guard checks nothing"
+    assert reexported <= set(gu.__all__), reexported - set(gu.__all__)

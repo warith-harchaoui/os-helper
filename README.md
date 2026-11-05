@@ -28,10 +28,9 @@ market that, here is the honest, case-by-case reality:
    `download_file()` (it downloads a URL you hand it) and the URL-liveness
    checks (`is_working_url()` / `check_url`). `get_user_ip()` also calls a
    public echo service on purpose. These are the only network calls in the
-   library, and you only trigger them by explicitly calling them. One more
-   request leaves the browser, not the library: the Tree Radar page loads its
-   charting script (D3) from the jsDelivr CDN when it opens. It sends nothing
-   of yours, but the treemap does not draw offline.
+   library, and you only trigger them by explicitly calling them. The Tree
+   Radar page makes none either: its charting script (D3) ships inside the
+   package and is served by the local app, so the treemap draws offline.
 
 3. **Your decision.** Nothing here forces the cloud. `temporary_remote_file()`
    can stage to S3/GCS/SFTP, but only when *you* wire it to a remote. If you
@@ -359,3 +358,5 @@ Special thanks to [Mohamed Chelali](https://mchelali.github.io) and [Bachir Zerr
 ## License
 
 This project is licensed under the BSD-3-Clause License; see the [LICENSE](https://github.com/warith-harchaoui/os-helper/blob/main/LICENSE) file for details.
+
+The Tree Radar bundles [D3](https://d3js.org) v7.9.0 (`os_helper/static/d3.v7.min.js`), © 2010-2023 Mike Bostock, under the ISC license reproduced in [`os_helper/static/d3.LICENSE`](https://github.com/warith-harchaoui/os-helper/blob/main/os_helper/static/d3.LICENSE).
