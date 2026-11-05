@@ -94,7 +94,7 @@ def test_path_without_home() -> None:
     assert pu.path_without_home(nested) == os.path.join("~", "project", "file.txt")
 
     # A path outside the home directory is returned unchanged (normalized).
-    outside = "/opt/somewhere/file.txt"
+    outside = "/path/to/elsewhere/file.txt"
     assert pu.path_without_home(outside) == os.path.normpath(outside)
 
     # A sibling directory that merely shares the home dir as a string prefix

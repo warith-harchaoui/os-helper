@@ -169,16 +169,16 @@ def test_openfile_dispatches_by_platform(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(system_utils, "system", lambda cmd, **kw: calls.append(cmd))
 
     monkeypatch.setattr(system_utils.platform, "system", lambda: "Darwin")
-    system_utils.openfile("/tmp/some file.txt")
-    assert calls[-1] == "open '/tmp/some file.txt'"
+    system_utils.openfile("/path/to/some file.txt")
+    assert calls[-1] == "open '/path/to/some file.txt'"
 
     monkeypatch.setattr(system_utils.platform, "system", lambda: "Linux")
-    system_utils.openfile("/tmp/report.pdf")
-    assert calls[-1] == "xdg-open /tmp/report.pdf"
+    system_utils.openfile("/path/to/report.pdf")
+    assert calls[-1] == "xdg-open /path/to/report.pdf"
 
     monkeypatch.setattr(system_utils.platform, "system", lambda: "FreeBSD")
     with pytest.raises(OSError, match="Unsupported operating system"):
-        system_utils.openfile("/tmp/report.pdf")
+        system_utils.openfile("/path/to/report.pdf")
 
     # Windows uses os.startfile directly, not the system()/subprocess path.
     monkeypatch.setattr(system_utils.platform, "system", lambda: "Windows")
