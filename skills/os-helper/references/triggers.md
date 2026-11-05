@@ -17,7 +17,7 @@ human-reviewable superset.
 **Files, folders and paths**
 - "does this file exist", "how big is this file", "list every .wav under"
 - "make this directory", "delete these files", "remove this folder"
-- "copy this file", "zip this folder"
+- "copy this file", "zip this folder", "unzip this archive without letting it escape the folder"
 - "split this path into folder / name / extension", "join these path parts"
 - "give me a temp file / scratch directory", "where should I put intermediates"
 - "hide my home directory in this output / path"
@@ -30,6 +30,7 @@ human-reviewable superset.
 - "format these bytes", "1234567 bytes in human units"
 - "turn 3725 seconds into 1h 2m 5s" and the inverse
 - "timestamp for a filename"
+- "time this block", "tic / toc", "how long did the GPU spend on this", "CPU time vs wall time"
 
 **Network-touching utilities**
 - "is this URL alive / reachable / 404"
@@ -41,11 +42,17 @@ human-reviewable superset.
 - "set up logging for this script", "how do I log in this suite"
 - "add a guard / assertion with a message"
 
+**Localization**
+- "translate this GUI's strings", "a .po / .mo catalogue", "compile the catalogues without msgfmt"
+- "which English string has no French translation", "load locales/i18n.yaml"
+- "the same prompt in French and English", "a placeholder dropped from one language"
+
 **Explicit tool and symbol mentions**
 - `os-helper-api`, `os-helper-mcp`, `os-helper-gui` (there is no `os-helper` command)
 - `import os_helper`, `import os_helper as osh`, `osh.<anything>`
 - `hardware_info`, `get_nb_workers`, `recursive_glob`, `temporary_folder`,
-  `hashfile`, `hashfolder`, `get_config`, `init_logging`, `check`, `format_size`
+  `hashfile`, `hashfolder`, `get_config`, `init_logging`, `check`, `format_size`,
+  `download_file`, `unzip_folder`, `tic` / `toc`, `Catalog`, `Locales`, `Prompts`
 - "Tree Radar", "treemap my disk", "what is eating my disk"
 - "install / run os-helper"
 

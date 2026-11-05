@@ -30,13 +30,16 @@ below.
 ### `get_config`'s three-tier fallback
 
 `get_config()` resolves a set of required keys through a fixed, deterministic
-order; see [EXAMPLES.md § Configuration Loading](EXAMPLES.md#configuration-loading)
+order; see [EXAMPLES.md § Configuration Loading](EXAMPLES.md#3-configuration-loading)
 for the full API:
 
 1. an explicit JSON/YAML file, or the first matching file in a folder;
 2. one or more `.env` files, merged into `os.environ` via `python-dotenv`;
 3. plain process environment variables (`UPPER_CASE` tried first, then the
-   exact key as given).
+   exact key as given). With `allow_ambient_env=False` this step reads only
+   the named `.env` files' own contents, never what the process inherited:
+   the HTTP API's `/config` route runs that way, so a network caller cannot
+   name an environment variable and get the server's secret back.
 
 It returns the resolved values as a plain `dict[str, str | int | float]`.
 **Nothing is encrypted, masked, or redacted in that return value**: the
@@ -209,7 +212,7 @@ sequenceDiagram
 
 ## See Also
 
-- [EXAMPLES.md § Configuration Loading](EXAMPLES.md#configuration-loading):
+- [EXAMPLES.md § Configuration Loading](EXAMPLES.md#3-configuration-loading):
   the plain `get_config` API and its fallback order, without the vault layer.
 - [README.md § The Promise](README.md#the-promise): the library's
   local-first network posture.

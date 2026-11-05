@@ -31,7 +31,7 @@ explicitement ci-dessous.
 ### Le repli en trois niveaux de `get_config`
 
 `get_config()` résout un ensemble de clés requises selon un ordre fixe et
-déterministe ; voir [EXEMPLES.md § Chargement de configuration](EXEMPLES.md#chargement-de-configuration)
+déterministe ; voir [EXEMPLES.md § Chargement de configuration](EXEMPLES.md#3-chargement-de-configuration)
 pour l'API complète :
 
 1. un fichier JSON/YAML explicite ou le premier fichier correspondant dans
@@ -39,7 +39,11 @@ pour l'API complète :
 2. un ou plusieurs fichiers `.env`, fusionnés dans `os.environ` via
    `python-dotenv` ;
 3. les variables d'environnement du processus (`UPPER_CASE` essayé en
-   premier, puis la clé exacte telle que fournie).
+   premier, puis la clé exacte telle que fournie). Avec
+   `allow_ambient_env=False`, cette étape ne lit que le contenu des fichiers
+   `.env` nommés, jamais ce dont le processus a hérité : la route `/config`
+   de l'API HTTP fonctionne ainsi, pour qu'un appelant réseau ne puisse pas
+   nommer une variable d'environnement puis récupérer le secret du serveur.
 
 La fonction renvoie les valeurs résolues sous forme de simple
 `dict[str, str | int | float]`. **Rien n'est chiffré, masqué ou expurgé dans
@@ -227,7 +231,7 @@ sequenceDiagram
 
 ## Voir aussi
 
-- [EXEMPLES.md § Chargement de configuration](EXEMPLES.md#chargement-de-configuration) :
+- [EXEMPLES.md § Chargement de configuration](EXEMPLES.md#3-chargement-de-configuration) :
   l'API `get_config` nue et son ordre de repli, sans la couche vault.
 - [LISEZMOI.md § La promesse](LISEZMOI.md#la-promesse) : la posture réseau
   local-first de la bibliothèque.

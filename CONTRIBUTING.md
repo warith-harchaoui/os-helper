@@ -90,17 +90,19 @@ Releases live in [`CHANGELOG.md`](CHANGELOG.md) following the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Each
 release is tagged `vX.Y.Z` in git and published as a GitHub release.
 
-Cross-helper dependency pins (e.g. `os-helper @ git+...@v1.3.0`) are
-exact-pinned to a specific tag for now. Once helpers are on PyPI we
-will move to version ranges.
+Every helper is on PyPI, and members depend on os-helper by version
+range, floor and cap together (e.g. `os-helper>=2.6.0,<5` in
+audio-helper).
 
 ## CI
 
-GitHub Actions runs `pytest` across a cross-OS matrix
-(`ubuntu-latest` × `macos-latest` × `windows-latest`) on Python
-3.10 / 3.11 / 3.12 / 3.13. os-helper is the most OS-sensitive helper of
-the suite, so all three major operating systems are exercised on every
-push. A separate, non-blocking `ruff` lint job also runs. The whole
+GitHub Actions runs `pytest` on `ubuntu-latest`, `macos-latest` and
+`windows-latest`, on Python 3.12 only: os-helper is the most OS-sensitive
+helper of the suite, so all three operating systems are exercised on every
+push, while the heavy sweep runs locally through the pre-push hook. A
+`ruff` job (`ruff check` and `ruff format --check`, ruff pinned) fails the
+run like any other, and a `floor` job installs and imports the package on
+Python 3.10, the declared minimum. The whole
 suite is fast and hermetic (no network / model dependencies), so there
 is no separate integration tier to opt into.
 

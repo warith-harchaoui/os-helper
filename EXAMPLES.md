@@ -54,6 +54,7 @@ This document provides detailed examples for using the `OS Helper` module to sim
     - [CPU Timer](#cpu-timer)
     - [GPU Timer](#gpu-timer)
     - [MATLAB-style tic / toc](#matlab-style-tic--toc)
+13. [Localization](#13-localization)
 
 [Command line](#command-line)
 
@@ -89,7 +90,9 @@ the same function reached through the alias.
 Use the following functions to determine the platform your script is running on. These are especially useful for writing cross-platform scripts.
 
 ```python
-from os_helper import windows, linux, macos, unix
+from os_helper import windows, linux, macos, unix, platform_name
+
+print(platform_name())  # 'darwin', 'linux' or 'windows'
 
 # Check if the system is Windows
 if windows():
@@ -325,6 +328,11 @@ from os_helper import (
     path_without_home,
 )
 
+# A file to work on. Yours exists already; this one makes the snippet
+# runnable as it stands.
+with open("example.txt", "w") as handle:
+    handle.write("some content worth backing up")
+
 # Assert a file exists (and optionally isn't empty), raising with a clear
 # message otherwise; handy as a precondition at the top of a function.
 checkfile("example.txt", "Expected input file is missing", check_empty=True)
@@ -412,7 +420,7 @@ print(folder, name, ext)  # Output: '/path/to', 'file', ''
 ### Compress a Folder into a ZIP File
 
 ```python
-from os_helper import make_directory, zip_folder
+from os_helper import make_directory, unzip_folder, zip_folder
 
 # A folder to archive (the `demo` tree from the section above would do too).
 make_directory("demo")
@@ -423,6 +431,17 @@ with open("demo/file1.txt", "w") as handle:
 # to get `<folder>.zip` written beside the folder.
 zip_folder("demo", "demo_archive.zip")
 print("Folder successfully compressed into a ZIP archive!")
+
+# The inverse. Every member is checked before the first write: one that would
+# land outside the destination (`../elsewhere`, an absolute path) or a symlink
+# raises ValueError and leaves nothing behind. The destination defaults to the
+# archive path without `.zip`, and is returned.
+print(unzip_folder("demo_archive.zip", "demo_restored"))  # 'demo_restored'
+
+# Idempotent: a destination that is already populated is returned untouched,
+# which suits a download-once-then-reuse cache. overwrite=True extracts over it.
+unzip_folder("demo_archive.zip", "demo_restored")
+unzip_folder("demo_archive.zip", "demo_restored", overwrite=True)
 ```
 
 ## 5. String Utilities
@@ -965,6 +984,71 @@ print(toc(t_outer))  # outer block
 ```
 
 Call `toc(log=True)` to also emit an INFO log line.
+
+## 13. Localization
+
+Three loaders, one per shape of text. `Catalog` is gettext: the English
+sentence is the key, so a translator works on real sentences, and
+`problems(used=...)` turns an English string the code asks for but no
+catalogue carries into a red test instead of a page that half-reverts to
+English. `Locales` keys a YAML file on meaning (`greeting`), for any text
+shown to a person. `Prompts` reads one section of the same kind of file as
+text a model reads: each language is written on its own rather than
+translated, so the key stays put while the wording moves.
+
+```python
+from pathlib import Path
+
+from os_helper import Catalog, Locales, Prompts, compile_catalogs, write_po
+
+# 1) Catalog: gettext, keyed on the English sentence. English needs no file;
+#    French lives in locales/fr/LC_MESSAGES/<domain>.po.
+write_po(
+    "locales/fr/LC_MESSAGES/demo.po",
+    {"Convert a document": "Convertir un document"},
+    language="fr",
+    project="demo",
+)
+compile_catalogs("locales")  # writes the .mo beside each .po, no msgfmt needed
+
+cat = Catalog.from_package(Path("locales"), "demo", default_language="en")
+print(cat.gettext("fr", "Convert a document"))  # 'Convertir un document'
+print(cat.gettext("fr-CA", "Convert a document"))  # 'fr-CA' finds the 'fr' catalogue
+print(cat.problems(used={"Convert a document", "Open a file"}))
+# one problem: 'Open a file' is asked for by the code, carried by no catalogue
+
+# 2) Locales: a YAML file of semantic keys, one text per locale.
+Path("i18n.yaml").write_text(
+    "meta:\n"
+    "  default_locale: fr\n"
+    "  supported_locales: [fr, en]\n"
+    "gui:\n"
+    "  greeting:\n"
+    "    fr: Bonjour {name}\n"
+    "    en: Hello {name}\n",
+    encoding="utf-8",
+)
+loc = Locales.from_path("i18n.yaml")
+print(loc.render("gui", "greeting", "en", name="Alice"))  # 'Hello Alice'
+print(loc.text("gui", "greeting", "de"))  # no German: falls back to 'Bonjour {name}'
+print(loc.problems())  # [] (every key in every locale, placeholders consistent)
+
+# 3) Prompts: one section of the same kind of file, read as model-facing text.
+Path("prompts.yaml").write_text(
+    "meta:\n"
+    "  default_locale: en\n"
+    "  supported_locales: [en, fr]\n"
+    "prompts:\n"
+    "  summarize:\n"
+    "    en: Summarize {topic} in three sentences.\n"
+    "    fr: Résumez {topic} en trois phrases.\n",
+    encoding="utf-8",
+)
+prompts = Prompts.from_path("prompts.yaml")  # section="prompts" by default
+print(prompts.render("summarize", "fr", topic="ce rapport"))
+# 'Résumez ce rapport en trois phrases.'
+print(prompts.problems())  # [] (no language drops a {field} the code fills)
+```
 
 ## Command line
 

@@ -28,7 +28,10 @@ market that, here is the honest, case-by-case reality:
    `download_file()` (it downloads a URL you hand it) and the URL-liveness
    checks (`is_working_url()` / `check_url`). `get_user_ip()` also calls a
    public echo service on purpose. These are the only network calls in the
-   library, and you only trigger them by explicitly calling them.
+   library, and you only trigger them by explicitly calling them. One more
+   request leaves the browser, not the library: the Tree Radar page loads its
+   charting script (D3) from the jsDelivr CDN when it opens. It sends nothing
+   of yours, but the treemap does not draw offline.
 
 3. **Your decision.** Nothing here forces the cloud. `temporary_remote_file()`
    can stage to S3/GCS/SFTP, but only when *you* wire it to a remote. If you
@@ -50,7 +53,8 @@ market that, here is the honest, case-by-case reality:
 Everything is a thin, well-typed, well-documented wrapper: no heavy system
 dependency, pure-Python across macOS / Linux / Windows.
 
-- **OS detection**: `windows()`, `linux()`, `macos()`, `unix()`.
+- **OS detection**: `windows()`, `linux()`, `macos()`, `unix()`, and
+  `platform_name()` (`darwin` / `linux` / `windows`).
 - **Hardware inspection**: `hardware_info()` (one-call snapshot), plus its
   building blocks: `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
   `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
@@ -78,13 +82,22 @@ dependency, pure-Python across macOS / Linux / Windows.
   available, BLAKE2b fallback; stable 40-char hex digests cross-platform).
 - **Configuration loading**: `get_config()` with a deterministic fallback order,
   JSON/YAML file (or folder), then `.env` files, then process environment.
-- **Localization**: two mechanisms, one per shape of problem.
+  `allow_ambient_env=False` drops that last step down to the named `.env`
+  files only, which is what the HTTP API does so a network caller cannot read
+  the server's environment.
+- **Localization**: three mechanisms, one per shape of problem.
   - **`Catalog`** — `Catalog.from_package()` reads `gettext` `.po`/`.mo` catalogues keyed on the English source string, which is what the suite's GUIs use. `Catalog.problems(used=...)` reports a source the code asks for that no catalogue carries: the check that keeps a reworded sentence from silently half-reverting to English. `compile_catalogs()` writes the `.mo` itself, so GNU `msgfmt` is never a build dependency.
   - **`Locales`** — `Locales.from_path()` reads a `locales/i18n.yaml` holding every human-readable string in one place. It resolves a key for a locale with a deterministic fallback to the declared default, fills `{placeholder}` fields safely with `render()`, and reports every missing translation or mismatched placeholder at once with `problems()` — the check a CI job asserts on. Sections are named by the caller and mean nothing here, so one loader serves whatever each package keeps in its file.
+  - **`Prompts`** — `Prompts.from_path()` reads one section of the same kind of YAML file as text a *model* reads. Each language of a prompt is written on its own rather than translated, so it is keyed on meaning (`axis_prompt`), never on the English wording that prompt engineering keeps rewriting. `text()` / `render()` resolve `fr-CA` to `fr` and accept `system` / `user` fields, `bundle()` returns every prompt for one language, and `problems()` reports a language that drops a `{field}` the code fills.
+
+  The `.po` tooling behind `Catalog` is public too: `parse_po()`, `write_po()`, `untranslated()`, `build_mo()`, `extract_sources()` / `extract_call_sites()` (every English string the markup or the Python source asks for) and `language_candidates()`.
 - **Strings**: `emptystring()` (None / empty / whitespace), `asciistring()`
   (accent-folding, filesystem-safe slugs).
-- **Downloads and networking**: `download_file()` (streaming, flat memory,
-  adaptive block size, progress bar, returns `{path, content_type, bytes}`),
+- **Downloads and networking**: `download_file()` (streaming with flat
+  memory and an adaptive block size, resumable through a `.part` sidecar and
+  HTTP `Range`, retried with backoff, renamed into place only once complete,
+  optionally `sha256`-verified, skipped when the file is already there,
+  progress bar; returns `{path, content_type, bytes, sha256, resumed}`),
   `progress_bar()` (shared byte-scaled `tqdm` factory, auto-quiet off-TTY),
   `is_working_url()`, `get_user_ip()`.
 - **Folder reporting and archiving**: `folder_description()` (size map,
@@ -285,6 +298,7 @@ and as MCP tools for any MCP-aware agent host:
 pip install "os-helper[api]"
 os-helper-api                    # -> http://127.0.0.1:8010 (docs at /docs)
 curl http://127.0.0.1:8010/hardware
+OS_HELPER_PORT=9000 os-helper-api  # host and port come from OS_HELPER_HOST / OS_HELPER_PORT
 
 pip install "os-helper[mcp]"
 os-helper-mcp                    # same app + an /mcp endpoint (fastapi-mcp)

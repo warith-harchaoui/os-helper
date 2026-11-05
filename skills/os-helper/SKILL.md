@@ -52,8 +52,8 @@ pip install 'os-helper[mcp]'            # + MCP tools over the same app (os-help
 pip install 'os-helper[gui]'            # + Tree Radar disk-treemap GUI (os-helper-gui)
 ```
 
-The core install is deliberately FastAPI-free: nine suite packages depend on
-`import os_helper`, so the web stack is opt-in.
+The core install is deliberately FastAPI-free: all sixteen other suite
+packages depend on `import os_helper`, so the web stack is opt-in.
 
 ## What it does, and how to invoke it
 
@@ -72,6 +72,9 @@ The core install is deliberately FastAPI-free: nine suite packages depend on
 | Load a YAML/JSON/env config | `get_config` |
 | Zip a folder | `zip_folder` |
 | Unzip an archive safely (no path escape) | `unzip_folder` |
+| Time a block (wall / CPU / GPU) | `wall_timer`, `cpu_timer`, `gpu_timer`, `tic` / `toc` |
+| Translate interface strings (gettext) | `Catalog`, `compile_catalogs` |
+| Text keyed on meaning / prompts per language | `Locales`, `Prompts` |
 | Browse disk usage visually | `os-helper-gui` (the `[gui]` extra) |
 
 This table had a third column until 3.0.0, mapping each intent to an

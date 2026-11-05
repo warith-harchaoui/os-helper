@@ -1,7 +1,7 @@
 # os-helper surfaces
 
 Four doors onto the same toolbox. The core install deliberately carries none of
-the web stack — nine suite packages depend on `import os_helper` and must not
+the web stack — all sixteen other suite packages depend on `import os_helper` and must not
 pay for FastAPI.
 
 ## 1. Library (always available)

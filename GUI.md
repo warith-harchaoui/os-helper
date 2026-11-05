@@ -1,8 +1,8 @@
 # GUI — OS Helper
 
-> A design plan, not a CLI mirror. The CLI already handles "one path at
-> a time, one predicate at a time". A GUI must go further, otherwise
-> why build one? This document lays out an ambitious, opinionated
+> A design plan. os-helper ships no command line: the library and the
+> shell already handle "one path at a time, one predicate at a time". A
+> GUI must go further, otherwise why build one? This document lays out an ambitious, opinionated
 > visual product for the "make a folder legible" workflow.
 
 ## North star
@@ -11,10 +11,23 @@
 > one screen that turns "what is on disk" into a decision.**
 
 Filesystem work is inherently exploratory (ls → glob → hash → clean up
-→ zip → ship). The CLI is fine when you know what you want. The GUI's
+→ zip → ship). The library and the shell are fine when you know what you want. The GUI's
 job is to show you what you *have* (sizes, dupes, hashes, permissions,
 staleness) at a glance, and to let you act on it with keyboard
 shortcuts.
+
+## What ships today
+
+Milestone M0 with part of M1, read-only: `pip install "os-helper[gui]"`,
+then `os-helper-gui --root <folder>` (flags `--root`, `--host`, `--port`;
+default `127.0.0.1:8017`). FastAPI serves the page at `GET /gui` and the
+scanned tree as JSON at `GET /api/tree` (`root`, `depth` from 1 to 64,
+default 12, `dedupe=1` to hash files and group duplicates). The Tree Radar
+colours by age, by hash-dedupe cluster or by type family, and speaks French
+and English (`?lang=fr` / `?lang=en`). The page is server-rendered HTML
+drawn with D3, loaded from the jsDelivr CDN, not the Svelte stack planned
+below. It has no action yet: no trash, no zip, no Dedupe Lens, no Config
+Explorer, no hash cache on disk.
 
 ## Three surfaces, one product
 
@@ -60,20 +73,20 @@ side-by-side. Instant answer to "which key is my app actually reading?".
 - **Keyboard first.** ``/`` opens a fuzzy filter. ``h`` hashes.
   ``d`` toggles the Dedupe Lens. ``z`` zips the current selection.
 - **Files, not blobs.** Every action produces a real on-disk artifact
-  and logs the exact CLI command that would reproduce it: reproducible
+  and logs the exact Python call that would reproduce it: reproducible
   by construction.
 - **Colorblind-safe by construction.** Treemap encodings always ship a
   shape/pattern fallback (see companion ``sprezzature-colors`` audit skill).
 - **No telemetry.** The GUI is a thin client on top of the local
-  os-helper library / CLI; nothing leaves the box.
+  os-helper library; nothing leaves the box.
 
 ## What we deliberately don't do
 
 - **No file manager rewrite.** Finder / Nautilus / Explorer exist. The
   GUI does one job: make a folder *legible* fast.
-- **No cloud sync.** ``download_file`` remains a library / CLI concern;
+- **No cloud sync.** ``download_file`` remains a library concern;
   the GUI opens what is already on disk.
-- **No live shell.** ``os-helper os run`` covers that already, and a
+- **No live shell.** ``system()`` and the shell itself cover that already, and a
   live shell inside a GUI is a rabbit hole with no bottom.
 
 ## Stack
@@ -81,7 +94,7 @@ side-by-side. Instant answer to "which key is my app actually reading?".
 - Front end: TypeScript + Svelte 5 + D3 (treemap layout) +
   ``@lucide/svelte`` icons. No React; matches the ``sprezzature-ui``
   companion skill's stack.
-- Back end: the ``os_helper`` library (and its CLIs) already covers
+- Back end: the ``os_helper`` library already covers
   100 % of the read/compute operations. GUI is a thin client that calls
   into the library only.
 - Recipe format: the "what did I just do" panel emits a shell script
@@ -101,7 +114,7 @@ side-by-side. Instant answer to "which key is my app actually reading?".
 
 - Not a file manager.
 - Not a hosted SaaS.
-- Not a substitute for the CLI in CI (the "what did I just do" panel
+- Not a substitute for scripts in CI (the "what did I just do" panel
   emits shell scripts that CI can replay headless).
 
 ## Success metric

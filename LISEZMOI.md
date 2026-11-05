@@ -31,7 +31,10 @@ réalité honnête, cas par cas :
    donnez) et les vérifications d'URL (`is_working_url()` / `check_url`).
    `get_user_ip()` interroge aussi, volontairement, un service public. Ce
    sont les seuls accès réseau de la bibliothèque ; vous ne les déclenchez
-   qu'en les appelant explicitement.
+   qu'en les appelant explicitement. Une requête de plus part du navigateur,
+   pas de la bibliothèque : la page Tree Radar charge son script de graphiques
+   (D3) depuis le CDN jsDelivr à l'ouverture. Elle n'envoie rien de vous, mais
+   la treemap ne se dessine pas hors ligne.
 
 3. **Votre décision.** Rien ici ne force le cloud. `temporary_remote_file()`
    peut déposer vers S3/GCS/SFTP, mais seulement si *vous* le branchez sur
@@ -53,7 +56,8 @@ réalité honnête, cas par cas :
 Chaque fonction est un enrobage fin, bien typé et bien documenté : sans
 dépendance système lourde, en Python pur sur macOS / Linux / Windows.
 
-- **Détection de l'OS** : `windows()`, `linux()`, `macos()`, `unix()`.
+- **Détection de l'OS** : `windows()`, `linux()`, `macos()`, `unix()`, plus
+  `platform_name()` (`darwin` / `linux` / `windows`).
 - **Inspection matérielle** : `hardware_info()` (instantané en un appel) et ses
   briques : `cpu_count_logical()`, `cpu_count_physical()`, `cpu_model()`,
   `ram_gb()`, `gpu_vendor()` (`apple`/`nvidia`/`amd`/`intel`/`cpu`), `gpus()`
@@ -83,17 +87,25 @@ dépendance système lourde, en Python pur sur macOS / Linux / Windows.
   multi-plateformes).
 - **Chargement de configuration** : `get_config()` avec un ordre de repli
   déterministe : fichier JSON/YAML (ou dossier) → fichiers `.env` →
-  environnement du processus.
-- **Localisation** : deux mécanismes, un par forme de problème.
+  environnement du processus. `allow_ambient_env=False` réduit cette dernière
+  étape aux seuls fichiers `.env` nommés : c'est ce que fait l'API HTTP, pour
+  qu'un appelant réseau ne lise pas l'environnement du serveur.
+- **Localisation** : trois mécanismes, un par forme de problème.
   - **`Catalog`** — `Catalog.from_package()` lit des catalogues `gettext` `.po`/`.mo` indexés sur la chaîne source anglaise, ce qu'utilisent les GUI de la suite. `Catalog.problems(used=...)` signale une source que le code demande puis qu'aucun catalogue ne porte : c'est le contrôle qui empêche une phrase reformulée de se dé-traduire en silence. `compile_catalogs()` écrit le `.mo` lui-même, si bien que `msgfmt` de GNU n'est jamais une dépendance de construction.
   - **`Locales`** — `Locales.from_path()` lit un `locales/i18n.yaml` qui tient en un seul endroit toutes les chaînes lisibles par un humain. Il résout une clé pour une locale avec repli déterministe sur la langue par défaut déclarée, remplit sans danger les champs `{placeholder}` via `render()`, puis signale d'un coup chaque traduction manquante comme chaque placeholder incohérent via `problems()` — le contrôle qu'un job de CI vérifie.
 
     Les sections sont nommées par l'appelant puis ne signifient rien ici, de sorte qu'un seul chargeur sert ce que chaque paquet garde dans son fichier.
+  - **`Prompts`** — `Prompts.from_path()` lit une section du même genre de fichier YAML comme du texte qu'un *modèle* lit. Chaque langue d'un prompt est écrite à part plutôt que traduite : la clé porte donc le sens (`axis_prompt`), jamais la formulation anglaise que l'ingénierie de prompt ne cesse de retoucher. `text()` / `render()` résolvent `fr-CA` vers `fr` puis acceptent des champs `system` / `user`, `bundle()` rend tous les prompts d'une langue, enfin `problems()` signale une langue qui perd un `{champ}` que le code remplit.
+
+  L'outillage `.po` derrière `Catalog` est public lui aussi : `parse_po()`, `write_po()`, `untranslated()`, `build_mo()`, `extract_sources()` / `extract_call_sites()` (chaque chaîne anglaise que le balisage ou le source Python demande) puis `language_candidates()`.
 - **Chaînes** : `emptystring()` (None / vide / espaces), `asciistring()`
   (dépliage des accents, slugs sûrs pour le système de fichiers).
-- **Téléchargements et réseau** : `download_file()` (en flux, mémoire plate,
-  taille de bloc adaptative, barre de progression, renvoie
-  `{path, content_type, bytes}`), `progress_bar()` (fabrique `tqdm` partagée
+- **Téléchargements et réseau** : `download_file()` (en flux à mémoire plate
+  avec une taille de bloc adaptative, reprenable grâce à un fichier `.part` et
+  au `Range` HTTP, relancé avec attente croissante, renommé en place seulement
+  une fois complet, vérifié par `sha256` sur demande, sauté quand le fichier
+  est déjà là, barre de progression ; renvoie
+  `{path, content_type, bytes, sha256, resumed}`), `progress_bar()` (fabrique `tqdm` partagée
   échelonnée en octets, silencieuse hors TTY), `is_working_url()`,
   `get_user_ip()`.
 - **Rapport de dossier et archivage** : `folder_description()` (carte des tailles
@@ -297,6 +309,7 @@ hôte agentique compatible :
 pip install "os-helper[api]"
 os-helper-api                    # -> http://127.0.0.1:8010 (docs sur /docs)
 curl http://127.0.0.1:8010/hardware
+OS_HELPER_PORT=9000 os-helper-api  # hôte et port viennent de OS_HELPER_HOST / OS_HELPER_PORT
 
 pip install "os-helper[mcp]"
 os-helper-mcp                    # même app + un endpoint /mcp (fastapi-mcp)

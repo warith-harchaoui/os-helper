@@ -54,6 +54,7 @@ Ce document fournit des exemples détaillés pour utiliser le module `OS Helper`
     - [Chronomètre CPU](#chronomètre-cpu)
     - [Chronomètre GPU](#chronomètre-gpu)
     - [tic / toc façon MATLAB](#tic--toc-façon-matlab)
+13. [Localisation](#13-localisation)
 
 [Ligne de commande](#ligne-de-commande)
 
@@ -89,7 +90,9 @@ telle quelle ; `osh.hashfile(...)` désigne la même fonction via l'alias.
 Utilisez les fonctions suivantes pour déterminer la plateforme sur laquelle votre script s'exécute. Elles sont particulièrement utiles pour écrire des scripts multiplateformes.
 
 ```python
-from os_helper import windows, linux, macos, unix
+from os_helper import windows, linux, macos, unix, platform_name
+
+print(platform_name())  # 'darwin', 'linux' ou 'windows'
 
 # Vérifier si le système est Windows
 if windows():
@@ -334,6 +337,11 @@ from os_helper import (
     path_without_home,
 )
 
+# Un fichier sur lequel travailler. Le vôtre existe déjà ; celui-ci rend
+# l'extrait exécutable tel quel.
+with open("example.txt", "w") as handle:
+    handle.write("un contenu qui mérite une sauvegarde")
+
 # Vérifier qu'un fichier existe (et optionnellement qu'il n'est pas vide)
 # et lever une exception avec un message clair sinon : pratique comme
 # précondition en tête de fonction.
@@ -427,7 +435,7 @@ print(folder, name, ext)  # Sortie : '/path/to', 'file', ''
 ### Compresser un dossier en fichier ZIP
 
 ```python
-from os_helper import make_directory, zip_folder
+from os_helper import make_directory, unzip_folder, zip_folder
 
 # Un dossier à archiver (l'arborescence `demo` de la section précédente
 # ferait aussi l'affaire).
@@ -439,6 +447,19 @@ with open("demo/file1.txt", "w") as handle:
 # `<dossier>.zip` est écrit à côté du dossier.
 zip_folder("demo", "demo_archive.zip")
 print("Dossier compressé avec succès en archive ZIP !")
+
+# L'inverse. Chaque membre est contrôlé avant la première écriture : un membre
+# qui atterrirait hors de la destination (`../ailleurs`, un chemin absolu) ou un
+# lien symbolique lève ValueError sans rien laisser derrière lui. La
+# destination vaut par défaut le chemin de l'archive sans `.zip` ; elle est
+# renvoyée.
+print(unzip_folder("demo_archive.zip", "demo_restored"))  # 'demo_restored'
+
+# Idempotent : une destination déjà peuplée est renvoyée intacte, ce qui
+# convient à un cache « télécharger une fois, réutiliser ensuite ».
+# overwrite=True extrait par-dessus.
+unzip_folder("demo_archive.zip", "demo_restored")
+unzip_folder("demo_archive.zip", "demo_restored", overwrite=True)
 ```
 
 ## 5. Utilitaires de chaînes
@@ -723,7 +744,7 @@ print(f"Hachage du dossier avec date : {dated_hash}")
 try:
     hashfolder("no-such-folder", hash_content=True)
 except FileNotFoundError as exc:
-    print(f"Refusé, et c'est bien ainsi : {exc}")
+    print(f"Refusé, comme il se doit : {exc}")
 ```
 
 
@@ -1015,6 +1036,73 @@ print(toc(t_outer))  # bloc externe
 ```
 
 Appelez `toc(log=True)` pour aussi émettre une ligne de log INFO.
+
+## 13. Localisation
+
+Trois chargeurs, un par forme de texte. `Catalog`, c'est gettext : la phrase
+anglaise sert de clé, si bien qu'un traducteur travaille sur de vraies
+phrases ; `problems(used=...)` transforme une chaîne anglaise que le code
+demande sans qu'aucun catalogue la porte en test rouge, au lieu d'une page qui
+retombe à moitié en anglais. `Locales` indexe un fichier YAML sur le sens
+(`greeting`), pour tout texte montré à une personne. `Prompts` lit une section
+du même genre de fichier comme du texte qu'un modèle lit : chaque langue y est
+écrite à part plutôt que traduite, donc la clé reste fixe pendant que la
+formulation bouge.
+
+```python
+from pathlib import Path
+
+from os_helper import Catalog, Locales, Prompts, compile_catalogs, write_po
+
+# 1) Catalog : gettext, indexé sur la phrase anglaise. L'anglais n'a besoin
+#    d'aucun fichier ; le français vit dans locales/fr/LC_MESSAGES/<domaine>.po.
+write_po(
+    "locales/fr/LC_MESSAGES/demo.po",
+    {"Convert a document": "Convertir un document"},
+    language="fr",
+    project="demo",
+)
+compile_catalogs("locales")  # écrit le .mo à côté de chaque .po, sans msgfmt
+
+cat = Catalog.from_package(Path("locales"), "demo", default_language="en")
+print(cat.gettext("fr", "Convert a document"))  # 'Convertir un document'
+print(cat.gettext("fr-CA", "Convert a document"))  # 'fr-CA' trouve le catalogue 'fr'
+print(cat.problems(used={"Convert a document", "Open a file"}))
+# un problème : le code demande 'Open a file', qu'aucun catalogue ne porte
+
+# 2) Locales : un fichier YAML de clés sémantiques, un texte par langue.
+Path("i18n.yaml").write_text(
+    "meta:\n"
+    "  default_locale: fr\n"
+    "  supported_locales: [fr, en]\n"
+    "gui:\n"
+    "  greeting:\n"
+    "    fr: Bonjour {name}\n"
+    "    en: Hello {name}\n",
+    encoding="utf-8",
+)
+loc = Locales.from_path("i18n.yaml")
+print(loc.render("gui", "greeting", "en", name="Alice"))  # 'Hello Alice'
+print(loc.text("gui", "greeting", "de"))  # pas d'allemand : repli sur 'Bonjour {name}'
+print(loc.problems())  # [] (chaque clé dans chaque langue, placeholders cohérents)
+
+# 3) Prompts : une section du même genre de fichier, lue comme du texte destiné
+#    à un modèle.
+Path("prompts.yaml").write_text(
+    "meta:\n"
+    "  default_locale: en\n"
+    "  supported_locales: [en, fr]\n"
+    "prompts:\n"
+    "  summarize:\n"
+    "    en: Summarize {topic} in three sentences.\n"
+    "    fr: Résumez {topic} en trois phrases.\n",
+    encoding="utf-8",
+)
+prompts = Prompts.from_path("prompts.yaml")  # section="prompts" par défaut
+print(prompts.render("summarize", "fr", topic="ce rapport"))
+# 'Résumez ce rapport en trois phrases.'
+print(prompts.problems())  # [] (aucune langue ne perd un {champ} que le code remplit)
+```
 
 ## Ligne de commande
 

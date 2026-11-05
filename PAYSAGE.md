@@ -62,14 +62,16 @@ systèmes de fichiers distants, `psutil` sur la télémétrie fine par processus
 
 Là où `os-helper` gagne dans la famille :
 
-1. **Surfaces multiples**. Chaque utilitaire est accessible depuis Python,
-   une API HTTP (FastAPI), des outils MCP (pour les agents) et l'interface
-   Tree Radar, toujours avec les mêmes signatures, aucune dérive. Il n'y a
+1. **Surfaces multiples**. Chaque utilitaire est accessible depuis Python ;
+   son sous-ensemble sûr, sans effet de bord (matériel, hachage, ASCII,
+   formatage, vérification d'URL, config), forme aussi une API HTTP (FastAPI)
+   avec des outils MCP (pour les agents) qui appellent les mêmes fonctions,
+   tandis que l'interface Tree Radar lit un disque à travers elles. Il n'y a
    pas de ligne de commande : envelopper `path exists` dans une commande
    shell ne faisait que répéter ce que le shell disait déjà, donc les deux
    CLI ont disparu en 3.0.0.
 2. **Zéro dépendance lourde** pour le cœur (`requests`, `pyyaml`,
-   `python-dotenv`, `validators`). Chaque surface est un extra optionnel, donc
+   `python-dotenv`, `validators`, `tqdm`, `psutil`). Chaque surface est un extra optionnel, donc
    `pip install os-helper` reste léger.
 3. **Fondation de la famille AI Helpers** : chaque autre paquet `*-helper`
    importe ``os_helper`` pour la journalisation, les chemins, les dossiers
