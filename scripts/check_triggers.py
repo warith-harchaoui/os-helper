@@ -16,7 +16,7 @@ This script parses the YAML frontmatter and asserts that the ``description``:
 * contains no XML angle brackets (a frontmatter security restriction),
 
 and that the repo ships the companion catalogue (``TRIGGERS.md`` at the root,
-mirrored into ``skills/os-helper/references/triggers.md``).
+mirrored byte for byte into ``skills/os-helper/references/triggers.md``).
 
 It is deliberately dependency-free (stdlib only) so it runs in the lightest CI
 lane without installing anything.
@@ -180,6 +180,16 @@ def check(verbose: bool = False) -> list[str]:
         failures.append("TRIGGERS.md missing at the repo root")
     if not _SKILL_TRIGGERS.exists():
         failures.append("skills/os-helper/references/triggers.md missing")
+
+    # Mirrored, not merely both present. Two catalogues that have drifted are
+    # worse than one, because each audience believes the one it reads.
+    if _ROOT_TRIGGERS.exists() and _SKILL_TRIGGERS.exists():
+        root = _ROOT_TRIGGERS.read_text(encoding="utf-8").strip()
+        mirror = _SKILL_TRIGGERS.read_text(encoding="utf-8").strip()
+        if root != mirror:
+            failures.append(
+                "TRIGGERS.md and skills/os-helper/references/triggers.md have drifted apart"
+            )
 
     return failures
 

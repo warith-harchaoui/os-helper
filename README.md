@@ -297,7 +297,7 @@ and as MCP tools for any MCP-aware agent host:
 pip install "os-helper[api]"
 os-helper-api                    # -> http://127.0.0.1:8010 (docs at /docs)
 curl http://127.0.0.1:8010/hardware
-OS_HELPER_PORT=9000 os-helper-api  # host and port come from OS_HELPER_HOST / OS_HELPER_PORT
+OS_HELPER_PORT=9000 os-helper-api  # or --host / --port; os-helper-api --help lists both
 
 pip install "os-helper[mcp]"
 os-helper-mcp                    # same app + an /mcp endpoint (fastapi-mcp)

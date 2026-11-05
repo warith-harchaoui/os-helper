@@ -60,6 +60,10 @@ api = [
     "fastapi>=0.110,<1",
     "uvicorn>=0.29,<1",
     "httpx>=0.27,<1",
+    # `os-helper-api` / `os-helper-mcp` parse `--host` / `--port` / `--help`
+    # with click (the `[mcp]` extra pulls this one in). Not in the core
+    # dependencies, for the same reason as in `[gui]`.
+    "click>=8.1,<9",
 ]
 # MCP extra (os_helper.mcp) — exposes the SAME FastAPI app from `[api]` as MCP
 # tools via fastapi-mcp; needs the api extra's runtime deps too.
@@ -83,6 +87,8 @@ dev = [
     "httpx>=0.27,<1",
     "fastapi-mcp>=0.3,<1",
     "mcp>=1.12,<2",
+    # The three launchers parse their arguments with click.
+    "click>=8.1,<9",
 ]
 
 [project.scripts]

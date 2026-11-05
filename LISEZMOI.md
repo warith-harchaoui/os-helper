@@ -308,7 +308,7 @@ hôte agentique compatible :
 pip install "os-helper[api]"
 os-helper-api                    # -> http://127.0.0.1:8010 (docs sur /docs)
 curl http://127.0.0.1:8010/hardware
-OS_HELPER_PORT=9000 os-helper-api  # hôte et port viennent de OS_HELPER_HOST / OS_HELPER_PORT
+OS_HELPER_PORT=9000 os-helper-api  # ou --host / --port ; os-helper-api --help les liste
 
 pip install "os-helper[mcp]"
 os-helper-mcp                    # même app + un endpoint /mcp (fastapi-mcp)

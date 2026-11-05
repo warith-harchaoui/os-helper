@@ -1,9 +1,19 @@
-# os-helper skill — exhaustive trigger catalogue
+# TRIGGERS: os-helper
 
-Auditable list of the phrasings that should fire this skill. Keep it in sync
-with the `description:` clause in `SKILL.md` — the description is what a host
-model actually sees (and it is capped at 1024 characters), this file is the
-human-reviewable superset.
+This is the user-facing, exhaustive catalogue of what `os-helper` can do and
+the natural-language phrasings, commands, functions, and situations that should
+invoke it. Keep it in sync with the `description:` clause in
+`skills/os-helper/SKILL.md`: the description is what a host model actually sees
+(and it is capped at 1024 characters), this file is the human-reviewable
+superset. The repo-root `TRIGGERS.md` and
+`skills/os-helper/references/triggers.md` are the same file, byte for byte;
+`scripts/check_triggers.py` fails when they drift.
+
+`os-helper` is the AI Helpers suite's **foundation**: filesystem, hardware
+introspection, hashing, timing, formatting, config, logging and localization. Every other
+package in the suite imports it for logging and file management. It is
+local-first — paths, sizes, hashes and hardware readings stay on the machine —
+with three deliberate network exceptions named below.
 
 ## Fire (positive triggers)
 
@@ -77,3 +87,12 @@ human-reviewable superset.
 `download_file()` is the one overlap worth naming: use os-helper for a plain
 URL → disk fetch, and `youtube-helper` / `podcast-helper` when the URL is a
 media platform or an RSS feed and the metadata matters.
+
+## See also
+
+- the repo's `README.md`: features, install, the honest *Promise* section.
+- the repo's `EXAMPLES.md`: runnable recipes.
+- the repo's `GUI.md`: the Tree Radar disk treemap.
+- the repo's `LANDSCAPE.md`: how os-helper compares with `pathlib`, `shutil`,
+  `psutil` and friends.
+- `skills/os-helper/SKILL.md`: the same catalogue, compressed for an agent.

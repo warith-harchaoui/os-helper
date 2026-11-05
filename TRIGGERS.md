@@ -2,7 +2,12 @@
 
 This is the user-facing, exhaustive catalogue of what `os-helper` can do and
 the natural-language phrasings, commands, functions, and situations that should
-invoke it.
+invoke it. Keep it in sync with the `description:` clause in
+`skills/os-helper/SKILL.md`: the description is what a host model actually sees
+(and it is capped at 1024 characters), this file is the human-reviewable
+superset. The repo-root `TRIGGERS.md` and
+`skills/os-helper/references/triggers.md` are the same file, byte for byte;
+`scripts/check_triggers.py` fails when they drift.
 
 `os-helper` is the AI Helpers suite's **foundation**: filesystem, hardware
 introspection, hashing, timing, formatting, config, logging and localization. Every other

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`os-helper-api --help` and `os-helper-mcp --help` started a server.** Both
+  launchers read their bind from `OS_HELPER_HOST` / `OS_HELPER_PORT` and
+  ignored their arguments, so asking for help served on port 8010 and never
+  returned. They are now click commands: `--help` (and `-h`) prints the usage,
+  `--host` / `--port` set the bind, and the environment variables and defaults
+  (`127.0.0.1:8010`) work as before. click joins the `[api]` extra (and so
+  `[mcp]`), never the core dependencies. A test runs every console script with
+  `--help` under a timeout.
+- **The trigger catalogue had two diverging copies.** `TRIGGERS.md` and
+  `skills/os-helper/references/triggers.md` are now one file written twice,
+  and `scripts/check_triggers.py` fails when they drift.
+
 ## [4.1.1] - 2026-11-05
 
 ### Fixed
