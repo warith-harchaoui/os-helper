@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-11-15
+
+### Changed
+
+- **Python 3.14 and 3.15 accepted.** `requires-python` was capped at `<3.14`
+  with no recorded reason; it is now `>=3.10,<3.16`, and the full test suite
+  passes on Python 3.15.0. Badges, prerequisites and classifiers follow.
+
 ## [4.1.2] - 2026-11-05
 
 ### Fixed
