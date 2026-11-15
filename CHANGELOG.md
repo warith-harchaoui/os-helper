@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **No upper bound on Python any more.** The previous release raised the cap
+  from `<3.14` to `<3.16`, which would only have moved the same wall: every
+  newer Python would again be refused at install time. `requires-python` is
+  now `>=3.10`, with no ceiling. Badges and prerequisites say "3.10 or later";
+  the classifiers list the versions actually tested.
+
 ## [4.2.0] - 2026-11-15
 
 ### Changed
