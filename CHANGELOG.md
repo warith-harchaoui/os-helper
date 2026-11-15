@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.1] - 2026-11-15
+
 ### Changed
 
 - **No upper bound on Python any more.** The previous release raised the cap
