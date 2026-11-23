@@ -43,7 +43,7 @@ def emptystring(s: str | None) -> bool:
 
     Parameters
     ----------
-    s : Optional[str]
+    s : str | None
         The value to check.
 
     Returns

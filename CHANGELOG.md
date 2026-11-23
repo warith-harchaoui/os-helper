@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.2] - 2026-11-23
+
+### Changed
+
+- os-helper's own modules log through `logging.getLogger(__name__)` (`os_helper.config_utils`, `os_helper.hardware_utils`, …). They are children of `os_helper`, so a level or filter set on `os_helper` still applies. Docstring types use the modern syntax (`list[str]`, `str | None`).
+- CODING.md and CONTRIBUTING.md state the logging rule (a module logger, configuration only in the entry point) and the modern typing syntax (`list[dict]`, `str | None`).
+
 ## [4.2.1] - 2026-11-15
 
 ### Changed

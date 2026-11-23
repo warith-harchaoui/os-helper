@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import glob
 import json
+import logging
 import os
 
 # PyYAML is loaded lazily-but-eagerly here because YAML is one of the two
@@ -37,9 +38,10 @@ import os
 import yaml
 from dotenv import dotenv_values, load_dotenv
 
-from .logging_utils import info
 from .path_utils import checkfile, dir_exists, file_exists, folder_name_ext, join
 from .string_utils import emptystring
+
+logger = logging.getLogger(__name__)
 
 
 def _valid_config_file(a_path: str, keys: list[str], config_type: str) -> dict | None:
@@ -55,14 +57,14 @@ def _valid_config_file(a_path: str, keys: list[str], config_type: str) -> dict |
     ----------
     a_path : str
         The path to the configuration file.
-    keys : List[str]
+    keys : list[str]
         List of keys that must be present in the configuration file.
     config_type : str
         The type of configuration (for logging purposes).
 
     Returns
     -------
-    Optional[Dict]
+    dict | None
         The loaded configuration dictionary if valid, otherwise None.
 
     Example
@@ -91,7 +93,7 @@ def _valid_config_file(a_path: str, keys: list[str], config_type: str) -> dict |
     # An unrecognized extension leaves ``config`` as None: treat it as a soft
     # miss so the caller can fall through to the next config source.
     if config is None:
-        info(f"Unsupported configuration file format {ext}: {a_path}")
+        logger.info(f"Unsupported configuration file format {ext}: {a_path}")
         return None
 
     # A syntactically valid JSON/YAML document that isn't a mapping (a bare
@@ -100,18 +102,18 @@ def _valid_config_file(a_path: str, keys: list[str], config_type: str) -> dict |
     # check list membership instead of key presence. Treat it the same as an
     # unsupported format -- a soft miss, not a crash.
     if not isinstance(config, dict):
-        info(f"Configuration file '{a_path}' does not contain a mapping at the top level.")
+        logger.info(f"Configuration file '{a_path}' does not contain a mapping at the top level.")
         return None
 
     # A file only counts as valid when it satisfies EVERY required key.
     if all(key in config for key in keys):
-        info(f"Configuration '{config_type}' successfully loaded from '{a_path}'")
+        logger.info(f"Configuration '{config_type}' successfully loaded from '{a_path}'")
         return config
     else:
         # Otherwise report exactly which keys are missing to aid debugging.
         missing = [key for key in keys if key not in config]
         m = ", ".join(missing)
-        info(f"Configuration file '{a_path}' does not have all keys. Missing keys are {m}")
+        logger.info(f"Configuration file '{a_path}' does not have all keys. Missing keys are {m}")
 
     return None
 
@@ -130,14 +132,14 @@ def _config_from_mapping(
 
     Parameters
     ----------
-    keys : List[str]
+    keys : list[str]
         Keys to retrieve from ``mapping``.
-    mapping : Dict[str, str]
+    mapping : dict[str, str]
         The key/value source to search.
 
     Returns
     -------
-    Optional[Dict[str, Union[str, int, float]]]
+    dict[str, str | int | float] | None
         A dictionary of key-value pairs if all keys are found, otherwise None.
     """
     config = {}
@@ -160,7 +162,7 @@ def _config_from_mapping(
 
     # Partial matches are treated as a miss so the caller can try another source.
     m = ", ".join(missing_keys)
-    info(f"Missing keys: {m}")
+    logger.info(f"Missing keys: {m}")
     return None
 
 
@@ -172,12 +174,12 @@ def _config_from_env(keys: list[str]) -> dict[str, str | int | float] | None:
 
     Parameters
     ----------
-    keys : List[str]
+    keys : list[str]
         Keys to retrieve from the environment.
 
     Returns
     -------
-    Optional[Dict[str, Union[str, int, float]]]
+    dict[str, str | int | float] | None
         A dictionary of key-value pairs if all keys are found, otherwise None.
     """
     return _config_from_mapping(keys, os.environ)
@@ -204,14 +206,14 @@ def get_config(
 
     Parameters
     ----------
-    keys : List[str]
+    keys : list[str]
         Keys required to be present in the resolved configuration.
     config_type : str
         Human-readable label used only in log messages.
-    path : Optional[str], optional
+    path : str | None, optional
         Path to a configuration file or a directory containing one. If None
         or empty, this step is skipped.
-    env_files : Optional[List[str]], optional
+    env_files : list[str] | None, optional
         ``.env`` files to load into ``os.environ`` before reading variables.
         Defaults to ``[".env"]``.
     allow_ambient_env : bool, optional
@@ -231,7 +233,7 @@ def get_config(
 
     Returns
     -------
-    Dict[str, Union[str, int, float]]
+    dict[str, str | int | float]
         Mapping with one entry per requested key.
 
     Raises
@@ -250,13 +252,13 @@ def get_config(
         env_files = [".env"]
 
     # Step 1: Attempt to load from a specific file or folder if `path` is provided
-    info(f"Loading configuration for '{config_type}'")
+    logger.info(f"Loading configuration for '{config_type}'")
     config = None
     if not emptystring(path):
         if file_exists(path):
             config = _valid_config_file(path, keys, config_type)
             if config is not None:
-                info(f"Configuration '{config_type}' loaded from file: {path}")
+                logger.info(f"Configuration '{config_type}' loaded from file: {path}")
                 return config
         if dir_exists(path):
             ext = ["json", "yaml", "yml"]
@@ -267,36 +269,42 @@ def get_config(
             for candidate_path in candidates:
                 config = _valid_config_file(candidate_path, keys, config_type)
                 if config is not None:
-                    info(f"Configuration '{config_type}' loaded from file: {candidate_path}")
+                    logger.info(f"Configuration '{config_type}' loaded from file: {candidate_path}")
                     return config
-        info(f"No valid configuration found in path: {path}")
+        logger.info(f"No valid configuration found in path: {path}")
 
     if allow_ambient_env:
         # Step 2: Merge all .env files into os.environ
-        info("Loading configuration from env files")
+        logger.info("Loading configuration from env files")
         for env_file in env_files:
             if file_exists(env_file):
                 load_dotenv(env_file)
-                info(f"Loaded env file: {env_file}")
+                logger.info(f"Loaded env file: {env_file}")
 
         # Step 3: Check os.environ (files + whatever the process inherited) for required keys
-        info("Loading configuration from environment variables (possibly merged with .env files)")
+        logger.info(
+            "Loading configuration from environment variables (possibly merged with .env files)"
+        )
         config = _config_from_env(keys)
     else:
         # Step 2+3, restricted: read each env_file's own contents directly
         # (dotenv_values never touches os.environ), so a key can only
         # resolve here because a requested file actually defines it — never
         # because the process happened to inherit it from its own shell.
-        info("Loading configuration from env files only (ambient process environment excluded)")
+        logger.info(
+            "Loading configuration from env files only (ambient process environment excluded)"
+        )
         merged: dict[str, str] = {}
         for env_file in env_files:
             if file_exists(env_file):
                 merged.update(dotenv_values(env_file))
-                info(f"Loaded env file: {env_file}")
+                logger.info(f"Loaded env file: {env_file}")
         config = _config_from_mapping(keys, merged)
 
     if config is not None:
-        info(f"Configuration '{config_type}' successfully loaded from environment variables.")
+        logger.info(
+            f"Configuration '{config_type}' successfully loaded from environment variables."
+        )
         return config
 
     # Step 4: Raise if no configuration was found

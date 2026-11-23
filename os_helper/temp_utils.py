@@ -35,16 +35,18 @@ Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
 import shutil
 import tempfile
 from collections.abc import Callable, Generator
 
 from .hash_utils import hash_string
-from .logging_utils import error, info
 from .misc_utils import now_string
 from .path_utils import relative2absolute_path
 from .string_utils import emptystring
+
+logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
@@ -115,10 +117,10 @@ def temporary_filename(
             dir=directory,
         ) as tmp:
             temp_path = relative2absolute_path(tmp.name)
-            info(f"Created temporary file: {temp_path}")
+            logger.info(f"Created temporary file: {temp_path}")
             yield temp_path
     except Exception as e:
-        error(f"Failed to create temporary file: {e}")
+        logger.error(f"Failed to create temporary file: {e}")
         raise
     finally:
         # Cleanup runs whether the body succeeded or raised; only delete when
@@ -126,10 +128,10 @@ def temporary_filename(
         if delete and temp_path is not None and os.path.exists(temp_path):
             try:
                 os.unlink(temp_path)
-                info(f"Deleted temporary file: {temp_path}")
+                logger.info(f"Deleted temporary file: {temp_path}")
             except Exception as e:
                 # Never let a cleanup failure mask the original result — log only.
-                error(f"Failed to delete temporary file '{temp_path}': {e}")
+                logger.error(f"Failed to delete temporary file '{temp_path}': {e}")
 
 
 @contextlib.contextmanager
@@ -172,10 +174,10 @@ def temporary_folder(prefix: str = "", delete: bool = True) -> Generator[str, No
         # ``mkdtemp`` atomically creates the directory with safe permissions.
         temp_dir = tempfile.mkdtemp(prefix=unique_prefix)
         temp_dir = relative2absolute_path(temp_dir)
-        info(f"Created temporary directory: {temp_dir}")
+        logger.info(f"Created temporary directory: {temp_dir}")
         yield temp_dir
     except Exception as e:
-        error(f"Failed to create temporary directory: {e}")
+        logger.error(f"Failed to create temporary directory: {e}")
         raise
     finally:
         # Recursively remove the whole tree on exit, guarding on existence in
@@ -183,9 +185,9 @@ def temporary_folder(prefix: str = "", delete: bool = True) -> Generator[str, No
         if delete and temp_dir is not None and os.path.exists(temp_dir):
             try:
                 shutil.rmtree(temp_dir)
-                info(f"Deleted temporary directory: {temp_dir}")
+                logger.info(f"Deleted temporary directory: {temp_dir}")
             except Exception as e:
-                error(f"Failed to delete temporary directory '{temp_dir}': {e}")
+                logger.error(f"Failed to delete temporary directory '{temp_dir}': {e}")
 
 
 def make_temporary_directory(prefix: str = "", directory: str | None = None) -> str:
@@ -221,7 +223,7 @@ def make_temporary_directory(prefix: str = "", directory: str | None = None) -> 
     # path that persists until the caller removes it — exactly the "deferred /
     # long-lived cleanup" semantics a context manager cannot express.
     path = tempfile.mkdtemp(prefix=prefix, dir=directory)
-    info(f"Created temporary directory: {path}")
+    logger.info(f"Created temporary directory: {path}")
     return relative2absolute_path(path)
 
 
@@ -348,7 +350,7 @@ def temporary_remote_file(
         remote_file_path = upload_function(local_path)
         if checkfile_function is not None and not checkfile_function(remote_file_path):
             raise RuntimeError(f"Upload check failed for remote: {remote_file_path}")
-        info(f"Uploaded '{local_path}' to remote '{remote_file_path}'")
+        logger.info(f"Uploaded '{local_path}' to remote '{remote_file_path}'")
         return remote_file_path
 
     try:
@@ -377,6 +379,6 @@ def temporary_remote_file(
         if remote_file_path is not None:
             try:
                 delete_function(remote_file_path)
-                info(f"Deleted remote file: {remote_file_path}")
+                logger.info(f"Deleted remote file: {remote_file_path}")
             except Exception as e:
-                error(f"Failed to delete remote file '{remote_file_path}': {e}")
+                logger.error(f"Failed to delete remote file '{remote_file_path}': {e}")

@@ -67,10 +67,10 @@ Every Python file in this suite follows the same shape (mandate 2026-06-29):
 4. **Generous comments.** Explain the *why* and any non-obvious *how*.
    Comments above blocks, not redundant inline. Cite the trade-off when
    picking an algorithm or backend.
-5. **No bare `print(...)` in `.py` code.** Use `os_helper`'s logging
-   surface (`osh.info(...)` / `osh.warning(...)` / `osh.error(...)` /
-   `osh.debug(...)`), so verbosity is controlled centrally via
-   `osh.verbosity(level)`. **Docs (README, LISEZMOI, EXAMPLES.md, docstring
+5. **No bare `print(...)` in `.py` code.** Each module that logs declares
+   `logger = logging.getLogger(__name__)` at the top and calls `logger.info(...)`;
+   the entry point alone configures logging (`osh.init_logging(...)`), and
+   `osh.verbosity(level)` tunes it. **Docs (README, LISEZMOI, EXAMPLES.md, docstring
    examples) keep `print(...)`**: tutorial code reads naturally that way.
 6. **`print(...)` in docs is followed by a `#`-comment showing expected
    output.** Doctest / REPL style, either trailing inline

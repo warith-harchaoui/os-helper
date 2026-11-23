@@ -149,6 +149,10 @@ from __future__ import annotations
 
 Use `TypedDict`, `dataclasses`, `Protocol`, or `pydantic` models when returning or passing structured data.
 
+Use the modern syntax: `list[dict]` rather than `typing.List[Dict]` (3.9+), `str | None` rather than
+`Optional[str]` and `int | str` rather than `Union[int, str]` (3.10+). Docstring types follow the
+same spelling. Ruff's `UP006`, `UP007`, `UP035` and `UP045` enforce it.
+
 Example:
 
 ```python
@@ -286,6 +290,11 @@ logger.info("Processing started")
 ```
 
 This keeps verbosity controlled from one place rather than scattered across the codebase.
+
+Every module that logs declares `logger = logging.getLogger(__name__)` at the top, right after
+its imports, and logs through it, so each record carries the module's dotted name. Configuration
+(`logging.basicConfig`, `osh.init_logging`, handlers, levels) happens once, in the entry point
+(the CLI's `main`, a server's startup), never in a library module.
 
 Exception: documentation snippets may use `print(...)` because tutorials should remain simple to read.
 

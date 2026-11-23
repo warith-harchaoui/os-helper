@@ -32,13 +32,15 @@ Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 from __future__ import annotations
 
 import glob
+import logging
 import os
 import pathlib
 import shutil
 
+logger = logging.getLogger(__name__)
+
 # We route all human-facing messages through the package logging surface
 # (rule 6: no bare ``print`` in library code) rather than writing to stdout.
-from .logging_utils import error, info
 
 
 def folder_name_ext(path: str, checkpath: bool = False) -> tuple[str, str, str]:
@@ -286,7 +288,7 @@ def recursive_glob(root_dir: str, pattern: str) -> list[str]:
 
     Returns
     -------
-    List[str]
+    list[str]
         File paths matching the pattern, in walk order.
 
     Example
@@ -443,13 +445,13 @@ def copyfile(source: str, destination: str) -> None:
     except Exception as e:
         # Log with both original paths for context, then re-raise unchanged so
         # the caller still sees the real ``OSError``.
-        error(f"Error copying file '{source}' to '{destination}': {e}")
+        logger.error(f"Error copying file '{source}' to '{destination}': {e}")
         raise
     # Post-condition: confirm the destination now exists and is non-empty.
     checkfile(
         destination_abs, msg=f"Failed to copy '{source}' to '{destination}'", check_empty=True
     )
-    info(f"Copied '{source}' to '{destination_abs}' successfully.")
+    logger.info(f"Copied '{source}' to '{destination_abs}' successfully.")
 
 
 def remove_directory(folder_path: str) -> None:
@@ -477,16 +479,16 @@ def remove_directory(folder_path: str) -> None:
     # Idempotent by design: removing an already-absent directory is a no-op,
     # which keeps cleanup code free of existence checks at every call site.
     if not dir_exists(folder_path):
-        info(f"Directory '{folder_path}' does not exist, nothing to remove.")
+        logger.info(f"Directory '{folder_path}' does not exist, nothing to remove.")
         return
     try:
         # ``rmtree`` recursively deletes the tree; any failure (permissions,
         # busy file) is logged and re-raised for the caller to handle.
         shutil.rmtree(folder_path)
     except Exception as e:
-        error(f"Failed to remove directory '{folder_path}': {e}")
+        logger.error(f"Failed to remove directory '{folder_path}': {e}")
         raise
-    info(f"Removed directory: '{folder_path}'")
+    logger.info(f"Removed directory: '{folder_path}'")
 
 
 def remove_files(files_list: list[str]) -> None:
@@ -500,7 +502,7 @@ def remove_files(files_list: list[str]) -> None:
 
     Parameters
     ----------
-    files_list : List[str]
+    files_list : list[str]
         A list of file paths to remove.
 
     Example
@@ -513,13 +515,13 @@ def remove_files(files_list: list[str]) -> None:
         if file_exists(file_path):
             try:
                 pathlib.Path(file_path).unlink()
-                info(f"Removed file: '{file_path}'")
+                logger.info(f"Removed file: '{file_path}'")
             except Exception as e:
                 # Log and swallow: this helper's contract is not to raise.
-                error(f"Failed to remove file '{file_path}': {e}")
+                logger.error(f"Failed to remove file '{file_path}': {e}")
         else:
             # Missing files are simply skipped — nothing to remove.
-            info(f"File '{file_path}' does not exist, skipping.")
+            logger.info(f"File '{file_path}' does not exist, skipping.")
 
 
 def make_directory(folder_path: str, exist_ok: bool = True) -> None:
@@ -551,9 +553,9 @@ def make_directory(folder_path: str, exist_ok: bool = True) -> None:
         # whether a pre-existing leaf is tolerated or is an error.
         os.makedirs(folder_path, exist_ok=exist_ok)
     except Exception as e:
-        error(f"Error creating directory '{folder_path}': {e}")
+        logger.error(f"Error creating directory '{folder_path}': {e}")
         raise
     # Defensive post-condition: guard against exotic filesystems where the
     # call returns cleanly but the directory is not actually visible.
     assert dir_exists(folder_path), f"Failed to create directory: '{folder_path}'"
-    info(f"Directory created: '{folder_path}'")
+    logger.info(f"Directory created: '{folder_path}'")

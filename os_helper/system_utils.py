@@ -29,6 +29,7 @@ Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 # supported interpreter and never cost anything at import time.
 from __future__ import annotations
 
+import logging
 import os
 import platform
 import shlex
@@ -37,9 +38,10 @@ import shlex
 # both captured stdout and stderr back as a dict without extra plumbing.
 from subprocess import PIPE, Popen
 
-from .logging_utils import info
 from .path_utils import dir_exists, file_exists
 from .string_utils import emptystring
+
+logger = logging.getLogger(__name__)
 
 
 def windows() -> bool:
@@ -132,7 +134,7 @@ def get_nb_workers(workers: int = -1) -> int:
         except ValueError:
             # A malformed value must not crash the caller — warn and keep the
             # auto-detected default instead.
-            info("NB_WORKERS environment variable is invalid. Using default CPU count.")
+            logger.info("NB_WORKERS environment variable is invalid. Using default CPU count.")
 
     # ``0`` is the explicit "use the whole pool" request.
     if workers == 0:
@@ -217,7 +219,7 @@ def system(
     AssertionError
         If the exit code check or the expected-output check fails.
     """
-    info(f"Executing system command: {cmd}")
+    logger.info(f"Executing system command: {cmd}")
 
     # ``shlex.split`` turns the string into an argv list; combined with
     # ``shell=False`` below this sidesteps shell-injection entirely.
@@ -278,7 +280,7 @@ def openfile(filename: str) -> None:
     OSError
         If the platform is unsupported or the underlying open call fails.
     """
-    info(f"Opening file '{filename}' with default application.")
+    logger.info(f"Opening file '{filename}' with default application.")
 
     # Windows has a dedicated stdlib call; it needs no external launcher.
     if windows():

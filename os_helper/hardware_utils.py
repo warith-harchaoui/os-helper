@@ -34,13 +34,15 @@ Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 
 from __future__ import annotations
 
+import logging
 import platform
 import re
 import subprocess
 import sys
 from typing import Any
 
-from .logging_utils import debug, info
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Internal probe helper
@@ -76,7 +78,7 @@ def _probe(cmd: list[str], **kwargs: Any) -> str:
         # FileNotFoundError: binary not on PATH.
         # CalledProcessError: binary exists but returned non-zero.
         # OSError: platform refused to spawn the process at all.
-        debug(f"Hardware probe unavailable/failed: {cmd[0]} ({exc})")
+        logger.debug(f"Hardware probe unavailable/failed: {cmd[0]} ({exc})")
         return ""
 
 
@@ -245,7 +247,7 @@ def cpu_model() -> str | None:
                     if line.lower().startswith("model name"):
                         return line.split(":", 1)[1].strip() or None
         except OSError:
-            debug("Could not read /proc/cpuinfo for CPU model detection.")
+            logger.debug("Could not read /proc/cpuinfo for CPU model detection.")
         return None
 
     # Windows: platform.processor() reads the registry-backed
@@ -388,27 +390,27 @@ def gpu_vendor() -> str:
         # Intel Macs report neither "Apple M" nor "Apple A" and fall through.
         out = _probe(["system_profiler", "SPHardwareDataType"])
         if "Apple M" in out or "Apple A" in out:
-            info("Detected accelerator vendor: apple")
+            logger.info("Detected accelerator vendor: apple")
             return "apple"
 
     # NVIDIA works the same way on Linux and Windows.
     if _probe(["nvidia-smi", "-L"]):
-        info("Detected accelerator vendor: nvidia")
+        logger.info("Detected accelerator vendor: nvidia")
         return "nvidia"
 
     # AMD's ROCm stack (Linux only, in practice).
     if _probe(["rocm-smi", "--showid"]):
-        info("Detected accelerator vendor: amd")
+        logger.info("Detected accelerator vendor: amd")
         return "amd"
 
     # Intel Arc / integrated graphics — Linux-only probe via lspci.
     if plat == "linux":
         lspci = _probe(["lspci"])
         if "Intel" in lspci and "VGA" in lspci:
-            info("Detected accelerator vendor: intel")
+            logger.info("Detected accelerator vendor: intel")
             return "intel"
 
-    info("No accelerator detected; falling back to cpu")
+    logger.info("No accelerator detected; falling back to cpu")
     return "cpu"
 
 

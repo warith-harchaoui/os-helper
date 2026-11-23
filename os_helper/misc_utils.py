@@ -34,6 +34,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import logging
 import os
 import re
 import time
@@ -46,7 +47,6 @@ from typing import Any
 import requests
 import validators
 
-from .logging_utils import error, info, warning
 from .path_utils import (
     dir_exists,
     file_exists,
@@ -56,6 +56,8 @@ from .path_utils import (
     size_file,
 )
 from .string_utils import emptystring
+
+logger = logging.getLogger(__name__)
 
 
 def now_string(fmt: str = "log") -> str:
@@ -210,7 +212,7 @@ def folder_description(
         # UTF-8 so non-ASCII file names survive the round-trip to disk.
         with open(index_html_path, "w", encoding="utf-8") as fout:
             fout.write(page)
-        info(f"HTML index generated at: {index_html_path}")
+        logger.info(f"HTML index generated at: {index_html_path}")
 
     # Optionally also dump the raw mapping as machine-readable JSON.
     if description_json:
@@ -223,7 +225,7 @@ def folder_description(
             # which defeats using the file to diff snapshots over time. The
             # HTML index below already sorts for the same reason.
             json.dump(result, jfile, indent=2, sort_keys=True)
-        info(f"Folder description JSON written to: {desc_json_path}")
+        logger.info(f"Folder description JSON written to: {desc_json_path}")
 
     return result
 
@@ -294,7 +296,7 @@ def zip_folder(folder_path: str, zip_file_path: str = "") -> None:
                 # cleanly without leaking the source machine's directory layout.
                 arcname = os.path.relpath(full_path, folder_path)
                 zf.write(full_path, arcname)
-    info(f"Zipped folder '{folder_path}' into '{zip_file_path}'")
+    logger.info(f"Zipped folder '{folder_path}' into '{zip_file_path}'")
 
 
 def unzip_folder(zip_file_path: str, folder_path: str = "", *, overwrite: bool = False) -> str:
@@ -340,7 +342,7 @@ def unzip_folder(zip_file_path: str, folder_path: str = "", *, overwrite: bool =
 
     # Idempotence: a populated destination is a cache hit, not an error.
     if not overwrite and dir_exists(folder_path) and os.listdir(folder_path):
-        info(f"Folder '{folder_path}' already populated; leaving it alone")
+        logger.info(f"Folder '{folder_path}' already populated; leaving it alone")
         return folder_path
 
     make_directory(folder_path)
@@ -360,7 +362,7 @@ def unzip_folder(zip_file_path: str, folder_path: str = "", *, overwrite: bool =
                     f"escape '{folder_path}'; refusing to extract it"
                 )
         zf.extractall(folder_path)
-    info(f"Extracted '{zip_file_path}' into '{folder_path}'")
+    logger.info(f"Extracted '{zip_file_path}' into '{folder_path}'")
     return folder_path
 
 
@@ -456,10 +458,10 @@ def str2time(input_string: str) -> float:
             elif len(parts) == 2:  # MM:SS
                 return parts[0] * 60 + parts[1]
             else:
-                error(f"Invalid time format: {input_string} - expected 2 or 3 parts")
+                logger.error(f"Invalid time format: {input_string} - expected 2 or 3 parts")
                 return 0.0
         except ValueError:
-            error(f"Invalid time format: {input_string}")
+            logger.error(f"Invalid time format: {input_string}")
             return 0.0
 
     # Handle text formats like "1 hour 30 minutes"
@@ -489,7 +491,7 @@ def str2time(input_string: str) -> float:
                     remaining = re.sub(pattern, "", remaining, count=1).strip()
                     found_unit = True
                 except ValueError:
-                    error(f"Invalid numeric value in: {input_string}")
+                    logger.error(f"Invalid numeric value in: {input_string}")
                     continue
 
     # If any unit token matched, trust the accumulated total.
@@ -500,7 +502,7 @@ def str2time(input_string: str) -> float:
     try:
         return float(input_string)
     except ValueError:
-        error(f"Cannot parse time from: {input_string}")
+        logger.error(f"Cannot parse time from: {input_string}")
         return 0.0
 
 
@@ -763,7 +765,7 @@ def download_file(
         if sha256 is not None:
             have = _sha256_file(file_path)
             if have == sha256.lower():
-                info(f"'{file_path}' already present and sha256-verified; skipping download")
+                logger.info(f"'{file_path}' already present and sha256-verified; skipping download")
                 return {
                     "path": file_path,
                     "content_type": "",
@@ -771,9 +773,9 @@ def download_file(
                     "sha256": have,
                     "resumed": False,
                 }
-            warning(f"'{file_path}' exists but sha256 mismatch; re-downloading")
+            logger.warning(f"'{file_path}' exists but sha256 mismatch; re-downloading")
         else:
-            info(f"'{file_path}' already present; skipping (pass overwrite=True to force)")
+            logger.info(f"'{file_path}' already present; skipping (pass overwrite=True to force)")
             return {
                 "path": file_path,
                 "content_type": "",
@@ -788,7 +790,7 @@ def download_file(
     if not resume and os.path.exists(part_path):
         os.remove(part_path)
 
-    info(f"Downloading '{url}' → '{file_path}'")
+    logger.info(f"Downloading '{url}' → '{file_path}'")
     content_type = ""
     resumed = False
     # Attempt loop: on a transient error we back off and retry, each retry
@@ -839,12 +841,12 @@ def download_file(
                 # Exponential backoff (1s, 2s, 4s, ...); the sidecar is kept so
                 # the next attempt resumes instead of starting over.
                 wait = 2**attempt
-                warning(
+                logger.warning(
                     f"Download attempt {attempt + 1} for '{url}' failed ({e}); retry in {wait}s"
                 )
                 time.sleep(wait)
                 continue
-            error(f"Failed to download from '{url}' after {retries + 1} attempts: {e}")
+            logger.error(f"Failed to download from '{url}' after {retries + 1} attempts: {e}")
             raise
 
     # Optional integrity gate: verify BEFORE finalizing so a corrupt transfer
@@ -861,7 +863,7 @@ def download_file(
     # Atomic finalize: one rename, so ``file_path`` appears complete or not at all.
     os.replace(part_path, file_path)
     size = size_file(file_path)
-    info(f"File downloaded from '{url}' and saved to '{file_path}' ({size} bytes)")
+    logger.info(f"File downloaded from '{url}' and saved to '{file_path}' ({size} bytes)")
     # Metadata is additive over the historical {path, content_type, bytes}; callers
     # that ignore the return, or read only the old keys, are unaffected.
     return {

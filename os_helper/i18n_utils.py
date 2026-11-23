@@ -53,6 +53,7 @@ Warith HARCHAOUI, https://linkedin.com/in/warith-harchaoui
 # Postpone annotation evaluation for consistent modern typing on Python 3.10.
 from __future__ import annotations
 
+import logging
 import string
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,8 +61,9 @@ from typing import Any
 
 import yaml
 
-from .logging_utils import warning
 from .path_utils import file_exists
+
+logger = logging.getLogger(__name__)
 
 #: The section every file must carry: it declares which locales exist and
 #: which one answers when the asked-for locale has nothing.
@@ -310,7 +312,7 @@ class Locales:
         if fallback in value:
             # Loud enough to be fixed, quiet enough not to break a release:
             # the user still reads a real sentence, in the wrong language.
-            warning(
+            logger.warning(
                 f"{self.path}: {section}.{key} has no {wanted!r} entry; "
                 f"falling back to {fallback!r}"
             )
